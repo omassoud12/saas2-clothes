@@ -1,0 +1,160 @@
+DATABASE SCHEMA - Clothing Inventory & Sales SaaS
+====================================================
+ORM: Prisma | Database: PostgreSQL
+
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  WAREHOUSE
+}
+
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      UserRole
+  accountId String?  // null only for SUPER_ADMIN
+  account   Account? @relation(fields: [accountId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+
+model Account {
+  id         String        @id @default(cuid())
+  name       String
+  isActive   Boolean       @default(true)
+  users      User[]
+  categories Category[]
+  products   Product[]
+  expenses   Expense[]
+  sales      Sale[]
+  reports    DailyReport[]
+  createdAt  DateTime      @default(now())
+}
+
+
+model Category {
+  id        String    @id @default(cuid())
+  accountId String
+  account   Account   @relation(fields: [accountId], references: [id])
+  name      String    // "Pantalon", "Chemise", etc.
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@index([accountId])
+}
+
+
+model Product {
+  id             String          @id @default(cuid())
+  accountId      String
+  account        Account         @relation(fields: [accountId], references: [id])
+  categoryId     String
+  category       Category        @relation(fields: [categoryId], references: [id])
+  name           String
+  imageUrl       String
+  color          String
+  wholesaleCost  Float?          // null until Owner sets it — Owner only can see/edit
+  profitMargin   Float?          // null until Owner sets it — Owner only can see/edit
+  currentStock   Int             @default(0)
+  suggestedPrice Float?          // auto-calculated from cost + margin + allocated expenses
+  createdById    String
+  createdAt      DateTime        @default(now())
+  sales          Sale[]
+  movements      StockMovement[]
+
+  @@index([accountId])
+  @@index([accountId, categoryId])
+}
+
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  costAtTime Float?
+  addedById  String
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+}
+
+
+model Expense {
+  id          String   @id @default(cuid())
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id])
+  description String
+  amount      Float
+  date        DateTime @default(now())
+
+  @@index([accountId])
+}
+
+
+model Sale {
+  id         String   @id @default(cuid())
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  categoryId String   // snapshot of product's category at sale time
+  quantity   Int
+  soldPrice  Float    // actual price sold at (may differ from suggestedPrice)
+  costAtSale Float    // snapshot of product cost at sale time (never changes later)
+  soldById   String
+  createdAt  DateTime @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([accountId, categoryId, createdAt])
+  @@index([accountId, productId, createdAt])
+}
+
+
+model DailyReport {
+  id             String   @id @default(cuid())
+  accountId      String
+  account        Account  @relation(fields: [accountId], references: [id])
+  date           DateTime
+  totalSales     Float    // cumulative (flow) - safe to SUM across days
+  totalProfit    Float    // cumulative (flow) - safe to SUM across days
+  totalUnitsSold Int      // cumulative (flow) - safe to SUM across days
+  stockValue     Float    // snapshot (point-in-time) - take LATEST value only, never SUM
+  createdAt      DateTime @default(now())
+
+  @@unique([accountId, date])
+  @@index([accountId, date])
+}
+
+
+====================================================
+NOTES
+====================================================
+
+1. Multi-tenancy: every table carries accountId; every query MUST filter
+   WHERE accountId = ... (enforced via backend middleware).
+
+2. Roles & permissions:
+   - SUPER_ADMIN: manages all accounts on the platform.
+   - OWNER: full access (products, homepage, business/pricing, accounting,
+     cost visibility, can add the Warehouse employee).
+   - WAREHOUSE: products + homepage only. No cost/profitMargin visibility,
+     no business/accounting access. Only one Warehouse user per account.
+
+3. Snapshot fields (costAtSale, categoryId on Sale) exist so historical
+   sales/profit numbers never change if Product's cost or category is
+   edited later.
+
+4. DailyReport is a precomputed cache built by a daily scheduled job from
+   Sale rows — used for fast dashboard totals. Monthly/yearly reports =
+   SUM of DailyReport rows in range for flow fields; stockValue uses the
+   latest row only (never summed).
+
+5. Detailed filtered analytics (by category / product / date range) query
+   Sale directly, using the composite indexes above.
+
+6. Migrations: `prisma migrate dev` for local development only;
+   `prisma migrate deploy` for production (never migrate dev in prod).

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+.tools/
+node-v*-win-x64.zip
+*.log
+.DS_Store
+
