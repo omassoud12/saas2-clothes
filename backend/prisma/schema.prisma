@@ -1,0 +1,268 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  WAREHOUSE
+}
+
+enum InventoryMovementType {
+  RESTOCK
+  SALE
+  RETURN
+  DAMAGE
+  ADJUSTMENT
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+model Account {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String
+  isActive     Boolean @default(true)
+  baseCurrency String  @default("USD") @db.Char(3)
+
+  users              User[]
+  categories         Category[]
+  products           Product[]
+  variants           ProductVariant[]
+  inventoryMovements InventoryMovement[]
+  expenses           Expense[]
+  sales              Sale[]
+  saleItems          SaleItem[]
+  reports            DailyReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  // If Supabase Auth is used, store auth.users.id here.
+  id        String   @id @db.Uuid
+  email     String   @unique
+  role      UserRole
+  accountId String?  @db.Uuid
+  isActive  Boolean  @default(true)
+
+  account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  createdProducts    Product[]           @relation("ProductCreatedBy")
+  inventoryMovements InventoryMovement[] @relation("InventoryMovementPerformedBy")
+  expensesCreated    Expense[]           @relation("ExpenseCreatedBy")
+  sales              Sale[]              @relation("SaleSoldBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, role, isActive])
+}
+
+model Category {
+  id                  String  @id @default(uuid()) @db.Uuid
+  accountId           String  @db.Uuid
+  name                String
+  defaultProfitMargin Decimal @default(0.3000) @db.Decimal(7, 4)
+  isActive            Boolean @default(true)
+
+  account   Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  products  Product[]
+  saleItems SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, name])
+  @@index([accountId, isActive])
+}
+
+model Product {
+  id                   String   @id @default(uuid()) @db.Uuid
+  accountId            String   @db.Uuid
+  categoryId           String   @db.Uuid
+  name                 String
+  imageUrl             String?
+  profitMarginOverride Decimal? @db.Decimal(7, 4)
+  createdById          String   @db.Uuid
+  isActive             Boolean  @default(true)
+
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category  Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  variants  ProductVariant[]
+  saleItems SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, categoryId, isActive])
+  @@index([accountId, name])
+}
+
+model ProductVariant {
+  id        String @id @default(uuid()) @db.Uuid
+  accountId String @db.Uuid
+  productId String @db.Uuid
+
+  sku     String
+  barcode String?
+  color   String?
+  size    String?
+
+  // Inventory costing: averageCost is used for current valuation and costAtSale.
+  // lastPurchaseCost keeps the latest shipment cost for owner visibility.
+  averageCost      Decimal? @db.Decimal(18, 2)
+  lastPurchaseCost Decimal? @db.Decimal(18, 2)
+  suggestedPrice   Decimal? @db.Decimal(18, 2)
+  currentStock     Int      @default(0)
+  isActive         Boolean  @default(true)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  movements InventoryMovement[]
+  saleItems SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, sku])
+  @@unique([accountId, barcode])
+  @@index([accountId, productId, isActive])
+  @@index([accountId, currentStock])
+}
+
+model InventoryMovement {
+  id             String                @id @default(uuid()) @db.Uuid
+  accountId      String                @db.Uuid
+  variantId      String                @db.Uuid
+  type           InventoryMovementType
+  quantityChange Int
+  unitCost       Decimal?              @db.Decimal(18, 2)
+  performedById  String                @db.Uuid
+  saleItemId     String?               @db.Uuid
+  note           String?
+
+  account     Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  performedBy User           @relation("InventoryMovementPerformedBy", fields: [performedById], references: [id], onDelete: Restrict)
+  saleItem    SaleItem?      @relation(fields: [saleItemId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([accountId, variantId, createdAt])
+  @@index([accountId, type, createdAt])
+  @@index([saleItemId])
+}
+
+model Expense {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @db.Uuid
+  description String
+  amount      Decimal  @db.Decimal(18, 2)
+  expenseDate DateTime
+  createdById String   @db.Uuid
+
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdBy User    @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, expenseDate])
+}
+
+model Sale {
+  id             String     @id @default(uuid()) @db.Uuid
+  accountId      String     @db.Uuid
+  soldById       String     @db.Uuid
+  status         SaleStatus @default(COMPLETED)
+  currency       String     @db.Char(3)
+  subtotal       Decimal    @db.Decimal(18, 2)
+  discountAmount Decimal    @default(0) @db.Decimal(18, 2)
+  totalAmount    Decimal    @db.Decimal(18, 2)
+
+  account Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  soldBy  User       @relation("SaleSoldBy", fields: [soldById], references: [id], onDelete: Restrict)
+  items   SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, createdAt])
+  @@index([accountId, soldById, createdAt])
+  @@index([accountId, status, createdAt])
+}
+
+model SaleItem {
+  id         String @id @default(uuid()) @db.Uuid
+  accountId  String @db.Uuid
+  saleId     String @db.Uuid
+  productId  String @db.Uuid
+  variantId  String @db.Uuid
+  categoryId String @db.Uuid
+
+  // Historical snapshots: these do not change when the current product/category changes later.
+  productNameAtSale  String
+  categoryNameAtSale String
+  skuAtSale          String
+  colorAtSale        String?
+  sizeAtSale         String?
+
+  quantity       Int
+  unitSoldPrice  Decimal @db.Decimal(18, 2)
+  unitCostAtSale Decimal @db.Decimal(18, 2)
+  lineTotal      Decimal @db.Decimal(18, 2)
+
+  account  Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  sale     Sale           @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  product  Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  category Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  movements InventoryMovement[]
+
+  createdAt DateTime @default(now())
+
+  @@index([saleId])
+  @@index([accountId, categoryId, createdAt])
+  @@index([accountId, productId, createdAt])
+  @@index([accountId, variantId, createdAt])
+}
+
+model DailyReport {
+  id                String   @id @default(uuid()) @db.Uuid
+  accountId         String   @db.Uuid
+  reportDate        DateTime @db.Date
+  revenue           Decimal  @db.Decimal(18, 2)
+  costOfGoodsSold   Decimal  @db.Decimal(18, 2)
+  grossProfit       Decimal  @db.Decimal(18, 2)
+  operatingExpenses Decimal  @db.Decimal(18, 2)
+  netProfit         Decimal  @db.Decimal(18, 2)
+  salesCount        Int
+  totalUnitsSold    Int
+  stockValue        Decimal  @db.Decimal(18, 2)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  computedAt DateTime @default(now())
+
+  @@unique([accountId, reportDate])
+  @@index([accountId, reportDate])
+}

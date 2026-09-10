@@ -1,5 +1,6 @@
 node_modules/
 dist/
+backend/src/generated/prisma/
 .env
 .env.local
 .env.*.local
@@ -7,4 +8,3 @@ dist/
 node-v*-win-x64.zip
 *.log
 .DS_Store
-
