@@ -118,7 +118,7 @@ Can:
 - activate/deactivate Accounts
 - access platform administration
 
-SUPER_ADMIN is not required to belong to an Account.
+SUPER_ADMIN does not belong to an Account.
 
 ### OWNER
 
@@ -136,6 +136,8 @@ Can:
 - perform sales
 - manage Warehouse employee
 
+An OWNER employee code is optional.
+
 ### WAREHOUSE
 
 Belongs to one Account.
@@ -146,6 +148,10 @@ Can:
 - create categories
 - restock inventory
 - perform sales
+
+An Account may have multiple WAREHOUSE employees. Each WAREHOUSE employee has
+their own User account and a required employee code that is unique within the
+Account.
 
 Cannot:
 - access accounting
@@ -199,9 +205,11 @@ Supported movement concepts:
 
 - RESTOCK
 - SALE
-- RETURN
 - DAMAGE
 - ADJUSTMENT
+
+Returns and exchanges will be added with their complete financial and inventory
+reversal models in a later version.
 
 currentStock is used for fast reads.
 
@@ -231,6 +239,10 @@ SaleItem must preserve historical snapshots such as:
 - product/category information required for historical reports
 
 Changing a Product later must never modify historical sales.
+
+Sale must preserve the seller name and optional employee code as immutable
+snapshots. `soldById` is derived from the authenticated Supabase user. OWNER and
+WAREHOUSE may perform sales; SUPER_ADMIN may not perform tenant sales.
 
 ---
 

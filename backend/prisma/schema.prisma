@@ -19,16 +19,12 @@ enum UserRole {
 enum InventoryMovementType {
   RESTOCK
   SALE
-  RETURN
   DAMAGE
   ADJUSTMENT
 }
 
 enum SaleStatus {
   COMPLETED
-  VOIDED
-  PARTIALLY_REFUNDED
-  REFUNDED
 }
 
 model Account {
@@ -47,17 +43,20 @@ model Account {
   saleItems          SaleItem[]
   reports            DailyReport[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model User {
   // If Supabase Auth is used, store auth.users.id here.
-  id        String   @id @db.Uuid
-  email     String   @unique
-  role      UserRole
-  accountId String?  @db.Uuid
-  isActive  Boolean  @default(true)
+  id           String   @id @db.Uuid
+  email        String   @unique
+  firstName    String
+  lastName     String
+  employeeCode String?
+  role         UserRole
+  accountId    String?  @db.Uuid
+  isActive     Boolean  @default(true)
 
   account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
@@ -66,9 +65,11 @@ model User {
   expensesCreated    Expense[]           @relation("ExpenseCreatedBy")
   sales              Sale[]              @relation("SaleSoldBy")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  @@unique([id, accountId])
+  @@unique([accountId, employeeCode])
   @@index([accountId, role, isActive])
 }
 
@@ -83,9 +84,10 @@ model Category {
   products  Product[]
   saleItems SaleItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  @@unique([id, accountId])
   @@unique([accountId, name])
   @@index([accountId, isActive])
 }
@@ -101,17 +103,21 @@ model Product {
   isActive             Boolean  @default(true)
 
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  category  Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  createdBy User     @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  category  Category @relation(fields: [categoryId, accountId], references: [id, accountId], onDelete: Restrict)
+  createdBy User     @relation("ProductCreatedBy", fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
 
   variants  ProductVariant[]
   saleItems SaleItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  @@unique([id, accountId])
+  @@unique([id, categoryId, accountId])
   @@index([accountId, categoryId, isActive])
   @@index([accountId, name])
+  @@index([categoryId, accountId])
+  @@index([createdById, accountId])
 }
 
 model ProductVariant {
@@ -126,25 +132,28 @@ model ProductVariant {
 
   // Inventory costing: averageCost is used for current valuation and costAtSale.
   // lastPurchaseCost keeps the latest shipment cost for owner visibility.
-  averageCost      Decimal? @db.Decimal(18, 2)
+  averageCost      Decimal? @db.Decimal(18, 4)
   lastPurchaseCost Decimal? @db.Decimal(18, 2)
   suggestedPrice   Decimal? @db.Decimal(18, 2)
   currentStock     Int      @default(0)
   isActive         Boolean  @default(true)
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
 
   movements InventoryMovement[]
   saleItems SaleItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  @@unique([id, accountId])
+  @@unique([id, productId, accountId])
   @@unique([accountId, sku])
   @@unique([accountId, barcode])
   @@index([accountId, productId, isActive])
   @@index([accountId, currentStock])
+  @@index([productId, accountId])
 }
 
 model InventoryMovement {
@@ -153,22 +162,24 @@ model InventoryMovement {
   variantId      String                @db.Uuid
   type           InventoryMovementType
   quantityChange Int
-  unitCost       Decimal?              @db.Decimal(18, 2)
+  unitCost       Decimal?              @db.Decimal(18, 4)
   performedById  String                @db.Uuid
   saleItemId     String?               @db.Uuid
   note           String?
 
   account     Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  performedBy User           @relation("InventoryMovementPerformedBy", fields: [performedById], references: [id], onDelete: Restrict)
-  saleItem    SaleItem?      @relation(fields: [saleItemId], references: [id], onDelete: Restrict)
+  variant     ProductVariant @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
+  performedBy User           @relation("InventoryMovementPerformedBy", fields: [performedById, accountId], references: [id, accountId], onDelete: Restrict)
+  saleItem    SaleItem?      @relation(fields: [saleItemId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([accountId, createdAt])
   @@index([accountId, variantId, createdAt])
   @@index([accountId, type, createdAt])
-  @@index([saleItemId])
+  @@index([variantId, accountId])
+  @@index([performedById, accountId])
+  @@index([saleItemId, variantId, accountId])
 }
 
 model Expense {
@@ -176,38 +187,42 @@ model Expense {
   accountId   String   @db.Uuid
   description String
   amount      Decimal  @db.Decimal(18, 2)
-  expenseDate DateTime
+  expenseDate DateTime @db.Date
   createdById String   @db.Uuid
 
   account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  createdBy User    @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy User    @relation("ExpenseCreatedBy", fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   @@index([accountId, expenseDate])
+  @@index([createdById, accountId])
 }
 
 model Sale {
-  id             String     @id @default(uuid()) @db.Uuid
-  accountId      String     @db.Uuid
-  soldById       String     @db.Uuid
-  status         SaleStatus @default(COMPLETED)
-  currency       String     @db.Char(3)
-  subtotal       Decimal    @db.Decimal(18, 2)
-  discountAmount Decimal    @default(0) @db.Decimal(18, 2)
-  totalAmount    Decimal    @db.Decimal(18, 2)
+  id               String     @id @default(uuid()) @db.Uuid
+  accountId        String     @db.Uuid
+  soldById         String     @db.Uuid
+  sellerNameAtSale String
+  sellerCodeAtSale String?
+  status           SaleStatus @default(COMPLETED)
+  currency         String     @db.Char(3)
+  subtotal         Decimal    @db.Decimal(18, 2)
+  totalAmount      Decimal    @db.Decimal(18, 2)
 
   account Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  soldBy  User       @relation("SaleSoldBy", fields: [soldById], references: [id], onDelete: Restrict)
+  soldBy  User       @relation("SaleSoldBy", fields: [soldById, accountId], references: [id, accountId], onDelete: Restrict)
   items   SaleItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+  @@unique([id, accountId])
   @@index([accountId, createdAt])
   @@index([accountId, soldById, createdAt])
   @@index([accountId, status, createdAt])
+  @@index([soldById, accountId])
 }
 
 model SaleItem {
@@ -227,23 +242,27 @@ model SaleItem {
 
   quantity       Int
   unitSoldPrice  Decimal @db.Decimal(18, 2)
-  unitCostAtSale Decimal @db.Decimal(18, 2)
+  unitCostAtSale Decimal @db.Decimal(18, 4)
   lineTotal      Decimal @db.Decimal(18, 2)
 
   account  Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  sale     Sale           @relation(fields: [saleId], references: [id], onDelete: Restrict)
-  product  Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
-  variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  category Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sale     Sale           @relation(fields: [saleId, accountId], references: [id, accountId], onDelete: Restrict)
+  product  Product        @relation(fields: [productId, categoryId, accountId], references: [id, categoryId, accountId], onDelete: Restrict)
+  variant  ProductVariant @relation(fields: [variantId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
+  category Category       @relation(fields: [categoryId, accountId], references: [id, accountId], onDelete: Restrict)
 
   movements InventoryMovement[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([saleId])
+  @@unique([id, variantId, accountId])
+  @@index([saleId, accountId])
   @@index([accountId, categoryId, createdAt])
   @@index([accountId, productId, createdAt])
   @@index([accountId, variantId, createdAt])
+  @@index([productId, categoryId, accountId])
+  @@index([variantId, productId, accountId])
+  @@index([categoryId, accountId])
 }
 
 model DailyReport {
@@ -261,8 +280,7 @@ model DailyReport {
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
-  computedAt DateTime @default(now())
+  computedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([accountId, reportDate])
-  @@index([accountId, reportDate])
 }
