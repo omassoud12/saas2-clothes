@@ -16,6 +16,13 @@ enum UserRole {
   WAREHOUSE
 }
 
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
 enum InventoryMovementType {
   RESTOCK
   SALE
@@ -28,10 +35,15 @@ enum SaleStatus {
 }
 
 model Account {
-  id           String  @id @default(uuid()) @db.Uuid
-  name         String
-  isActive     Boolean @default(true)
-  baseCurrency String  @default("USD") @db.Char(3)
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String
+  status          AccountStatus @default(PENDING)
+  baseCurrency    String        @default("USD") @db.Char(3)
+  reviewedAt      DateTime?     @db.Timestamptz(3)
+  reviewedById    String?       @db.Uuid
+  rejectionReason String?
+
+  reviewedBy User? @relation("AccountReviewedBy", fields: [reviewedById], references: [id], onDelete: Restrict)
 
   users              User[]
   categories         Category[]
@@ -45,6 +57,9 @@ model Account {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([reviewedById])
 }
 
 model User {
@@ -59,6 +74,8 @@ model User {
   isActive     Boolean  @default(true)
 
   account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  reviewedAccounts Account[] @relation("AccountReviewedBy")
 
   createdProducts    Product[]           @relation("ProductCreatedBy")
   inventoryMovements InventoryMovement[] @relation("InventoryMovementPerformedBy")
