@@ -1,18 +1,16 @@
 import 'dotenv/config'
-import cors from 'cors'
-import express from 'express'
-import { isSupabaseConfigured } from './supabase.js'
+import { createApp } from './app.js'
+import { createAuthDependencies } from './auth/auth.service.js'
+import { loadEnvironment } from './config/env.js'
+import { createPrismaClient } from './lib/prisma.js'
+import { createSupabaseClients } from './supabase.js'
 
-const app = express()
-const port = Number(process.env.PORT) || 3001
+const environment = loadEnvironment()
+const prisma = createPrismaClient(environment.databaseUrl)
+const supabase = createSupabaseClients(environment)
+const auth = createAuthDependencies(prisma, supabase.verifier)
+const app = createApp({ auth })
 
-app.use(cors())
-app.use(express.json())
-
-app.get('/api/health', (_request, response) => {
-  response.json({ status: 'ok', supabaseConfigured: isSupabaseConfigured })
-})
-
-app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`)
+app.listen(environment.port, () => {
+  console.log(`API listening on http://localhost:${environment.port}`)
 })

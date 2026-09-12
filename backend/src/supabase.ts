@@ -1,23 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
+import type { BackendEnvironment } from './config/env.js'
 
-const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env
+const serverAuthOptions = {
+  persistSession: false,
+  autoRefreshToken: false,
+  detectSessionInUrl: false,
+} as const
 
-function getSupabaseConfig() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return null
-  }
+export function createSupabaseClients(environment: BackendEnvironment) {
+  const verifier = createClient(
+    environment.supabaseUrl,
+    environment.supabasePublicKey,
+    { auth: serverAuthOptions },
+  )
 
-  return {
-    url: SUPABASE_URL,
-    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
-  }
+  const admin = createClient(
+    environment.supabaseUrl,
+    environment.supabaseServiceRoleKey,
+    { auth: serverAuthOptions },
+  )
+
+  return Object.freeze({ verifier, admin })
 }
-
-const supabaseConfig = getSupabaseConfig()
-
-export const isSupabaseConfigured = supabaseConfig !== null
-export const supabaseAdmin = supabaseConfig
-  ? createClient(supabaseConfig.url, supabaseConfig.serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-  : null
