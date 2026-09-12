@@ -1,7 +1,10 @@
 import type { Request, RequestHandler } from 'express'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
-import type { AuthDependencies } from './auth.types.js'
+import type {
+  AuthDependencies,
+  VerifiedIdentityContext,
+} from './auth.types.js'
 
 function getAuthorizationHeader(request: Request): string {
   let rawAuthorizationCount = 0
@@ -56,39 +59,161 @@ function getBearerToken(request: Request): string {
   return match[1]
 }
 
+export async function resolveVerifiedIdentity(
+  request: Request,
+  dependencies: AuthDependencies,
+): Promise<Readonly<VerifiedIdentityContext>> {
+  const accessToken = getBearerToken(request)
+  const identity = await dependencies.verifyAccessToken(accessToken)
+
+  if (!identity) {
+    throw new HttpError(
+      401,
+      'INVALID_ACCESS_TOKEN',
+      'Access token is invalid or expired',
+    )
+  }
+
+  if (identity.isAnonymous) {
+    throw new HttpError(
+      403,
+      'ANONYMOUS_IDENTITY_FORBIDDEN',
+      'Anonymous identities cannot access this application',
+    )
+  }
+
+  if (!identity.email || !identity.emailConfirmedAt) {
+    throw new HttpError(
+      403,
+      'EMAIL_NOT_CONFIRMED',
+      'A confirmed email address is required',
+    )
+  }
+
+  const verifiedEmail = identity.email.trim().toLowerCase()
+
+  if (!verifiedEmail) {
+    throw new HttpError(
+      403,
+      'EMAIL_NOT_CONFIRMED',
+      'A confirmed email address is required',
+    )
+  }
+
+  return Object.freeze({
+    authUserId: identity.id,
+    verifiedEmail,
+  })
+}
+
+export function createRequireVerifiedIdentity(
+  dependencies: AuthDependencies,
+): RequestHandler {
+  return async (request, _response, next) => {
+    try {
+      request.verifiedIdentity = await resolveVerifiedIdentity(
+        request,
+        dependencies,
+      )
+      next()
+    } catch (error) {
+      next(error)
+    }
+  }
+}
+
+interface RateLimitEntry {
+  count: number
+  expiresAt: number
+}
+
+function consumeRateLimit(
+  entries: Map<string, RateLimitEntry>,
+  key: string,
+  limit: number,
+  now: number,
+  windowMs: number,
+): boolean {
+  const current = entries.get(key)
+
+  if (!current || current.expiresAt <= now) {
+    entries.set(key, { count: 1, expiresAt: now + windowMs })
+    return true
+  }
+
+  if (current.count >= limit) return false
+
+  current.count += 1
+  return true
+}
+
+export function createBootstrapRateLimit(): RequestHandler {
+  const windowMs = 10 * 60 * 1000
+  const userEntries = new Map<string, RateLimitEntry>()
+  const ipEntries = new Map<string, RateLimitEntry>()
+
+  return (request, _response, next) => {
+    const identity = request.verifiedIdentity
+
+    if (!identity) {
+      next(
+        new HttpError(
+          401,
+          'AUTHENTICATION_REQUIRED',
+          'A verified identity is required',
+        ),
+      )
+      return
+    }
+
+    const now = Date.now()
+
+    for (const entries of [userEntries, ipEntries]) {
+      for (const [key, entry] of entries) {
+        if (entry.expiresAt <= now) entries.delete(key)
+      }
+    }
+
+    const userAllowed = consumeRateLimit(
+      userEntries,
+      identity.authUserId,
+      5,
+      now,
+      windowMs,
+    )
+    const ipAllowed = consumeRateLimit(
+      ipEntries,
+      request.ip || request.socket.remoteAddress || 'unknown',
+      20,
+      now,
+      windowMs,
+    )
+
+    if (!userAllowed || !ipAllowed) {
+      next(
+        new HttpError(
+          429,
+          'BOOTSTRAP_RATE_LIMITED',
+          'Too many bootstrap attempts; try again later',
+        ),
+      )
+      return
+    }
+
+    next()
+  }
+}
+
 export function createRequireAuth(
   dependencies: AuthDependencies,
 ): RequestHandler {
   return async (request, _response, next) => {
     try {
-      const accessToken = getBearerToken(request)
-      const identity = await dependencies.verifyAccessToken(accessToken)
+      const identity = await resolveVerifiedIdentity(request, dependencies)
 
-      if (!identity) {
-        throw new HttpError(
-          401,
-          'INVALID_ACCESS_TOKEN',
-          'Access token is invalid or expired',
-        )
-      }
-
-      if (identity.isAnonymous) {
-        throw new HttpError(
-          403,
-          'ANONYMOUS_IDENTITY_FORBIDDEN',
-          'Anonymous identities cannot access this application',
-        )
-      }
-
-      if (!identity.email || !identity.emailConfirmedAt) {
-        throw new HttpError(
-          403,
-          'EMAIL_NOT_CONFIRMED',
-          'A confirmed email address is required',
-        )
-      }
-
-      const applicationUser = await dependencies.findApplicationUser(identity.id)
+      const applicationUser = await dependencies.findApplicationUser(
+        identity.authUserId,
+      )
 
       if (!applicationUser) {
         throw new HttpError(

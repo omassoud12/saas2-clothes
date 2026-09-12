@@ -39,6 +39,9 @@ function createDependencies(
     async findCurrentUser() {
       return null
     },
+    async bootstrapOwner() {
+      throw new Error('Not implemented in middleware tests')
+    },
     ...overrides,
   }
 }

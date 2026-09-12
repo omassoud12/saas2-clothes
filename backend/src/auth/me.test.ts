@@ -59,6 +59,9 @@ function createDependencies(
       onProfileLookup?.(resolvedUserId)
       return profile
     },
+    async bootstrapOwner() {
+      throw new Error('Not implemented in /me tests')
+    },
   }
 }
 

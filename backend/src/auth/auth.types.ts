@@ -17,6 +17,43 @@ export interface VerifiedAuthIdentity {
   readonly isAnonymous: boolean
 }
 
+export interface VerifiedIdentityContext {
+  readonly authUserId: string
+  readonly verifiedEmail: string
+}
+
+export type SupportedCurrency = 'USD' | 'LBP'
+
+export interface OwnerBootstrapInput {
+  readonly firstName: string
+  readonly lastName: string
+  readonly accountName: string
+  readonly baseCurrency: SupportedCurrency
+  readonly employeeCode: string | null
+}
+
+export interface OwnerBootstrapData {
+  readonly user: {
+    readonly id: string
+    readonly email: string
+    readonly firstName: string
+    readonly lastName: string
+    readonly role: UserRole
+    readonly employeeCode: string | null
+  }
+  readonly account: {
+    readonly id: string
+    readonly name: string
+    readonly status: AccountStatus
+    readonly baseCurrency: string
+  }
+}
+
+export interface OwnerBootstrapResult {
+  readonly created: boolean
+  readonly data: OwnerBootstrapData
+}
+
 export interface ApplicationIdentity {
   readonly id: string
   readonly role: UserRole
@@ -50,4 +87,8 @@ export interface AuthDependencies {
   findApplicationUser(userId: string): Promise<ApplicationIdentity | null>
   findAccountById(accountId: string): Promise<TenantAccount | null>
   findCurrentUser(userId: string): Promise<CurrentUserProfile | null>
+  bootstrapOwner(
+    identity: VerifiedIdentityContext,
+    input: OwnerBootstrapInput,
+  ): Promise<OwnerBootstrapResult>
 }

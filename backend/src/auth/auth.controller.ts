@@ -1,7 +1,34 @@
 import type { RequestHandler } from 'express'
 import { AccountStatus } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
+import { parseOwnerBootstrapInput } from './auth.schemas.js'
 import type { AuthDependencies } from './auth.types.js'
+
+export function createBootstrapOwner(
+  dependencies: AuthDependencies,
+): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      if (!request.verifiedIdentity) {
+        throw new HttpError(
+          401,
+          'AUTHENTICATION_REQUIRED',
+          'A verified identity is required',
+        )
+      }
+
+      const input = parseOwnerBootstrapInput(request.body)
+      const result = await dependencies.bootstrapOwner(
+        request.verifiedIdentity,
+        input,
+      )
+
+      response.status(result.created ? 201 : 200).json(result.data)
+    } catch (error) {
+      next(error)
+    }
+  }
+}
 
 export function createGetCurrentUser(
   dependencies: AuthDependencies,

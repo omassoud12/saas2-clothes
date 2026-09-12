@@ -1,6 +1,158 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PrismaClient } from '../generated/prisma/client.js'
-import type { AuthDependencies } from './auth.types.js'
+import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
+import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
+import { HttpError } from '../errors/http-error.js'
+import type {
+  AuthDependencies,
+  OwnerBootstrapData,
+  OwnerBootstrapInput,
+  OwnerBootstrapResult,
+  VerifiedIdentityContext,
+} from './auth.types.js'
+
+const ownerBootstrapSelect = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  employeeCode: true,
+  accountId: true,
+  account: {
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      baseCurrency: true,
+    },
+  },
+} as const
+
+type OwnerBootstrapRecord = Prisma.UserGetPayload<{
+  select: typeof ownerBootstrapSelect
+}>
+
+function existingOwnerResult(
+  existingUser: OwnerBootstrapRecord,
+): OwnerBootstrapResult {
+  if (existingUser.role !== UserRole.OWNER) {
+    throw new HttpError(
+      409,
+      'AUTH_IDENTITY_ALREADY_PROVISIONED',
+      'Authenticated identity is already provisioned with another role',
+    )
+  }
+
+  if (!existingUser.accountId || !existingUser.account) {
+    throw new HttpError(
+      500,
+      'OWNER_ACCOUNT_INTEGRITY_ERROR',
+      'Owner account relationship is inconsistent',
+    )
+  }
+
+  return {
+    created: false,
+    data: {
+      user: {
+        id: existingUser.id,
+        email: existingUser.email,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        role: existingUser.role,
+        employeeCode: existingUser.employeeCode,
+      },
+      account: existingUser.account,
+    },
+  }
+}
+
+async function bootstrapOwner(
+  prisma: PrismaClient,
+  identity: VerifiedIdentityContext,
+  input: OwnerBootstrapInput,
+): Promise<OwnerBootstrapResult> {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: identity.authUserId },
+    select: ownerBootstrapSelect,
+  })
+
+  if (existingUser) return existingOwnerResult(existingUser)
+
+  try {
+    return await prisma.$transaction(async (transaction) => {
+      const concurrentExistingUser = await transaction.user.findUnique({
+        where: { id: identity.authUserId },
+        select: ownerBootstrapSelect,
+      })
+
+      if (concurrentExistingUser) {
+        return existingOwnerResult(concurrentExistingUser)
+      }
+
+      const account = await transaction.account.create({
+        data: {
+          name: input.accountName,
+          baseCurrency: input.baseCurrency,
+          status: AccountStatus.PENDING,
+          reviewedAt: null,
+          reviewedById: null,
+          rejectionReason: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          baseCurrency: true,
+        },
+      })
+
+      const user = await transaction.user.create({
+        data: {
+          id: identity.authUserId,
+          email: identity.verifiedEmail,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          employeeCode: input.employeeCode,
+          role: UserRole.OWNER,
+          accountId: account.id,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          employeeCode: true,
+        },
+      })
+
+      const data: OwnerBootstrapData = { user, account }
+      return { created: true, data }
+    })
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      const winningUser = await prisma.user.findUnique({
+        where: { id: identity.authUserId },
+        select: ownerBootstrapSelect,
+      })
+
+      if (winningUser) return existingOwnerResult(winningUser)
+
+      throw new HttpError(
+        409,
+        'EMAIL_ALREADY_PROVISIONED',
+        'Verified email is already associated with another application user',
+      )
+    }
+
+    throw error
+  }
+}
 
 export function createAuthDependencies(
   prisma: PrismaClient,
@@ -63,6 +215,10 @@ export function createAuthDependencies(
           },
         },
       })
+    },
+
+    bootstrapOwner(identity, input) {
+      return bootstrapOwner(prisma, identity, input)
     },
   }
 }
