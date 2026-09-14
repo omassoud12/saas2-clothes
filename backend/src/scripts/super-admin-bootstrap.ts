@@ -10,6 +10,7 @@ export interface SuperAdminBootstrapInput {
   readonly email: string
   readonly firstName: string
   readonly lastName: string
+  readonly inviteRedirectUrl: string
 }
 
 interface ApplicationUserRecord {
@@ -43,7 +44,10 @@ export interface SuperAdminBootstrapDependencies {
     email: string,
   ): Promise<ApplicationUserRecord | null>
   findAuthUserById(userId: string): Promise<AuthOperationResult>
-  inviteAuthUser(email: string): Promise<AuthOperationResult>
+  inviteAuthUser(
+    email: string,
+    redirectTo: string,
+  ): Promise<AuthOperationResult>
   deleteAuthUser(userId: string): Promise<AuthDeleteResult>
   createApplicationSuperAdmin(input: {
     readonly id: string
@@ -115,6 +119,37 @@ function normalizeEmail(value: string | undefined): string {
   return normalized
 }
 
+function normalizeInviteRedirectUrl(value: string | undefined): string {
+  if (typeof value !== 'string') {
+    throw inputError('SUPER_ADMIN_INVITE_REDIRECT_URL is required')
+  }
+
+  try {
+    const url = new URL(value.trim())
+    const isLocalHttp =
+      url.protocol === 'http:' &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+
+    if (
+      (url.protocol !== 'https:' && !isLocalHttp) ||
+      url.pathname.replace(/\/+$/, '') !== '/auth/callback' ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error('Invalid redirect URL')
+    }
+
+    url.pathname = url.pathname.replace(/\/+$/, '')
+    return url.toString()
+  } catch {
+    throw inputError(
+      'SUPER_ADMIN_INVITE_REDIRECT_URL must be an HTTPS callback URL, or localhost HTTP, ending in /auth/callback',
+    )
+  }
+}
+
 function parseArguments(arguments_: readonly string[]): Map<string, string> {
   const allowedOptions = new Set(['email', 'first-name', 'last-name'])
   const values = new Map<string, string>()
@@ -172,6 +207,9 @@ export function parseSuperAdminBootstrapInput(
     lastName: normalizeName(
       argumentsByName.get('last-name') ?? environment.SUPER_ADMIN_LAST_NAME,
       'lastName',
+    ),
+    inviteRedirectUrl: normalizeInviteRedirectUrl(
+      environment.SUPER_ADMIN_INVITE_REDIRECT_URL,
     ),
   })
 }
@@ -273,7 +311,10 @@ export async function bootstrapSuperAdmin(
 
   let invitation: AuthOperationResult
   try {
-    invitation = await dependencies.inviteAuthUser(input.email)
+    invitation = await dependencies.inviteAuthUser(
+      input.email,
+      input.inviteRedirectUrl,
+    )
   } catch {
     throw new SuperAdminBootstrapError(
       'AUTH_OUTCOME_AMBIGUOUS',
@@ -371,8 +412,10 @@ export function createSuperAdminBootstrapDependencies(
       }
     },
 
-    async inviteAuthUser(email) {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(email)
+    async inviteAuthUser(email, redirectTo) {
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo,
+      })
       return {
         user: data.user
           ? { id: data.user.id, email: data.user.email ?? null }

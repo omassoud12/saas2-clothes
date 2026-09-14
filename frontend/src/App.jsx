@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured } from './lib/supabase.js'
+import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
+import { LoginPage } from './pages/LoginPage.jsx'
+import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
 
 function App() {
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
+
+  if (pathname === '/auth/callback') return <AuthCallbackPage />
+  if (pathname === '/set-password') return <SetPasswordPage />
+  if (pathname === '/login') return <LoginPage />
+
+  return <HomePage />
+}
+
+function HomePage() {
   const [apiStatus, setApiStatus] = useState('Checking…')
 
   useEffect(() => {

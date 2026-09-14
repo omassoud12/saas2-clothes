@@ -14,6 +14,7 @@ const input: SuperAdminBootstrapInput = Object.freeze({
   email: 'admin@example.com',
   firstName: 'Platform',
   lastName: 'Admin',
+  inviteRedirectUrl: 'http://localhost:5173/auth/callback',
 })
 
 type ApplicationUser = Awaited<
@@ -47,6 +48,7 @@ class DependenciesDouble implements SuperAdminBootstrapDependencies {
   compensationThrows = false
   authLookupFailed = false
   invitedCount = 0
+  invitedRedirectUrl: string | undefined
   createdCount = 0
   deletedIds: string[] = []
   createdInput:
@@ -77,8 +79,9 @@ class DependenciesDouble implements SuperAdminBootstrapDependencies {
     }
   }
 
-  async inviteAuthUser() {
+  async inviteAuthUser(_email: string, redirectTo: string) {
     this.invitedCount += 1
+    this.invitedRedirectUrl = redirectTo
     if (this.inviteThrows) throw new Error('secret transport detail')
     return {
       user: this.inviteFailed ? null : { id: authUserId, email: input.email },
@@ -123,13 +126,19 @@ async function expectBootstrapError(
 describe('SUPER_ADMIN CLI input', () => {
   test('normalizes CLI input', () => {
     assert.deepEqual(
-      parseSuperAdminBootstrapInput([
-        '--email',
-        ' ADMIN@Example.COM ',
-        '--first-name= Platform ',
-        '--last-name',
-        ' Admin ',
-      ]),
+      parseSuperAdminBootstrapInput(
+        [
+          '--email',
+          ' ADMIN@Example.COM ',
+          '--first-name= Platform ',
+          '--last-name',
+          ' Admin ',
+        ],
+        {
+          SUPER_ADMIN_INVITE_REDIRECT_URL:
+            'http://localhost:5173/auth/callback',
+        },
+      ),
       input,
     )
   })
@@ -140,8 +149,23 @@ describe('SUPER_ADMIN CLI input', () => {
         SUPER_ADMIN_EMAIL: ' ADMIN@EXAMPLE.COM ',
         SUPER_ADMIN_FIRST_NAME: ' Platform ',
         SUPER_ADMIN_LAST_NAME: ' Admin ',
+        SUPER_ADMIN_INVITE_REDIRECT_URL:
+          'http://localhost:5173/auth/callback',
       }),
       input,
+    )
+  })
+
+  test('rejects an unsafe invitation redirect URL', () => {
+    assert.throws(
+      () =>
+        parseSuperAdminBootstrapInput([], {
+          SUPER_ADMIN_EMAIL: 'admin@example.com',
+          SUPER_ADMIN_FIRST_NAME: 'Platform',
+          SUPER_ADMIN_LAST_NAME: 'Admin',
+          SUPER_ADMIN_INVITE_REDIRECT_URL: 'http://example.com/auth/callback',
+        }),
+      SuperAdminBootstrapError,
     )
   })
 
@@ -269,6 +293,7 @@ describe('SUPER_ADMIN provisioning', () => {
 
     assert.deepEqual(result, { created: true, userId: authUserId })
     assert.equal(dependencies.invitedCount, 1)
+    assert.equal(dependencies.invitedRedirectUrl, input.inviteRedirectUrl)
     assert.equal(dependencies.createdCount, 1)
     assert.deepEqual(dependencies.createdInput, {
       id: authUserId,
