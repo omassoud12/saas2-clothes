@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { AppRouteGuard } from './app/AppRouteGuard.jsx'
 import { isSupabaseConfigured } from './lib/supabase.js'
 import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
 import { AdminPage } from './pages/AdminPage.jsx'
-import { AuthenticatedStatusPage } from './pages/AuthenticatedStatusPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
 import { PendingApprovalPage } from './pages/PendingApprovalPage.jsx'
@@ -10,8 +10,30 @@ import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
 import { SignupCallbackPage } from './pages/SignupCallbackPage.jsx'
 import { SignupPage } from './pages/SignupPage.jsx'
 
+function readPathname() {
+  return window.location.pathname.replace(/\/+$/, '') || '/'
+}
+
 function App() {
-  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
+  const [pathname, setPathname] = useState(readPathname)
+
+  useEffect(() => {
+    function handlePopState() {
+      setPathname(readPathname())
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const navigate = useCallback((path, options = {}) => {
+    if (options.replace) {
+      window.history.replaceState(null, '', path)
+    } else {
+      window.history.pushState(null, '', path)
+    }
+    setPathname(readPathname())
+  }, [])
 
   if (pathname === '/auth/callback') return <AuthCallbackPage />
   if (pathname === '/auth/signup-callback') return <SignupCallbackPage />
@@ -21,7 +43,9 @@ function App() {
   if (pathname === '/owner/onboarding') return <OwnerOnboardingPage />
   if (pathname === '/pending-approval') return <PendingApprovalPage />
   if (pathname === '/admin') return <AdminPage />
-  if (pathname === '/app') return <AuthenticatedStatusPage destination="/app" />
+  if (pathname === '/app' || pathname.startsWith('/app/')) {
+    return <AppRouteGuard pathname={pathname} navigate={navigate} />
+  }
 
   return <HomePage />
 }
