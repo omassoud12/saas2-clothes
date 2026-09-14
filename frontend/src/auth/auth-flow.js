@@ -1,11 +1,61 @@
 export const PASSWORD_MIN_LENGTH = 8
+export const RECOVERY_REQUEST_MESSAGE =
+  'If an account exists for this email, a password reset link has been sent.'
 
 const passwordSetupMarkerKey = 'clothes.password-setup-session'
 const passwordSetupWindowMs = 15 * 60 * 1000
 const callbackKinds = new Set(['invite', 'recovery'])
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function resultError(code, message) {
   return Object.freeze({ ok: false, code, message })
+}
+
+export async function requestPasswordRecovery({ supabase, email, origin }) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+
+  if (
+    !normalizedEmail ||
+    normalizedEmail.length > 254 ||
+    !emailPattern.test(normalizedEmail)
+  ) {
+    return resultError(
+      'INVALID_RECOVERY_EMAIL',
+      'Enter a valid email address.',
+    )
+  }
+
+  if (!supabase) {
+    return resultError(
+      'SUPABASE_NOT_CONFIGURED',
+      'Authentication is not configured for this application.',
+    )
+  }
+
+  let redirectTo
+  try {
+    const originUrl = new URL(origin)
+    if (
+      !['http:', 'https:'].includes(originUrl.protocol) ||
+      originUrl.origin !== originUrl.href.replace(/\/$/, '')
+    ) {
+      throw new Error('Invalid frontend origin')
+    }
+    redirectTo = new URL('/auth/callback', originUrl).toString()
+  } catch {
+    return resultError(
+      'INVALID_FRONTEND_ORIGIN',
+      'Password recovery is unavailable from this location.',
+    )
+  }
+
+  try {
+    await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
+  } catch {
+    // Deliberately return the same neutral response as a successful request.
+  }
+
+  return Object.freeze({ ok: true, message: RECOVERY_REQUEST_MESSAGE })
 }
 
 export function inspectAuthCallbackUrl(href) {

@@ -3,6 +3,8 @@ import { describe, test } from 'node:test'
 import {
   completeAuthCallback,
   inspectAuthCallbackUrl,
+  RECOVERY_REQUEST_MESSAGE,
+  requestPasswordRecovery,
   updateInvitedUserPassword,
   validateNewPassword,
   verifyPasswordSetupSession,
@@ -28,9 +30,22 @@ class MemoryStorage {
 }
 
 function createSupabase(options = {}) {
-  const calls = { getSession: 0, updateUser: [], signOut: 0 }
+  const calls = {
+    getSession: 0,
+    resetPasswordForEmail: [],
+    updateUser: [],
+    signOut: 0,
+  }
   const client = {
     auth: {
+      async resetPasswordForEmail(email, settings) {
+        calls.resetPasswordForEmail.push({ email, settings })
+        if (options.recoveryThrows) throw new Error('private recovery detail')
+        return {
+          data: {},
+          error: options.recoveryError ? new Error('private recovery detail') : null,
+        }
+      },
       async getSession() {
         calls.getSession += 1
         return {
@@ -56,6 +71,57 @@ function createSupabase(options = {}) {
 
   return { client, calls }
 }
+
+describe('password recovery request', () => {
+  test('normalizes email and derives the callback from the frontend origin', async () => {
+    const { client, calls } = createSupabase()
+
+    const result = await requestPasswordRecovery({
+      supabase: client,
+      email: ' ADMIN@Example.COM ',
+      origin: 'http://localhost:5173',
+    })
+
+    assert.deepEqual(result, { ok: true, message: RECOVERY_REQUEST_MESSAGE })
+    assert.deepEqual(calls.resetPasswordForEmail, [
+      {
+        email: 'admin@example.com',
+        settings: { redirectTo: 'http://localhost:5173/auth/callback' },
+      },
+    ])
+  })
+
+  test('rejects invalid email without calling Supabase', async () => {
+    const { client, calls } = createSupabase()
+    const result = await requestPasswordRecovery({
+      supabase: client,
+      email: 'not-an-email',
+      origin: 'http://localhost:5173',
+    })
+
+    assert.equal(result.ok, false)
+    assert.equal(result.code, 'INVALID_RECOVERY_EMAIL')
+    assert.deepEqual(calls.resetPasswordForEmail, [])
+  })
+
+  for (const failureMode of ['returned', 'thrown']) {
+    test(`handles a ${failureMode} Supabase error with the neutral response`, async () => {
+      const { client } = createSupabase({
+        recoveryError: failureMode === 'returned',
+        recoveryThrows: failureMode === 'thrown',
+      })
+
+      const result = await requestPasswordRecovery({
+        supabase: client,
+        email: 'admin@example.com',
+        origin: 'http://localhost:5173',
+      })
+
+      assert.deepEqual(result, { ok: true, message: RECOVERY_REQUEST_MESSAGE })
+      assert.doesNotMatch(result.message, /private|registered/i)
+    })
+  }
+})
 
 async function establishInvitation(storage, client, callback = { kind: 'invite', hasError: false }) {
   return completeAuthCallback({
@@ -106,6 +172,27 @@ describe('invitation callback', () => {
       (await verifyPasswordSetupSession({ supabase: client, storage, now })).ok,
       true,
     )
+  })
+
+  test('reuses the same callback and set-password flow for recovery', async () => {
+    const storage = new MemoryStorage()
+    const { client, calls } = createSupabase()
+    const callback = await establishInvitation(storage, client, {
+      kind: 'recovery',
+      hasError: false,
+    })
+    const passwordUpdate = await updateInvitedUserPassword({
+      supabase: client,
+      storage,
+      newPassword: 'strong-pass-1',
+      confirmPassword: 'strong-pass-1',
+      now,
+    })
+
+    assert.deepEqual(callback, { ok: true, redirectTo: '/set-password' })
+    assert.deepEqual(passwordUpdate, { ok: true, redirectTo: '/login' })
+    assert.equal(calls.updateUser.length, 1)
+    assert.equal(calls.signOut, 1)
   })
 
   test('rejects an invalid callback safely', async () => {
