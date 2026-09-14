@@ -11,6 +11,24 @@ function resultError(code, message) {
   return Object.freeze({ ok: false, code, message })
 }
 
+export function buildFrontendUrl(origin, pathname) {
+  try {
+    const originUrl = new URL(origin)
+    if (
+      !['http:', 'https:'].includes(originUrl.protocol) ||
+      originUrl.origin !== originUrl.href.replace(/\/$/, '') ||
+      typeof pathname !== 'string' ||
+      !pathname.startsWith('/')
+    ) {
+      return null
+    }
+
+    return new URL(pathname, originUrl).toString()
+  } catch {
+    return null
+  }
+}
+
 export async function requestPasswordRecovery({ supabase, email, origin }) {
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
 
@@ -32,17 +50,8 @@ export async function requestPasswordRecovery({ supabase, email, origin }) {
     )
   }
 
-  let redirectTo
-  try {
-    const originUrl = new URL(origin)
-    if (
-      !['http:', 'https:'].includes(originUrl.protocol) ||
-      originUrl.origin !== originUrl.href.replace(/\/$/, '')
-    ) {
-      throw new Error('Invalid frontend origin')
-    }
-    redirectTo = new URL('/auth/callback', originUrl).toString()
-  } catch {
+  const redirectTo = buildFrontendUrl(origin, '/auth/callback')
+  if (!redirectTo) {
     return resultError(
       'INVALID_FRONTEND_ORIGIN',
       'Password recovery is unavailable from this location.',

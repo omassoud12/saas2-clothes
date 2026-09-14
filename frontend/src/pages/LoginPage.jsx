@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { requestPasswordRecovery } from '../auth/auth-flow.js'
+import { resolvePostLoginDestination } from '../auth/owner-flow.js'
 import { supabase } from '../lib/supabase.js'
 
 export function LoginPage() {
@@ -23,18 +24,17 @@ export function LoginPage() {
     actionLock.current = true
     setBusyAction('login')
     setMessage('')
-    let error
+    let signInResult
     try {
-      const result = await supabase.auth.signInWithPassword({
+      signInResult = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
-      error = result.error
     } catch {
-      error = true
+      signInResult = { error: true }
     }
 
-    if (error) {
+    if (signInResult.error) {
       setMessage('Sign in failed. Check your credentials and try again.')
       setMessageKind('error')
       actionLock.current = false
@@ -43,7 +43,16 @@ export function LoginPage() {
     }
 
     setPassword('')
-    window.location.replace('/')
+    const destination = await resolvePostLoginDestination({ supabase })
+    if (!destination.ok) {
+      setMessage(destination.message)
+      setMessageKind('error')
+      actionLock.current = false
+      setBusyAction(null)
+      return
+    }
+
+    window.location.replace(destination.redirectTo)
   }
 
   async function handlePasswordRecovery() {
@@ -68,7 +77,7 @@ export function LoginPage() {
       <section className="card auth-card">
         <span className="eyebrow">Welcome back</span>
         <h1>Sign in</h1>
-        <p>Use the password you created from your secure invitation.</p>
+        <p>Use your confirmed email address and password.</p>
         <form onSubmit={handleSubmit} noValidate>
           <label htmlFor="email">Email</label>
           <input
@@ -110,6 +119,9 @@ export function LoginPage() {
             {busyAction === 'login' ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        <p className="auth-link-row">
+          Opening a new store? <a href="/signup">Create an owner account</a>
+        </p>
       </section>
     </main>
   )

@@ -1,15 +1,26 @@
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured } from './lib/supabase.js'
 import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
+import { AuthenticatedStatusPage } from './pages/AuthenticatedStatusPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
+import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
+import { PendingApprovalPage } from './pages/PendingApprovalPage.jsx'
 import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
+import { SignupCallbackPage } from './pages/SignupCallbackPage.jsx'
+import { SignupPage } from './pages/SignupPage.jsx'
 
 function App() {
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
 
   if (pathname === '/auth/callback') return <AuthCallbackPage />
+  if (pathname === '/auth/signup-callback') return <SignupCallbackPage />
   if (pathname === '/set-password') return <SetPasswordPage />
   if (pathname === '/login') return <LoginPage />
+  if (pathname === '/signup') return <SignupPage />
+  if (pathname === '/owner/onboarding') return <OwnerOnboardingPage />
+  if (pathname === '/pending-approval') return <PendingApprovalPage />
+  if (pathname === '/admin') return <AuthenticatedStatusPage destination="/admin" />
+  if (pathname === '/app') return <AuthenticatedStatusPage destination="/app" />
 
   return <HomePage />
 }
