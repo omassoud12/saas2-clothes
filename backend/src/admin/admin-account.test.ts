@@ -8,6 +8,7 @@ import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import { createRequireAuth, requireRole } from '../auth/auth.middleware.js'
 import type { AuthDependencies } from '../auth/auth.types.js'
+import type { CategoryDependencies } from '../categories/category.types.js'
 import {
   createApproveAccount,
   createRejectAccount,
@@ -279,6 +280,20 @@ describe('admin Account authorization', () => {
     const app = createApp({
       auth: authDependencies(UserRole.SUPER_ADMIN),
       adminAccounts,
+      categories: {
+        async listCategories() {
+          return []
+        },
+        async createCategory() {
+          throw new Error('Not implemented in admin tests')
+        },
+        async updateCategory() {
+          throw new Error('Not implemented in admin tests')
+        },
+        async deleteCategory() {
+          throw new Error('Not implemented in admin tests')
+        },
+      } satisfies CategoryDependencies,
     })
     const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
       const listeningServer = app.listen(0, '127.0.0.1', () =>
