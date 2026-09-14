@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured } from './lib/supabase.js'
 import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
+import { AdminPage } from './pages/AdminPage.jsx'
 import { AuthenticatedStatusPage } from './pages/AuthenticatedStatusPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
@@ -19,7 +20,7 @@ function App() {
   if (pathname === '/signup') return <SignupPage />
   if (pathname === '/owner/onboarding') return <OwnerOnboardingPage />
   if (pathname === '/pending-approval') return <PendingApprovalPage />
-  if (pathname === '/admin') return <AuthenticatedStatusPage destination="/admin" />
+  if (pathname === '/admin') return <AdminPage />
   if (pathname === '/app') return <AuthenticatedStatusPage destination="/app" />
 
   return <HomePage />

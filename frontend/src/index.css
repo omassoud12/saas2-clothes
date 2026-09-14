@@ -22,8 +22,9 @@ p { color: #5c675e; font-size: 1.08rem; line-height: 1.7; }
 .auth-card h1 { font-size: clamp(2.4rem, 7vw, 4rem); }
 form { display: grid; gap: .75rem; margin-top: 2rem; }
 label { margin-top: .4rem; color: #34483a; font-size: .9rem; font-weight: 750; }
-input, select { width: 100%; border: 1px solid #b8c5b6; border-radius: 12px; padding: .9rem 1rem; background: #fff; color: #17211a; font: inherit; }
-input:focus, select:focus { border-color: #557a5b; outline: 3px solid rgba(85, 122, 91, .16); }
+input, select, textarea { width: 100%; border: 1px solid #b8c5b6; border-radius: 12px; padding: .9rem 1rem; background: #fff; color: #17211a; font: inherit; }
+input:focus, select:focus, textarea:focus { border-color: #557a5b; outline: 3px solid rgba(85, 122, 91, .16); }
+textarea { resize: vertical; }
 button, .button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; margin-top: .75rem; border: 0; border-radius: 12px; padding: .8rem 1.15rem; background: #2f6b3b; color: #fff; font: inherit; font-weight: 800; text-decoration: none; cursor: pointer; }
 button:disabled { cursor: wait; opacity: .65; }
 .text-button { justify-self: end; min-height: auto; margin: 0; padding: .25rem 0; background: transparent; color: #2f6b3b; font-size: .9rem; }
@@ -43,3 +44,39 @@ button:disabled { cursor: wait; opacity: .65; }
 .error-notice { background: #fbefed; color: #8c2d2d; }
 .spinner { width: 34px; height: 34px; margin-top: 1.5rem; border: 3px solid #d5ded2; border-top-color: #2f6b3b; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.admin-main { display: block; padding: clamp(1.25rem, 4vw, 3rem); }
+.admin-panel { width: min(1080px, 100%); margin: 0 auto; }
+.admin-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem; margin-bottom: 2rem; }
+.admin-header h1 { margin-bottom: .6rem; }
+.admin-header p { margin: 0; }
+.admin-header button { flex: 0 0 auto; }
+.admin-message { margin: 0 0 1.25rem; border-radius: 12px; padding: .9rem 1rem; background: rgba(255, 255, 255, .75); }
+.admin-account-list { display: grid; gap: 1.25rem; }
+.admin-account-card, .admin-empty-state { border: 1px solid #cbd5c5; border-radius: 20px; padding: clamp(1.25rem, 4vw, 2rem); background: rgba(255, 255, 255, .82); box-shadow: 0 16px 42px rgba(31, 51, 37, .08); }
+.admin-empty-state { text-align: center; }
+.admin-empty-state h2 { margin-bottom: .35rem; }
+.admin-empty-state p { margin: 0; }
+.admin-account-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
+.admin-account-heading h2 { margin: .65rem 0 0; font-family: Georgia, serif; font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: 500; letter-spacing: -.025em; }
+.admin-account-heading .status-chip { margin-top: 0; }
+.request-date { color: #657068; font-size: .9rem; text-align: right; }
+.admin-account-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.admin-account-details div { min-width: 0; border-radius: 12px; padding: 1rem; background: #f4f6f1; }
+.admin-account-details dt { margin-bottom: .3rem; color: #657068; font-size: .82rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.admin-account-details dd { margin: 0; overflow-wrap: anywhere; color: #263b2c; font-weight: 750; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.admin-actions button { margin-top: 0; }
+.secondary-action { background: #e3eae0; color: #294f31; }
+.danger-action { background: #9c2f2f; }
+.rejection-form { margin-top: 1.5rem; border-top: 1px solid #dbe2d7; padding-top: 1.25rem; }
+.rejection-form-meta { display: flex; justify-content: flex-end; color: #657068; font-size: .8rem; }
+.rejection-form .error-message { margin: .25rem 0; }
+
+@media (max-width: 700px) {
+  .admin-header, .admin-account-heading { flex-direction: column; }
+  .admin-header button { width: 100%; }
+  .request-date { text-align: left; }
+  .admin-account-details { grid-template-columns: 1fr; }
+  .admin-actions button { flex: 1 1 160px; }
+}

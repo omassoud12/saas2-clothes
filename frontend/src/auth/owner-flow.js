@@ -321,7 +321,7 @@ function safeApiError(response, body, fallbackMessage) {
   return resultError(code, fallbackMessage, response.status)
 }
 
-async function authenticatedApiRequest({
+export async function authenticatedApiRequest({
   supabase,
   fetchImpl,
   path,
