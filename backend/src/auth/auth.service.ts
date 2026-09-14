@@ -32,6 +32,62 @@ type OwnerBootstrapRecord = Prisma.UserGetPayload<{
   select: typeof ownerBootstrapSelect
 }>
 
+export interface AuthVerificationFailure {
+  readonly status: number | null
+  readonly code: string
+}
+
+type AuthVerificationFailureReporter = (
+  failure: AuthVerificationFailure,
+) => void
+
+function toSafeAuthVerificationFailure(
+  error: unknown,
+): AuthVerificationFailure {
+  const status =
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof error.status === 'number' &&
+    Number.isInteger(error.status) &&
+    error.status >= 400 &&
+    error.status <= 599
+      ? error.status
+      : null
+  const providerCode =
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    /^[A-Za-z0-9_-]{1,100}$/.test(error.code)
+      ? error.code
+      : null
+
+  return Object.freeze({
+    status,
+    code: providerCode ?? 'AUTH_PROVIDER_ERROR',
+  })
+}
+
+function reportAuthVerificationFailure(
+  failure: AuthVerificationFailure,
+): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('Supabase Auth verification failed', failure)
+  }
+}
+
+function safelyReportAuthVerificationFailure(
+  error: unknown,
+  reporter: AuthVerificationFailureReporter,
+): void {
+  try {
+    reporter(toSafeAuthVerificationFailure(error))
+  } catch {
+    // Authentication behavior must not depend on diagnostic reporting.
+  }
+}
+
 function existingOwnerResult(
   existingUser: OwnerBootstrapRecord,
 ): OwnerBootstrapResult {
@@ -157,21 +213,34 @@ async function bootstrapOwner(
 export function createAuthDependencies(
   prisma: PrismaClient,
   verifier: SupabaseClient,
+  reportVerificationFailure: AuthVerificationFailureReporter =
+    reportAuthVerificationFailure,
 ): AuthDependencies {
   return {
     async verifyAccessToken(accessToken) {
-      const {
-        data: { user },
-        error,
-      } = await verifier.auth.getUser(accessToken)
+      try {
+        const {
+          data: { user },
+          error,
+        } = await verifier.auth.getUser(accessToken)
 
-      if (error || !user) return null
+        if (error || !user) {
+          safelyReportAuthVerificationFailure(
+            error ?? { code: 'AUTH_USER_MISSING' },
+            reportVerificationFailure,
+          )
+          return null
+        }
 
-      return {
-        id: user.id,
-        email: user.email ?? null,
-        emailConfirmedAt: user.email_confirmed_at ?? null,
-        isAnonymous: user.is_anonymous === true,
+        return {
+          id: user.id,
+          email: user.email ?? null,
+          emailConfirmedAt: user.email_confirmed_at ?? null,
+          isAnonymous: user.is_anonymous === true,
+        }
+      } catch (error) {
+        safelyReportAuthVerificationFailure(error, reportVerificationFailure)
+        return null
       }
     },
 

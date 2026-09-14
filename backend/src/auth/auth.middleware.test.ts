@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import type { PrismaClient } from '../generated/prisma/client.js'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import {
@@ -8,6 +10,10 @@ import {
   createRequireTenant,
   requireRole,
 } from './auth.middleware.js'
+import {
+  createAuthDependencies,
+  type AuthVerificationFailure,
+} from './auth.service.js'
 import type { AuthDependencies } from './auth.types.js'
 
 const userId = '11111111-1111-4111-8111-111111111111'
@@ -85,6 +91,138 @@ function assertHttpError(
   assert.equal(error.status, status)
   assert.equal(error.code, code)
 }
+
+function createVerifier(
+  getUser: (accessToken: string) => Promise<unknown>,
+): SupabaseClient {
+  return {
+    auth: { getUser },
+  } as unknown as SupabaseClient
+}
+
+describe('Supabase access-token verification', () => {
+  test('passes the request bearer token to getUser and continues to application User lookup', async () => {
+    let receivedAccessToken: string | undefined
+    let applicationLookupUserId: string | undefined
+    const verifier = createVerifier(async (accessToken) => {
+      receivedAccessToken = accessToken
+      return {
+        data: {
+          user: {
+            id: userId,
+            email: 'owner@example.com',
+            email_confirmed_at: '2026-09-12T00:00:00.000Z',
+            is_anonymous: false,
+          },
+        },
+        error: null,
+      }
+    })
+    const prisma = {
+      user: {
+        async findUnique(query: { where: { id: string } }) {
+          applicationLookupUserId = query.where.id
+          return {
+            id: userId,
+            role: UserRole.OWNER,
+            accountId,
+            isActive: true,
+          }
+        },
+      },
+    } as unknown as PrismaClient
+    const failures: AuthVerificationFailure[] = []
+    const dependencies = createAuthDependencies(
+      prisma,
+      verifier,
+      (failure) => failures.push(failure),
+    )
+    const request = createRequest('Bearer request-user-jwt')
+
+    const error = await invoke(createRequireAuth(dependencies), request)
+
+    assert.equal(error, undefined)
+    assert.equal(receivedAccessToken, 'request-user-jwt')
+    assert.equal(applicationLookupUserId, userId)
+    assert.deepEqual(request.auth, {
+      userId,
+      role: UserRole.OWNER,
+      accountId,
+    })
+    assert.deepEqual(failures, [])
+  })
+
+  test('reports only safe provider status and code for an invalid token', async () => {
+    const verifier = createVerifier(async () => ({
+      data: { user: null },
+      error: {
+        status: 403,
+        code: 'bad_jwt',
+        message: 'sensitive provider detail containing a token',
+      },
+    }))
+    const failures: AuthVerificationFailure[] = []
+    const dependencies = createAuthDependencies(
+      {} as PrismaClient,
+      verifier,
+      (failure) => failures.push(failure),
+    )
+
+    const identity = await dependencies.verifyAccessToken('invalid-token')
+
+    assert.equal(identity, null)
+    assert.deepEqual(failures, [{ status: 403, code: 'bad_jwt' }])
+    assert.equal(JSON.stringify(failures).includes('sensitive'), false)
+    assert.equal(JSON.stringify(failures).includes('invalid-token'), false)
+  })
+
+  test('preserves a safe provider code that distinguishes key misconfiguration', async () => {
+    const verifier = createVerifier(async () => ({
+      data: { user: null },
+      error: {
+        status: 401,
+        code: 'invalid_api_key',
+        message: 'sensitive provider configuration detail',
+      },
+    }))
+    const failures: AuthVerificationFailure[] = []
+    const dependencies = createAuthDependencies(
+      {} as PrismaClient,
+      verifier,
+      (failure) => failures.push(failure),
+    )
+
+    const identity = await dependencies.verifyAccessToken('invalid-token')
+
+    assert.equal(identity, null)
+    assert.deepEqual(failures, [{ status: 401, code: 'invalid_api_key' }])
+    assert.equal(JSON.stringify(failures).includes('configuration'), false)
+  })
+
+  test('sanitizes a thrown provider error without leaking its details', async () => {
+    const verifier = createVerifier(async () => {
+      throw Object.assign(new Error('sensitive network detail'), {
+        status: 503,
+        code: 'provider_unavailable',
+      })
+    })
+    const failures: AuthVerificationFailure[] = []
+    const dependencies = createAuthDependencies(
+      {} as PrismaClient,
+      verifier,
+      (failure) => failures.push(failure),
+    )
+
+    const identity = await dependencies.verifyAccessToken('invalid-token')
+
+    assert.equal(identity, null)
+    assert.deepEqual(failures, [
+      { status: 503, code: 'provider_unavailable' },
+    ])
+    assert.equal(JSON.stringify(failures).includes('network'), false)
+    assert.equal(JSON.stringify(failures).includes('invalid-token'), false)
+  })
+})
 
 describe('requireAuth', () => {
   test('rejects a missing Authorization header', async () => {
