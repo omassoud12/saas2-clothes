@@ -114,7 +114,7 @@ model Product {
   accountId            String   @db.Uuid
   categoryId           String   @db.Uuid
   name                 String
-  imageUrl             String?
+  imageKey             String?
   profitMarginOverride Decimal? @db.Decimal(7, 4)
   createdById          String   @db.Uuid
   isActive             Boolean  @default(true)
