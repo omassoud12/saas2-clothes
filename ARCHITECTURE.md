@@ -92,6 +92,9 @@ Examples:
 - InventoryMovement
 - Sale
 - SaleItem
+- SaleReturn
+- SaleReturnItem
+- Exchange
 - Expense
 - DailyReport
 
@@ -134,6 +137,8 @@ Can:
 - access accounting
 - access reports
 - perform sales
+- void sales
+- process returns and exchanges
 - manage Warehouse employee
 
 An OWNER employee code is optional.
@@ -148,6 +153,7 @@ Can:
 - create categories
 - restock inventory
 - perform sales
+- process returns and exchanges
 
 An Account may have multiple WAREHOUSE employees. Each WAREHOUSE employee has
 their own User account and a required employee code that is unique within the
@@ -158,6 +164,7 @@ Cannot:
 - access expenses
 - view sensitive costs/profit
 - manage account-level settings
+- void sales
 
 Authorization must be enforced by the backend.
 Hiding UI elements is not considered authorization.
@@ -218,13 +225,19 @@ Supported movement concepts:
 
 - RESTOCK
 - SALE
+- RETURN
+- SALE_VOID
 - DAMAGE
 - ADJUSTMENT
 
-Returns and exchanges will be added with their complete financial and inventory
-reversal models in a later version. Returns may be partial or full, may have an
-optional reason, and may be performed by OWNER or WAREHOUSE. An exchange is a
-Return plus a new Sale, not a distinct EXCHANGE inventory movement type.
+RETURN and SALE_VOID movements restore stock. Every SALE, SALE_VOID, and RETURN
+movement has exactly one matching SaleItem or SaleReturnItem reference, and
+database partial unique indexes make those movements idempotent. There is no
+EXCHANGE inventory movement type; an exchange is a Return plus a new Sale.
+
+For RETURN and SALE_VOID movements, InventoryMovement.unitCost must equal the
+original SaleItem.unitCostAtSale. Reversals never use the ProductVariant's
+current cost.
 
 currentStock is used for fast reads.
 
@@ -255,10 +268,42 @@ SaleItem must preserve historical snapshots such as:
 
 Changing a Product later must never modify historical sales.
 
-The future stored SaleStatus contract is COMPLETED or VOIDED. Return disposition
-is derived rather than stored. Voiding is OWNER-only, requires a reason, and is
-not allowed after any Return exists. Returns and voids must not rewrite the
-original Sale or SaleItems; the original SaleItem quantity remains unchanged.
+The stored SaleStatus contract is COMPLETED or VOIDED. Return disposition is
+derived from SaleReturnItem history rather than stored.
+
+A void stores voidedAt, the tenant-qualified void actor and immutable actor-name
+and optional actor-code snapshots, plus a required nonblank reason. Voiding is
+OWNER-only, restores stock through SALE_VOID movements, and reverses the Sale's
+reporting impact without rewriting its totals or items. A Sale can transition
+only once from COMPLETED to VOIDED, cannot be voided after any Return, and cannot
+be hard-deleted.
+
+A COMPLETED Sale is immutable after creation. Its only permitted update is the
+approved COMPLETED to VOIDED transition and the corresponding void metadata.
+
+SaleReturn is an immutable return header with a tenant-qualified Sale and
+processor. SaleReturnItem records positive returned quantities and immutable
+refund amounts against the original SaleItem and ProductVariant. Returns can be
+partial or full, may have an optional reason, and may be processed by OWNER or
+WAREHOUSE. The original SaleItem quantity never changes. The database locks the
+relevant SaleItem before checking the cumulative returned quantity, preventing
+over-return under concurrent transactions.
+
+SaleReturnItem.refundAmount equals its quantity multiplied by the original
+SaleItem.unitSoldPrice. The frontend never supplies authoritative refund value.
+
+Return creation and voiding both lock the relevant Sale row. This guarantees
+that a VOIDED Sale cannot receive a Return and a Sale with any Return cannot be
+voided, including under concurrency.
+
+Exchange is an immutable, tenant-qualified one-to-one link from one SaleReturn
+to one distinct new Sale. Exchange contains no stock or money fields; its
+monetary difference is derived from the new Sale total minus the ReturnItems'
+refund total.
+
+SaleReturn, SaleReturnItem, Exchange, and InventoryMovement are append-only.
+SaleItem remains immutable and non-deletable. Returns and voids must not rewrite
+the original Sale or SaleItems.
 
 Sale must preserve the seller name and optional employee code as immutable
 snapshots. `soldById` is derived from the authenticated Supabase user. OWNER and

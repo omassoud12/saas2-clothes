@@ -26,12 +26,15 @@ enum AccountStatus {
 enum InventoryMovementType {
   RESTOCK
   SALE
+  RETURN
+  SALE_VOID
   DAMAGE
   ADJUSTMENT
 }
 
 enum SaleStatus {
   COMPLETED
+  VOIDED
 }
 
 model Account {
@@ -53,6 +56,9 @@ model Account {
   expenses           Expense[]
   sales              Sale[]
   saleItems          SaleItem[]
+  saleReturns        SaleReturn[]
+  saleReturnItems    SaleReturnItem[]
+  exchanges          Exchange[]
   reports            DailyReport[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -81,6 +87,8 @@ model User {
   inventoryMovements InventoryMovement[] @relation("InventoryMovementPerformedBy")
   expensesCreated    Expense[]           @relation("ExpenseCreatedBy")
   sales              Sale[]              @relation("SaleSoldBy")
+  voidedSales        Sale[]              @relation("SaleVoidedBy")
+  processedReturns   SaleReturn[]        @relation("SaleReturnProcessedBy")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -156,8 +164,9 @@ model ProductVariant {
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
   product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
 
-  movements InventoryMovement[]
-  saleItems SaleItem[]
+  movements   InventoryMovement[]
+  saleItems   SaleItem[]
+  returnItems SaleReturnItem[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -180,12 +189,14 @@ model InventoryMovement {
   unitCost       Decimal?              @db.Decimal(18, 4)
   performedById  String                @db.Uuid
   saleItemId     String?               @db.Uuid
+  returnItemId   String?               @db.Uuid
   note           String?
 
-  account     Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  variant     ProductVariant @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
-  performedBy User           @relation("InventoryMovementPerformedBy", fields: [performedById, accountId], references: [id, accountId], onDelete: Restrict)
-  saleItem    SaleItem?      @relation(fields: [saleItemId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
+  account     Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  variant     ProductVariant  @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
+  performedBy User            @relation("InventoryMovementPerformedBy", fields: [performedById, accountId], references: [id, accountId], onDelete: Restrict)
+  saleItem    SaleItem?       @relation(fields: [saleItemId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
+  returnItem  SaleReturnItem? @relation(fields: [returnItemId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
@@ -195,6 +206,7 @@ model InventoryMovement {
   @@index([variantId, accountId])
   @@index([performedById, accountId])
   @@index([saleItemId, variantId, accountId])
+  @@index([returnItemId, variantId, accountId])
 }
 
 model Expense {
@@ -225,10 +237,19 @@ model Sale {
   currency         String     @db.Char(3)
   subtotal         Decimal    @db.Decimal(18, 2)
   totalAmount      Decimal    @db.Decimal(18, 2)
+  voidedAt         DateTime?  @db.Timestamptz(3)
+  voidedById       String?    @db.Uuid
+  voidedByName     String?
+  voidedByCode     String?
+  voidReason       String?
 
-  account Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  soldBy  User       @relation("SaleSoldBy", fields: [soldById, accountId], references: [id, accountId], onDelete: Restrict)
-  items   SaleItem[]
+  account           Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  soldBy            User             @relation("SaleSoldBy", fields: [soldById, accountId], references: [id, accountId], onDelete: Restrict)
+  voidedBy          User?            @relation("SaleVoidedBy", fields: [voidedById, accountId], references: [id, accountId], onDelete: Restrict)
+  items             SaleItem[]
+  returns           SaleReturn[]
+  returnItems       SaleReturnItem[]
+  exchangeAsNewSale Exchange?        @relation("ExchangeNewSale")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -238,6 +259,7 @@ model Sale {
   @@index([accountId, soldById, createdAt])
   @@index([accountId, status, createdAt])
   @@index([soldById, accountId])
+  @@index([voidedById, accountId])
 }
 
 model SaleItem {
@@ -266,11 +288,13 @@ model SaleItem {
   variant  ProductVariant @relation(fields: [variantId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
   category Category       @relation(fields: [categoryId, accountId], references: [id, accountId], onDelete: Restrict)
 
-  movements InventoryMovement[]
+  movements   InventoryMovement[]
+  returnItems SaleReturnItem[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([id, variantId, accountId])
+  @@unique([id, saleId, variantId, accountId])
   @@index([saleId, accountId])
   @@index([accountId, categoryId, createdAt])
   @@index([accountId, productId, createdAt])
@@ -278,6 +302,77 @@ model SaleItem {
   @@index([productId, categoryId, accountId])
   @@index([variantId, productId, accountId])
   @@index([categoryId, accountId])
+}
+
+model SaleReturn {
+  id              String  @id @default(uuid()) @db.Uuid
+  accountId       String  @db.Uuid
+  saleId          String  @db.Uuid
+  processedById   String  @db.Uuid
+  processedByName String
+  processedByCode String?
+  reason          String?
+
+  account     Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  sale        Sale             @relation(fields: [saleId, accountId], references: [id, accountId], onDelete: Restrict)
+  processedBy User             @relation("SaleReturnProcessedBy", fields: [processedById, accountId], references: [id, accountId], onDelete: Restrict)
+  items       SaleReturnItem[]
+  exchange    Exchange?        @relation("ExchangeReturn")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([id, accountId])
+  @@unique([id, saleId, accountId])
+  @@index([accountId, saleId, createdAt])
+  @@index([saleId, accountId])
+  @@index([processedById, accountId, createdAt])
+}
+
+model SaleReturnItem {
+  id           String  @id @default(uuid()) @db.Uuid
+  accountId    String  @db.Uuid
+  returnId     String  @db.Uuid
+  saleId       String  @db.Uuid
+  saleItemId   String  @db.Uuid
+  variantId    String  @db.Uuid
+  quantity     Int
+  refundAmount Decimal @db.Decimal(18, 2)
+
+  account    Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  saleReturn SaleReturn          @relation(fields: [returnId, saleId, accountId], references: [id, saleId, accountId], onDelete: Restrict)
+  sale       Sale                @relation(fields: [saleId, accountId], references: [id, accountId], onDelete: Restrict)
+  saleItem   SaleItem            @relation(fields: [saleItemId, saleId, variantId, accountId], references: [id, saleId, variantId, accountId], onDelete: Restrict)
+  variant    ProductVariant      @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
+  movements  InventoryMovement[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([id, accountId])
+  @@unique([id, variantId, accountId])
+  @@index([accountId, returnId, createdAt])
+  @@index([accountId, saleItemId, createdAt])
+  @@index([returnId, saleId, accountId])
+  @@index([saleId, accountId])
+  @@index([saleItemId, saleId, variantId, accountId])
+  @@index([variantId, accountId])
+}
+
+model Exchange {
+  id        String @id @default(uuid()) @db.Uuid
+  accountId String @db.Uuid
+  returnId  String @db.Uuid
+  newSaleId String @db.Uuid
+
+  account    Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  saleReturn SaleReturn @relation("ExchangeReturn", fields: [returnId, accountId], references: [id, accountId], onDelete: Restrict)
+  newSale    Sale       @relation("ExchangeNewSale", fields: [newSaleId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([id, accountId])
+  @@unique([returnId, accountId])
+  @@unique([newSaleId, accountId])
+  @@index([accountId, createdAt])
 }
 
 model DailyReport {
