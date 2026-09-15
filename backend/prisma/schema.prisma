@@ -379,11 +379,17 @@ model DailyReport {
   id                String   @id @default(uuid()) @db.Uuid
   accountId         String   @db.Uuid
   reportDate        DateTime @db.Date
-  revenue           Decimal  @db.Decimal(18, 2)
-  costOfGoodsSold   Decimal  @db.Decimal(18, 2)
-  grossProfit       Decimal  @db.Decimal(18, 2)
-  operatingExpenses Decimal  @db.Decimal(18, 2)
-  netProfit         Decimal  @db.Decimal(18, 2)
+  grossRevenue      Decimal  @default(0) @db.Decimal(18, 2)
+  returnedRevenue   Decimal  @default(0) @db.Decimal(18, 2)
+  voidedRevenue     Decimal  @default(0) @db.Decimal(18, 2)
+  netRevenue        Decimal  @default(0) @db.Decimal(18, 2)
+  grossCOGS         Decimal  @default(0) @db.Decimal(18, 2)
+  returnedCOGS      Decimal  @default(0) @db.Decimal(18, 2)
+  voidedCOGS        Decimal  @default(0) @db.Decimal(18, 2)
+  netCOGS           Decimal  @default(0) @db.Decimal(18, 2)
+  grossProfit       Decimal  @default(0) @db.Decimal(18, 2)
+  operatingExpenses Decimal  @default(0) @db.Decimal(18, 2)
+  netProfit         Decimal  @default(0) @db.Decimal(18, 2)
   salesCount        Int
   totalUnitsSold    Int
   stockValue        Decimal  @db.Decimal(18, 2)

@@ -357,33 +357,54 @@ Use Prisma Decimal / PostgreSQL Decimal for:
 
 ## 11. Accounting
 
-Reports distinguish between:
+Daily accounting distinguishes gross activity from reversals:
 
-Revenue
+- `grossRevenue` is the total of Sales created on the report date.
+- `returnedRevenue` is the total refund amount of SaleReturns created on the report date.
+- `voidedRevenue` is the original total of Sales voided on the report date.
+- `netRevenue = grossRevenue - returnedRevenue - voidedRevenue`.
+- `grossCOGS` is the sum of SaleItem quantity multiplied by `unitCostAtSale` for Sales created on the report date.
+- `returnedCOGS` is the sum of returned quantity multiplied by the original SaleItem `unitCostAtSale` for SaleReturns created on the report date.
+- `voidedCOGS` is the sum of the original SaleItem quantity multiplied by `unitCostAtSale` for Sales voided on the report date.
+- `netCOGS = grossCOGS - returnedCOGS - voidedCOGS`.
+- `grossProfit = netRevenue - netCOGS`.
+- `operatingExpenses` is the aggregate of Expense amounts belonging to the report date.
+- `netProfit = grossProfit - operatingExpenses`.
 
-Cost of Goods Sold (COGS)
+Gross, returned, and voided magnitude fields, operating expenses, and stock
+value cannot be negative. Net revenue, net COGS, gross profit, and net profit
+may be negative.
 
-Gross Profit =
-Revenue - COGS
-
-Operating Expenses
-
-Net Profit =
-Gross Profit - Operating Expenses
+Reversals are attributed to the date they occur, not the date of the original
+sale. This preserves the existing `reportDate` business-day convention and does
+not introduce a new timezone boundary.
 
 ---
 
 ## 12. Reports
 
-Sale and SaleItem are the source of truth.
+Sale, SaleItem, SaleReturn, SaleReturnItem, Sale void metadata, and Expense are
+the authoritative accounting history.
 
 DailyReport is a precomputed cache for faster dashboards.
 
-If DailyReport conflicts with Sale/SaleItem data:
+If DailyReport conflicts with the authoritative accounting history:
 
-Sale/SaleItem win.
+The authoritative accounting history wins.
 
 DailyReport can be rebuilt.
+
+`DailyReport.operatingExpenses` is only the cached per-business-day aggregate
+of authoritative Expense records; it does not replace or duplicate them.
+
+In the v1 report contract, `salesCount` is the number of gross Sale transactions
+created during the business day, and `totalUnitsSold` is the gross quantity on
+Sales created during that business day. Returns and voids do not rewrite these
+historical gross counts. Future return, void, or net count metrics require
+explicit new fields rather than overloading these fields.
+
+Exchanges are represented by their linked return and replacement sale; those
+underlying records contribute to the report on the dates they occur.
 
 ---
 
