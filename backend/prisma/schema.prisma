@@ -147,9 +147,7 @@ model ProductVariant {
   color   String?
   size    String?
 
-  // Inventory costing: averageCost is used for current valuation and costAtSale.
-  // lastPurchaseCost keeps the latest shipment cost for owner visibility.
-  averageCost      Decimal? @db.Decimal(18, 4)
+  // lastPurchaseCost is the current cost basis copied into SaleItem.unitCostAtSale.
   lastPurchaseCost Decimal? @db.Decimal(18, 2)
   sellingPrice     Decimal? @db.Decimal(18, 2)
   currentStock     Int      @default(0)

@@ -189,15 +189,22 @@ A variant can contain:
 - SKU
 - barcode
 - currentStock
-- averageCost
 - lastPurchaseCost
 - sellingPrice
+
+ProductVariant.lastPurchaseCost is the current cost basis for the variant.
+ProductVariant does not store averageCost.
 
 ProductVariant.sellingPrice is the normal/default catalog selling price for the
 variant.
 
 SaleItem.unitSoldPrice is the actual price charged in a completed sale. It may
 differ from ProductVariant.sellingPrice without mutating the catalog price.
+
+SaleItem.unitCostAtSale is the immutable historical cost snapshot. Sale
+creation must copy the current ProductVariant.lastPurchaseCost into this field.
+If that cost is required and lastPurchaseCost is null, the sale must be rejected;
+the application must never silently substitute zero.
 
 ---
 
@@ -215,7 +222,9 @@ Supported movement concepts:
 - ADJUSTMENT
 
 Returns and exchanges will be added with their complete financial and inventory
-reversal models in a later version.
+reversal models in a later version. Returns may be partial or full, may have an
+optional reason, and may be performed by OWNER or WAREHOUSE. An exchange is a
+Return plus a new Sale, not a distinct EXCHANGE inventory movement type.
 
 currentStock is used for fast reads.
 
@@ -245,6 +254,11 @@ SaleItem must preserve historical snapshots such as:
 - product/category information required for historical reports
 
 Changing a Product later must never modify historical sales.
+
+The future stored SaleStatus contract is COMPLETED or VOIDED. Return disposition
+is derived rather than stored. Voiding is OWNER-only, requires a reason, and is
+not allowed after any Return exists. Returns and voids must not rewrite the
+original Sale or SaleItems; the original SaleItem quantity remains unchanged.
 
 Sale must preserve the seller name and optional employee code as immutable
 snapshots. `soldById` is derived from the authenticated Supabase user. OWNER and
@@ -287,7 +301,6 @@ Never use Float for financial values.
 Use Prisma Decimal / PostgreSQL Decimal for:
 
 - purchase cost
-- average cost
 - sale price
 - catalog selling price
 - expenses
