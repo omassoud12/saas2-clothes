@@ -191,7 +191,13 @@ A variant can contain:
 - currentStock
 - averageCost
 - lastPurchaseCost
-- suggestedPrice
+- sellingPrice
+
+ProductVariant.sellingPrice is the normal/default catalog selling price for the
+variant.
+
+SaleItem.unitSoldPrice is the actual price charged in a completed sale. It may
+differ from ProductVariant.sellingPrice without mutating the catalog price.
 
 ---
 
@@ -283,7 +289,7 @@ Use Prisma Decimal / PostgreSQL Decimal for:
 - purchase cost
 - average cost
 - sale price
-- suggested price
+- catalog selling price
 - expenses
 - revenue
 - profit

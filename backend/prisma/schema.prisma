@@ -151,7 +151,7 @@ model ProductVariant {
   // lastPurchaseCost keeps the latest shipment cost for owner visibility.
   averageCost      Decimal? @db.Decimal(18, 4)
   lastPurchaseCost Decimal? @db.Decimal(18, 2)
-  suggestedPrice   Decimal? @db.Decimal(18, 2)
+  sellingPrice     Decimal? @db.Decimal(18, 2)
   currentStock     Int      @default(0)
   isActive         Boolean  @default(true)
 
