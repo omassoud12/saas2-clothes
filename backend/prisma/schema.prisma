@@ -156,7 +156,7 @@ model ProductVariant {
   size    String?
 
   // lastPurchaseCost is the current cost basis copied into SaleItem.unitCostAtSale.
-  lastPurchaseCost Decimal? @db.Decimal(18, 2)
+  lastPurchaseCost Decimal? @db.Decimal(18, 4)
   sellingPrice     Decimal? @db.Decimal(18, 2)
   currentStock     Int      @default(0)
   isActive         Boolean  @default(true)
@@ -181,16 +181,18 @@ model ProductVariant {
 }
 
 model InventoryMovement {
-  id             String                @id @default(uuid()) @db.Uuid
-  accountId      String                @db.Uuid
-  variantId      String                @db.Uuid
-  type           InventoryMovementType
-  quantityChange Int
-  unitCost       Decimal?              @db.Decimal(18, 4)
-  performedById  String                @db.Uuid
-  saleItemId     String?               @db.Uuid
-  returnItemId   String?               @db.Uuid
-  note           String?
+  id                 String                @id @default(uuid()) @db.Uuid
+  accountId          String                @db.Uuid
+  variantId          String                @db.Uuid
+  type               InventoryMovementType
+  quantityChange     Int
+  unitCost           Decimal?              @db.Decimal(18, 4)
+  performedById      String                @db.Uuid
+  saleItemId         String?               @db.Uuid
+  returnItemId       String?               @db.Uuid
+  note               String?
+  idempotencyKey     String?               @db.Uuid
+  requestFingerprint String?               @db.VarChar(64)
 
   account     Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   variant     ProductVariant  @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)

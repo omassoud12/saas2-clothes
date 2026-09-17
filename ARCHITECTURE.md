@@ -134,6 +134,7 @@ Can:
 - manage categories
 - view costs
 - manage pricing
+- restock inventory
 - manage expenses
 - access accounting
 - access reports
@@ -152,7 +153,6 @@ Can:
 - view products
 - create products
 - create categories
-- restock inventory
 - perform sales
 - process returns and exchanges
 
@@ -164,6 +164,7 @@ Cannot:
 - access accounting
 - access expenses
 - view sensitive costs/profit
+- restock inventory in the MVP
 - manage account-level settings
 - void sales
 
@@ -236,7 +237,9 @@ A variant can contain:
 - lastPurchaseCost
 - sellingPrice
 
-ProductVariant.lastPurchaseCost is the current cost basis for the variant.
+ProductVariant.lastPurchaseCost is the unit purchase cost from the latest
+successful RESTOCK and the current cost basis for the variant. It is not an
+average cost or a total invoice amount.
 ProductVariant does not store averageCost.
 
 ProductVariant.sellingPrice is the normal/default catalog selling price for the
@@ -249,6 +252,10 @@ SaleItem.unitCostAtSale is the immutable historical cost snapshot. Sale
 creation must copy the current ProductVariant.lastPurchaseCost into this field.
 If that cost is required and lastPurchaseCost is null, the sale must be rejected;
 the application must never silently substitute zero.
+
+Purchase/unit costs use Decimal(18,4) for ProductVariant.lastPurchaseCost,
+InventoryMovement.unitCost, and SaleItem.unitCostAtSale. Catalog
+ProductVariant.sellingPrice remains Decimal(18,2).
 
 ---
 
@@ -281,6 +288,32 @@ currentStock is used for fast reads.
 InventoryMovement is used as historical evidence explaining how stock changed.
 
 Stock must never become negative.
+
+In the MVP, RESTOCK is OWNER-only. WAREHOUSE cannot create RESTOCK movements or
+receive purchase-cost fields. A normal RESTOCK requires an active Product and
+active Variant, a positive integer quantity, and a unit purchase cost greater
+than zero with at most four decimal places. Free or promotional inventory needs
+a separate, explicitly approved workflow. The future backend must atomically
+increase ProductVariant.currentStock, set lastPurchaseCost to that RESTOCK's
+unit cost, and append one RESTOCK InventoryMovement; failure rolls back all
+three changes. RESTOCK movements require a positive unitCost and have no SaleItem
+or ReturnItem reference.
+
+Each RESTOCK requires a UUID idempotency key unique per Account and a canonical
+SHA-256 request fingerprint. The future backend derives accountId and
+performedById from authentication and hashes a UTF-8 JSON object with keys in
+this fixed order: type, accountId, performedById, variantId, quantity, unitCost,
+note. Use type "RESTOCK", lowercase canonical UUIDs, an integer quantity, a
+decimal unitCost string normalized to exactly four fractional digits, and a
+Unicode-NFC note trimmed at both ends (empty becomes JSON null). JSON null
+represents an absent note. The hash is lowercase 64-character hexadecimal;
+raw request JSON is not stored. An identical retry within the same Account
+returns the original successful movement result without another stock change.
+The same key with a different fingerprint is a conflict. A tenant-scoped unique
+database index is the final concurrent-duplicate guard. Idempotency metadata
+is part of the append-only movement record. In this MVP, SALE, RETURN,
+SALE_VOID, DAMAGE, and ADJUSTMENT must have null idempotencyKey and
+requestFingerprint; only RESTOCK may carry them.
 
 ---
 
