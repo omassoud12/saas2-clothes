@@ -327,6 +327,7 @@ export async function authenticatedApiRequest({
   path,
   method,
   payload,
+  requestBody,
   fallbackMessage,
 }) {
   const sessionResult = await readAuthenticatedSession(supabase)
@@ -340,7 +341,7 @@ export async function authenticatedApiRequest({
         Authorization: `Bearer ${sessionResult.session.access_token}`,
         ...(payload ? { 'Content-Type': 'application/json' } : {}),
       },
-      ...(payload ? { body: JSON.stringify(payload) } : {}),
+      ...(payload ? { body: JSON.stringify(payload) } : requestBody ? { body: requestBody } : {}),
     })
   } catch {
     return resultError('API_UNAVAILABLE', fallbackMessage)
