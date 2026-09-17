@@ -9,6 +9,7 @@ import { HttpError } from '../errors/http-error.js'
 import { createRequireAuth, requireRole } from '../auth/auth.middleware.js'
 import type { AuthDependencies } from '../auth/auth.types.js'
 import type { CategoryDependencies } from '../categories/category.types.js'
+import type { InventoryAuditDependencies } from '../inventory/inventory.types.js'
 import type { ProductDependencies } from '../products/product.types.js'
 import {
   createApproveAccount,
@@ -282,6 +283,7 @@ describe('admin Account authorization', () => {
       auth: authDependencies(UserRole.SUPER_ADMIN),
       adminAccounts,
       products: {} as ProductDependencies,
+      inventory: {} as InventoryAuditDependencies,
       categories: {
         async listCategories() {
           return []

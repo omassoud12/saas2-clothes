@@ -281,9 +281,27 @@ button:disabled { cursor: wait; opacity: .65; }
 .restock-dialog small { color: #657068; }
 .restock-dialog input[aria-invalid="true"], .restock-dialog textarea[aria-invalid="true"] { border-color: #b5483e; }
 .restock-dialog button:disabled { opacity: .6; cursor: not-allowed; }
+.inventory-audit-section { margin-top: 1rem; }
+.inventory-audit-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: .75rem; }
+.inventory-audit-filters > div { min-width: 0; }
+.inventory-audit-filters label { display: block; margin: 0 0 .3rem; }
+.inventory-audit-filters input, .inventory-audit-filters select { width: 100%; min-width: 0; }
+.inventory-audit-filters button { margin: 0; }
+.inventory-audit-list { display: grid; gap: .6rem; }
+.inventory-audit-card { min-width: 0; border: 1px solid #e0e8dc; border-radius: 12px; padding: .85rem; background: #f9fbf8; }
+.inventory-audit-card p { margin: .35rem 0; overflow-wrap: anywhere; }
+.inventory-audit-card small { color: #657068; }
+.inventory-audit-card-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.inventory-audit-card-heading strong { overflow-wrap: anywhere; }
+.inventory-positive { color: #2f6b3b; }
+.inventory-negative, .inventory-warning { color: #91342f; }
+.inventory-mismatch { border-color: #e6c8c4; background: #fff7f5; }
+.inventory-stock-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .7rem 0 0; }
+.inventory-stock-comparison dt { color: #657068; font-size: .72rem; }
+.inventory-stock-comparison dd { margin: .2rem 0 0; font-weight: 750; }
 
 @media (max-width: 1000px) { .product-catalog-layout { grid-template-columns: 1fr; } }
-@media (max-width: 750px) { .inventory-variant { grid-template-columns: repeat(2, minmax(0, 1fr)); } .inventory-variant button { justify-self: start; } }
+@media (max-width: 750px) { .inventory-variant { grid-template-columns: repeat(2, minmax(0, 1fr)); } .inventory-variant button { justify-self: start; } .inventory-audit-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .product-page-heading { align-items: stretch; flex-direction: column; }
   .product-page-heading button { width: 100%; }
@@ -299,4 +317,6 @@ button:disabled { cursor: wait; opacity: .65; }
   .inventory-filter .product-actions button { flex: 1 1 110px; }
   .restock-overlay { align-items: start; padding: .6rem; }
   .restock-dialog { max-height: calc(100vh - 1.2rem); padding: 1rem; }
+  .inventory-audit-filters { grid-template-columns: 1fr; }
+  .inventory-stock-comparison { grid-template-columns: 1fr; }
 }

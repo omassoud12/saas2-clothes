@@ -7,6 +7,8 @@ import type { AuthDependencies } from './auth/auth.types.js'
 import { createCategoryRouter } from './categories/category.routes.js'
 import type { CategoryDependencies } from './categories/category.types.js'
 import { errorHandler } from './middleware/error-handler.js'
+import { createInventoryRouter } from './inventory/inventory.routes.js'
+import type { InventoryAuditDependencies } from './inventory/inventory.types.js'
 import { createProductRouter } from './products/product.routes.js'
 import type { ProductDependencies } from './products/product.types.js'
 
@@ -15,6 +17,7 @@ export interface AppDependencies {
   readonly adminAccounts: AdminAccountDependencies
   readonly categories: CategoryDependencies
   readonly products: ProductDependencies
+  readonly inventory: InventoryAuditDependencies
 }
 
 export function createApp(dependencies: AppDependencies) {
@@ -33,6 +36,7 @@ export function createApp(dependencies: AppDependencies) {
     createCategoryRouter(dependencies.auth, dependencies.categories),
   )
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
+  app.use('/api/inventory', createInventoryRouter(dependencies.auth, dependencies.inventory))
   app.use(
     '/api/admin/accounts',
     createAdminAccountRouter(dependencies.auth, dependencies.adminAccounts),

@@ -287,6 +287,24 @@ currentStock is used for fast reads.
 
 InventoryMovement is used as historical evidence explaining how stock changed.
 
+Under correctly functioning stock workflows, each Variant's `currentStock`
+equals the sum of its `InventoryMovement.quantityChange` values. The read-only
+inventory reconciliation compares stored stock with this ledger sum and reports
+`difference = storedStock - ledgerStock`; it surfaces mismatches without editing
+stock or creating movements. The movement ledger remains append-only.
+
+The tenant-scoped movement-history API is timestamp-based and cursor-paginated
+by `createdAt DESC, id DESC`. OWNER may receive movement unit cost and note;
+WAREHOUSE receives neither. Neither role receives idempotency metadata or raw
+tenant identifiers from normal history responses. Reconciliation contains no
+costs for either role. Status-filtered reconciliation must compute the ledger
+sum before limiting results, so it may scan a large tenant ledger; unfiltered
+pages aggregate only their bounded Variant page.
+
+FUTURE PERFORMANCE FOLLOW-UP: Reconciliation status filtering may require
+optimization for large tenant ledgers. Review measured query plans before
+choosing indexes, precomputed state, or another strategy.
+
 Stock must never become negative.
 
 In the MVP, RESTOCK is OWNER-only. WAREHOUSE cannot create RESTOCK movements or

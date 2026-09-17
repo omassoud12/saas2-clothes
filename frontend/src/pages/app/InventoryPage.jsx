@@ -3,6 +3,7 @@ import { listProducts, canShowVariantCost } from '../../app/product-flow.js'
 import { RestockDialog } from '../../app/RestockDialog.jsx'
 import { canRestock } from '../../app/restock-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import { InventoryHistory, InventoryReconciliation } from './InventoryAuditSections.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -53,6 +54,8 @@ export function InventoryPage({ profile }) {
       </article>)}</div>}
       <nav className="product-pagination" aria-label="Inventory pages"><button type="button" className="secondary-action" disabled={filters.page <= 1} onClick={() => changeFilters({ ...filters, page: filters.page - 1 })}>Previous</button><span>Page {state.page} of {pageCount}</span><button type="button" className="secondary-action" disabled={filters.page >= pageCount} onClick={() => changeFilters({ ...filters, page: filters.page + 1 })}>Next</button></nav>
     </>}
+    <InventoryHistory key={`history-${version}-${filters.page}-${filters.search}`} role={role} products={state.kind === 'ready' ? state.products : []} />
+    <InventoryReconciliation key={`reconciliation-${version}-${filters.page}-${filters.search}`} products={state.kind === 'ready' ? state.products : []} />
     {target && role === 'OWNER' && <RestockDialog key={`${target.product.id}:${target.variant.id}`} product={target.product} variant={target.variant} onClose={() => setTarget(null)} onRefresh={refresh} onSuccess={(result) => {
       setTarget(null); refresh()
       setFeedback(result.idempotentReplay
