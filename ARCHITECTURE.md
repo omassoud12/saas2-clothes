@@ -190,12 +190,27 @@ unneeded metadata, and produces WebP at quality 82 and effort 4. The private
 bucket is read through short-lived signed GET URLs (at most five minutes), never
 persisted in PostgreSQL.
 
-Future Product flows create the Product before deriving its image key. For a
-first image, a failed database `imageKey` update after R2 upload triggers
+Product flows create the Product before deriving its image key. For a first
+image, a failed database `imageKey` update after R2 upload triggers
 best-effort R2 cleanup. Replacement overwrites the same canonical key: deleting
 that key on a later database failure would remove the Product's existing image,
 so the flow must reconcile or retry instead. R2 and PostgreSQL are not an atomic
-transaction. Product CRUD and upload routes are separate future work.
+transaction. To remove an image, the backend clears `imageKey` first, then
+deletes the private object; a failed R2 deletion leaves an orphan for later
+cleanup, never a database reference to a missing object. Product responses
+contain a runtime signed `imageUrl` or `null`, not the raw key.
+
+Product and Variant catalog APIs are available to active OWNER and WAREHOUSE
+users only. The backend derives `accountId` and `createdById` from authentication
+and scopes Product, Category, and Variant queries by Account. OWNER may see and
+edit Product `profitMarginOverride` and see Variant `lastPurchaseCost`;
+WAREHOUSE may not see or edit either field. Neither role may edit stock or
+`lastPurchaseCost` through Product APIs. New Variants begin with stock zero and
+null cost; inventory and Restock flows own subsequent changes. Products and
+Variants are deactivated with `isActive = false`, never hard-deleted. Inactive
+Products are omitted from the default active catalog/POS choices; inactive
+Variants must likewise be excluded from future sellable choices. Historical
+Sale, inventory, and return references remain intact and queryable.
 
 Example:
 

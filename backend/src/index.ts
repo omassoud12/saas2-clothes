@@ -5,6 +5,8 @@ import { createAuthDependencies } from './auth/auth.service.js'
 import { loadEnvironment } from './config/env.js'
 import { createCategoryDependencies } from './categories/category.service.js'
 import { createPrismaClient } from './lib/prisma.js'
+import { createProductDependencies } from './products/product.service.js'
+import { createR2ProductImageStore, loadR2Environment } from './product-images/r2-product-image-store.js'
 import { createSupabaseClients } from './supabase.js'
 
 const environment = loadEnvironment()
@@ -13,7 +15,12 @@ const supabase = createSupabaseClients(environment)
 const auth = createAuthDependencies(prisma, supabase.verifier)
 const adminAccounts = createAdminAccountDependencies(prisma)
 const categories = createCategoryDependencies(prisma)
-const app = createApp({ auth, adminAccounts, categories })
+let imageStore: ReturnType<typeof createR2ProductImageStore> | undefined
+const products = createProductDependencies(prisma, () => {
+  imageStore ??= createR2ProductImageStore(loadR2Environment())
+  return imageStore
+})
+const app = createApp({ auth, adminAccounts, categories, products })
 
 app.listen(environment.port, () => {
   console.log(`API listening on http://localhost:${environment.port}`)
