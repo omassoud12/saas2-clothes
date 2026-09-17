@@ -35,7 +35,8 @@ Business data from one Account must never be accessible by another Account.
 - Database: Supabase
 
 ### Storage
-- Supabase Storage for the MVP
+- Product images use a private Cloudflare R2 bucket. Other storage decisions
+  remain outside this product-image infrastructure step.
 
 ---
 
@@ -174,6 +175,27 @@ Hiding UI elements is not considered authorization.
 ## 6. Product Model
 
 Product represents the general product.
+
+For the MVP, Product has one primary image. PostgreSQL stores only the nullable
+`Product.imageKey`, not image bytes, a public URL, or a signed URL. The backend
+derives the canonical key `tenants/{accountId}/products/{productId}/main.webp`
+from authenticated tenant context and a tenant-owned Product; the frontend
+cannot choose the key or bucket. R2 credentials remain backend-only.
+
+The backend accepts JPEG, PNG, and static WebP uploads up to 10 MiB. It rejects
+animated and unsupported formats, validates decoded content rather than MIME or
+extension, and caps decoded dimensions at 40 million pixels. Sharp auto-rotates,
+resizes within 1600 × 1600 without enlargement, preserves aspect ratio, strips
+unneeded metadata, and produces WebP at quality 82 and effort 4. The private
+bucket is read through short-lived signed GET URLs (at most five minutes), never
+persisted in PostgreSQL.
+
+Future Product flows create the Product before deriving its image key. For a
+first image, a failed database `imageKey` update after R2 upload triggers
+best-effort R2 cleanup. Replacement overwrites the same canonical key: deleting
+that key on a later database failure would remove the Product's existing image,
+so the flow must reconcile or retry instead. R2 and PostgreSQL are not an atomic
+transaction. Product CRUD and upload routes are separate future work.
 
 Example:
 
