@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadCategories } from '../../app/category-flow.js'
+import { RestockDialog } from '../../app/RestockDialog.jsx'
+import { canRestock } from '../../app/restock-flow.js'
 import {
   canShowProductMargin, canShowVariantCost, createProduct, createVariant, getProduct, listProducts, removeProductImage,
   setProductActive, setVariantActive, updateProduct, updateVariant,
@@ -46,7 +48,7 @@ function VariantForm({ draft, change, editing, busy, submit, cancel }) {
     <div className="product-form-grid">{[
       ['sku', 'SKU', true], ['barcode', 'Barcode'], ['color', 'Color'], ['size', 'Size'], ['sellingPrice', 'Default selling price'],
     ].map(([field, label, required]) => <div key={field}><label htmlFor={`catalog-variant-${field}`}>{label}</label><input id={`catalog-variant-${field}`} value={draft[field]} required={Boolean(required)} maxLength={field === 'sellingPrice' ? undefined : 100} inputMode={field === 'sellingPrice' ? 'decimal' : undefined} disabled={busy} onChange={(event) => change({ ...draft, [field]: event.target.value })} /></div>)}</div>
-    <p className="product-muted">Stock and purchase cost are read-only. Initial stock belongs to the future Restock flow.</p>
+    <p className="product-muted">Stock and purchase cost are read-only here. Owners use Restock to add inventory.</p>
     <div className="product-actions"><button type="submit" disabled={busy}>{busy ? 'Saving...' : editing ? 'Save variant' : 'Add variant'}</button><button type="button" className="secondary-action" disabled={busy} onClick={cancel}>Cancel</button></div>
   </form>
 }
@@ -73,6 +75,7 @@ export function ProductsPage({ profile }) {
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [imageRevision, setImageRevision] = useState(0)
+  const [restockTarget, setRestockTarget] = useState(null)
   const mutationPending = useRef(false)
   const listRequestId = useRef(0)
   const detailRequestId = useRef(0)
@@ -123,7 +126,7 @@ export function ProductsPage({ profile }) {
   function selectProduct(id) {
     detailRequestId.current += 1
     setSelectedId(id); setDetailState({ kind: 'loading' }); setCreating(false)
-    setEditDraft(null); setVariantEdit(null); setConfirmation(null); chooseFile(null); setFeedback(null)
+    setEditDraft(null); setVariantEdit(null); setConfirmation(null); setRestockTarget(null); chooseFile(null); setFeedback(null)
     if (id === selectedId) refreshDetail()
   }
 
@@ -243,11 +246,17 @@ export function ProductsPage({ profile }) {
           {variantEdit && <VariantForm draft={variantEdit.draft} change={(draft) => setVariantEdit({ ...variantEdit, draft })} editing={Boolean(variantEdit.id)} busy={Boolean(busy)} submit={submitVariant} cancel={() => setVariantEdit(null)} />}
           {detail.variants.length === 0 ? <div className="product-variants-empty"><p>No variants yet. Add a SKU to define a sellable unit; stock starts at zero.</p></div> : <div className="product-variant-list">{detail.variants.map((variant) => <article className="product-variant" key={variant.id}><div className="product-variant-heading"><strong>{variant.sku}</strong><span className={`product-status ${variant.isActive ? '' : 'is-inactive'}`}>{variant.isActive ? 'Active' : 'Inactive'}</span></div>
             <dl><div><dt>Color / size</dt><dd>{[variant.color, variant.size].filter(Boolean).join(' / ') || 'Not available'}</dd></div><div><dt>Barcode</dt><dd>{valueOrUnavailable(variant.barcode)}</dd></div><div><dt>Selling price</dt><dd>{valueOrUnavailable(variant.sellingPrice)}</dd></div><div><dt>Current stock</dt><dd>{variant.currentStock} <small>read-only</small></dd></div>{canShowVariantCost(role, variant) && <div><dt>Last purchase cost</dt><dd>{valueOrUnavailable(variant.lastPurchaseCost)} <small>read-only</small></dd></div>}</dl>
-            <div className="product-actions"><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { setVariantEdit({ id: variant.id, draft: { sku: variant.sku, barcode: variant.barcode ?? '', color: variant.color ?? '', size: variant.size ?? '', sellingPrice: variant.sellingPrice ?? '' } }); setConfirmation(null) }}>Edit variant</button><button type="button" className={variant.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy)} onClick={() => { setConfirmation({ kind: 'variant', id: variant.id, next: !variant.isActive, label: variant.sku }); setVariantEdit(null) }}>{variant.isActive ? 'Deactivate variant' : 'Reactivate variant'}</button></div>
+            <div className="product-actions">{canRestock(role, detail, variant) && <button type="button" disabled={Boolean(busy)} onClick={() => setRestockTarget(variant)}>Restock</button>}<button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { setVariantEdit({ id: variant.id, draft: { sku: variant.sku, barcode: variant.barcode ?? '', color: variant.color ?? '', size: variant.size ?? '', sellingPrice: variant.sellingPrice ?? '' } }); setConfirmation(null) }}>Edit variant</button><button type="button" className={variant.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy)} onClick={() => { setConfirmation({ kind: 'variant', id: variant.id, next: !variant.isActive, label: variant.sku }); setVariantEdit(null) }}>{variant.isActive ? 'Deactivate variant' : 'Reactivate variant'}</button></div>
           </article>)}</div>}
         </section>
         {confirmation && <div className="product-confirmation" role="group" aria-label="Confirm catalog change"><strong>{confirmation.kind === 'image' ? 'Remove image' : `${confirmation.next ? 'Reactivate' : 'Deactivate'} ${confirmation.kind}`}?</strong><p>{confirmation.kind === 'image' ? 'The current primary image will be removed.' : `Confirm this change for “${confirmation.label}”. Historical records are preserved.`}</p><div className="product-actions"><button type="button" className={confirmation.next ? '' : 'danger-action'} disabled={Boolean(busy)} onClick={confirmation.kind === 'image' ? confirmImageRemove : confirmStatus}>{busy ? 'Working...' : 'Confirm'}</button><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => setConfirmation(null)}>Cancel</button></div></div>}
       </div>}
     </div></div>
+    {restockTarget && detail && role === 'OWNER' && <RestockDialog key={`${detail.id}:${restockTarget.id}`} product={detail} variant={restockTarget} onClose={() => setRestockTarget(null)} onRefresh={() => { refreshDetail(); refreshList() }} onSuccess={(result) => {
+      setRestockTarget(null); refreshDetail(); refreshList()
+      setFeedback({ kind: 'success', message: result.idempotentReplay
+        ? `This Restock was already processed. Current stock is ${result.variant.currentStock}.`
+        : `Restock completed: +${result.restock.quantity} units. Updated stock: ${result.variant.currentStock}. Purchase cost: ${result.restock.unitCost}.` })
+    }} />}
   </section>
 }

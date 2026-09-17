@@ -328,6 +328,12 @@ different fingerprint returns a conflict. The response's Variant
 `currentStock` and `lastPurchaseCost` are current state,
 not an historical stock-after snapshot for the returned movement.
 
+The OWNER frontend creates one idempotency key per valid Restock operation.
+After an uncertain outcome, retrying the same Product, Variant, quantity,
+cost, and normalized note reuses that key and frozen payload. Changing those
+semantics begins a new operation with a new key. A confirmed success or replay discards
+the key and refreshes catalog stock and cost from the backend.
+
 ---
 
 ## 8. Sales

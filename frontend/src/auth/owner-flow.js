@@ -328,6 +328,7 @@ export async function authenticatedApiRequest({
   method,
   payload,
   requestBody,
+  headers,
   fallbackMessage,
 }) {
   const sessionResult = await readAuthenticatedSession(supabase)
@@ -338,6 +339,7 @@ export async function authenticatedApiRequest({
     response = await fetchImpl(path, {
       method,
       headers: {
+        ...headers,
         Authorization: `Bearer ${sessionResult.session.access_token}`,
         ...(payload ? { 'Content-Type': 'application/json' } : {}),
       },
