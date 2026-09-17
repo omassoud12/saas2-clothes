@@ -1,4 +1,5 @@
 import type { UserRole } from '../generated/prisma/enums.js'
+import type { RestockDependencies } from '../restocks/restock.types.js'
 
 export interface ProductCreateInput {
   readonly categoryId: string
@@ -62,7 +63,7 @@ export interface ProductView {
   readonly profitMarginOverride?: string | null
 }
 
-export interface ProductDependencies {
+export interface ProductDependencies extends RestockDependencies {
   listProducts(accountId: string, role: UserRole, input: ProductListInput): Promise<{ products: readonly ProductView[]; total: number; page: number; limit: number }>
   getProduct(accountId: string, productId: string, role: UserRole): Promise<ProductView>
   createProduct(accountId: string, createdById: string, role: UserRole, input: ProductCreateInput): Promise<ProductView>

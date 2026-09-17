@@ -1,7 +1,9 @@
 import { Router } from 'express'
-import { createRequireAuth, createRequireTenant } from '../auth/auth.middleware.js'
+import { createRequireAuth, createRequireTenant, requireRole } from '../auth/auth.middleware.js'
 import type { AuthDependencies } from '../auth/auth.types.js'
+import { UserRole } from '../generated/prisma/enums.js'
 import { productImageUpload } from '../product-images/product-image-upload.js'
+import { createRestock } from '../restocks/restock.controller.js'
 import {
   createProduct,
   createVariant,
@@ -25,6 +27,7 @@ export function createProductRouter(auth: AuthDependencies, products: ProductDep
   router.patch('/:productId', updateProduct(products))
   router.post('/:productId/variants', createVariant(products))
   router.patch('/:productId/variants/:variantId', updateVariant(products))
+  router.post('/:productId/variants/:variantId/restocks', requireRole(UserRole.OWNER), createRestock(products))
   router.post('/:productId/image', productOwnership(products), productImageUpload, uploadImage(products))
   router.delete('/:productId/image', deleteImage(products))
 

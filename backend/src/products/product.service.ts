@@ -4,6 +4,7 @@ import { HttpError } from '../errors/http-error.js'
 import { productImageKey, requireProductImageKey } from '../product-images/product-image-key.js'
 import { uploadProductImage } from '../product-images/product-image.service.js'
 import type { ProductImageStore } from '../product-images/r2-product-image-store.js'
+import { createRestockDependencies } from '../restocks/restock.service.js'
 import type {
   ProductCreateInput,
   ProductDependencies,
@@ -286,6 +287,7 @@ export function createProductDependencies(
   }
 
   return {
+    ...createRestockDependencies(prisma),
     listProducts,
     getProduct,
     createProduct,

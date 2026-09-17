@@ -315,6 +315,19 @@ is part of the append-only movement record. In this MVP, SALE, RETURN,
 SALE_VOID, DAMAGE, and ADJUSTMENT must have null idempotencyKey and
 requestFingerprint; only RESTOCK may carry them.
 
+The OWNER-only `POST /api/products/:productId/variants/:variantId/restocks`
+endpoint requires one client-generated UUID in the `Idempotency-Key` header.
+It accepts only a positive integer quantity (at most 1,000,000), a positive
+decimal-string unitCost with at most four fractional digits, and an optional
+note of at most 500 Unicode characters after NFC normalization and trimming.
+The backend locks the tenant-owned Product then Variant in one transaction,
+checks both remain active, atomically increments stock, updates lastPurchaseCost,
+and inserts the movement. A matching-key retry returns the original movement
+without another mutation, even if the catalog item was later deactivated; a
+different fingerprint returns a conflict. The response's Variant
+`currentStock` and `lastPurchaseCost` are current state,
+not an historical stock-after snapshot for the returned movement.
+
 ---
 
 ## 8. Sales
