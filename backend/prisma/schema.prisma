@@ -310,13 +310,15 @@ model SaleItem {
 }
 
 model SaleReturn {
-  id              String  @id @default(uuid()) @db.Uuid
-  accountId       String  @db.Uuid
-  saleId          String  @db.Uuid
-  processedById   String  @db.Uuid
-  processedByName String
-  processedByCode String?
-  reason          String?
+  id                 String  @id @default(uuid()) @db.Uuid
+  accountId          String  @db.Uuid
+  saleId             String  @db.Uuid
+  idempotencyKey     String  @db.Uuid
+  requestFingerprint String  @db.VarChar(64)
+  processedById      String  @db.Uuid
+  processedByName    String
+  processedByCode    String?
+  reason             String?
 
   account     Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
   sale        Sale             @relation(fields: [saleId, accountId], references: [id, accountId], onDelete: Restrict)
@@ -328,6 +330,7 @@ model SaleReturn {
 
   @@unique([id, accountId])
   @@unique([id, saleId, accountId])
+  @@unique([accountId, idempotencyKey])
   @@index([accountId, saleId, createdAt])
   @@index([saleId, accountId])
   @@index([processedById, accountId, createdAt])

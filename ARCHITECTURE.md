@@ -403,6 +403,37 @@ over-return under concurrent transactions.
 SaleReturnItem.refundAmount equals its quantity multiplied by the original
 SaleItem.unitSoldPrice. The frontend never supplies authoritative refund value.
 
+The future Return API is not implemented yet. It will require one client
+operation UUID in `Idempotency-Key`, stored as `SaleReturn.idempotencyKey` and
+unique within the authenticated Account. The backend will store its own
+lowercase SHA-256 `requestFingerprint`; the client cannot supply the
+authoritative fingerprint. Its fixed-order UTF-8 JSON input is `type` set to
+`"RETURN"`, lowercase authenticated `accountId`, lowercase authenticated
+`processedById`, lowercase `saleId`, items sorted by lowercase `saleItemId`
+with integer quantities, and the normalized reason or JSON null. Refunds,
+costs, Variant IDs, timestamps, generated Return IDs, and current stock are
+excluded. A matching key and fingerprint replays the original Return; the same
+key with different semantics conflicts.
+
+Return requests will be nonempty and reject duplicate SaleItem IDs rather than
+merge them. An optional reason is Unicode-NFC normalized and trimmed, with an
+empty result represented by null and a maximum of 2,000 characters. Active
+OWNER and WAREHOUSE users may process Returns. The runtime must derive the
+Account and processor from authentication and write that processor consistently
+to both SaleReturn and its RETURN movements; this actor equality remains a
+runtime transaction guarantee rather than a database constraint.
+
+Every RETURN movement quantity must equal its SaleReturnItem quantity, and
+every SALE_VOID movement quantity must equal the original SaleItem quantity.
+Both continue using the immutable `SaleItem.unitCostAtSale` as their movement
+cost. The future Void API is also not implemented yet and remains OWNER-only.
+Its required reason is Unicode-NFC normalized, trimmed, nonempty, and at most
+2,000 characters. Void uses state-based replay: an already-VOIDED Sale with the
+same authenticated actor and normalized reason returns its stored result;
+another actor or reason conflicts. Void actor snapshots and `voidedAt` remain
+authoritative, and the runtime must use the authenticated actor for every
+SALE_VOID movement.
+
 Return creation and voiding both lock the relevant Sale row. This guarantees
 that a VOIDED Sale cannot receive a Return and a Sale with any Return cannot be
 voided, including under concurrency.
