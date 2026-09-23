@@ -460,13 +460,38 @@ Public Return history and Sale-detail Return summaries remain deferred.
 Every RETURN movement quantity must equal its SaleReturnItem quantity, and
 every SALE_VOID movement quantity must equal the original SaleItem quantity.
 Both continue using the immutable `SaleItem.unitCostAtSale` as their movement
-cost. The future Void API is also not implemented yet and remains OWNER-only.
-Its required reason is Unicode-NFC normalized, trimmed, nonempty, and at most
-2,000 characters. Void uses state-based replay: an already-VOIDED Sale with the
-same authenticated actor and normalized reason returns its stored result;
-another actor or reason conflicts. Void actor snapshots and `voidedAt` remain
-authoritative, and the runtime must use the authenticated actor for every
-SALE_VOID movement.
+cost.
+
+The transactional `POST /api/sales/:saleId/void` endpoint is OWNER-only;
+WAREHOUSE and SUPER_ADMIN cannot Void tenant Sales. Its request contains only a
+required reason, normalized with Unicode NFC and trimming, which must remain
+nonempty and no longer than 2,000 characters. Void has no dedicated
+idempotency key. It uses state-based replay: an already-VOIDED Sale with the
+same authenticated actor and normalized reason returns its persisted result
+with HTTP 200 and no inventory mutation; another actor or reason conflicts.
+The first successful Void returns HTTP 201. Stored actor snapshots, reason, and
+`voidedAt` remain authoritative on replay and are never rebuilt from the
+current User.
+
+A new Void runs in one READ COMMITTED transaction and locks the Account,
+authenticated active OWNER, tenant-owned Sale, and affected ProductVariants
+sorted by ID. SaleItems are immutable and are loaded by the tenant-qualified
+Sale relationship after the Sale lock; a zero-item Sale fails safely. The Sale
+must be COMPLETED and have no SaleReturn. The service restores every original
+SaleItem quantity to its historical Variant, appends exactly one SALE_VOID
+InventoryMovement per SaleItem using `SaleItem.unitCostAtSale`, then transitions
+the Sale to VOIDED with trusted current actor snapshots. Stock increments are
+atomic and overflow-checked. The final Sale transition trigger rechecks Return
+exclusion, and any stock, movement, or transition failure rolls back the entire
+Void.
+
+Inactive current Products or Variants do not block historical Void and are not
+reactivated. Runtime guarantees the authenticated OWNER is both
+`Sale.voidedById` and every SALE_VOID movement's `performedById`. Void does not
+create SaleReturn or SaleReturnItem records, alter original Sale totals/items,
+or synchronously update DailyReport. Its mutation response uses immutable Sale
+and SaleItem display snapshots and omits costs, profit, stock, movement IDs,
+and internal metadata.
 
 Return creation and voiding both lock the relevant Sale row. This guarantees
 that a VOIDED Sale cannot receive a Return and a Sale with any Return cannot be

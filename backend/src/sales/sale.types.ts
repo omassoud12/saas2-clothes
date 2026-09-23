@@ -95,6 +95,45 @@ export interface SaleView {
   readonly idempotentReplay: boolean
 }
 
+export interface SaleVoidInput {
+  readonly reason: string
+}
+
+export interface SaleVoidView {
+  readonly sale: {
+    readonly id: string
+    readonly status: 'VOIDED'
+    readonly currency: string
+    readonly subtotal: string
+    readonly totalAmount: string
+    readonly createdAt: Date
+    readonly seller: {
+      readonly name: string
+      readonly employeeCode: string | null
+    }
+    readonly void: {
+      readonly voidedAt: Date
+      readonly voidedByName: string
+      readonly voidedByCode: string | null
+      readonly reason: string
+    }
+    readonly items: readonly {
+      readonly id: string
+      readonly productId: string
+      readonly variantId: string
+      readonly productName: string
+      readonly categoryName: string
+      readonly sku: string
+      readonly color: string | null
+      readonly size: string | null
+      readonly quantity: number
+      readonly unitSoldPrice: string
+      readonly lineTotal: string
+    }[]
+  }
+  readonly idempotentReplay: boolean
+}
+
 export interface SaleDependencies {
   createSale(
     accountId: string,
@@ -111,4 +150,10 @@ export interface SaleDependencies {
     role: import('../generated/prisma/enums.js').UserRole,
     saleId: string,
   ): Promise<SaleDetailView>
+  voidSale(
+    accountId: string,
+    voidedById: string,
+    saleId: string,
+    input: SaleVoidInput,
+  ): Promise<SaleVoidView>
 }

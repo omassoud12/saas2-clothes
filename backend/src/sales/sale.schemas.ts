@@ -2,13 +2,14 @@ import { createHash } from 'node:crypto'
 import { Prisma } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import { SaleStatus } from '../generated/prisma/enums.js'
-import type { SaleHistoryQuery, SaleInput, SaleLineInput } from './sale.types.js'
+import type { SaleHistoryQuery, SaleInput, SaleLineInput, SaleVoidInput } from './sale.types.js'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const pricePattern = /^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/
 export const maxSaleLines = 100
 export const maxSaleQuantity = 1_000_000
+export const maxSaleVoidReasonCharacters = 2_000
 
 function invalidFilter(message: string): never {
   throw new HttpError(422, 'INVALID_SALE_FILTER', message)
@@ -63,6 +64,27 @@ export function parseSaleId(value: unknown): string {
     throw new HttpError(422, 'INVALID_SALE_ID', 'saleId must be a UUID')
   }
   return value.toLowerCase()
+}
+
+export function parseSaleVoidInput(body: unknown): SaleVoidInput {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpError(422, 'INVALID_SALE_VOID_INPUT', 'Sale Void input must be an object')
+  }
+  const input = body as Record<string, unknown>
+  if (Object.keys(input).some((key) => key !== 'reason') || !Object.hasOwn(input, 'reason')) {
+    throw new HttpError(422, 'INVALID_SALE_VOID_INPUT', 'Only reason is allowed')
+  }
+  if (typeof input.reason !== 'string') {
+    throw new HttpError(422, 'INVALID_SALE_VOID_REASON', 'reason must be a string')
+  }
+  const reason = input.reason.normalize('NFC').trim()
+  if (!reason) {
+    throw new HttpError(422, 'INVALID_SALE_VOID_REASON', 'reason must not be blank')
+  }
+  if ([...reason].length > maxSaleVoidReasonCharacters) {
+    throw new HttpError(422, 'INVALID_SALE_VOID_REASON', `reason must not exceed ${maxSaleVoidReasonCharacters} characters`)
+  }
+  return { reason }
 }
 
 export function parseSaleHistoryQuery(query: Record<string, unknown>): SaleHistoryQuery {

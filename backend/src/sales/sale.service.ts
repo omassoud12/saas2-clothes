@@ -2,10 +2,11 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import { canonicalSaleItems, encodeSaleCursor, saleFingerprint } from './sale.schemas.js'
-import type { SaleDependencies, SaleDetailView, SaleHistoryQuery, SaleInput, SaleView } from './sale.types.js'
+import type { SaleDependencies, SaleDetailView, SaleHistoryQuery, SaleInput, SaleView, SaleVoidInput, SaleVoidView } from './sale.types.js'
 
 const saleIdempotencyIndex = 'Sale_accountId_idempotencyKey_key'
 const maxMoney = new Prisma.Decimal('9999999999999999.99')
+const maxStock = 2_147_483_647
 const persistedSaleSelect = {
   id: true,
   status: true,
@@ -50,10 +51,29 @@ const detailSaleSelect = {
     },
   },
 } as const
+const voidSaleSelect = {
+  id: true, status: true, currency: true, subtotal: true, totalAmount: true, createdAt: true,
+  sellerNameAtSale: true, sellerCodeAtSale: true,
+  voidedAt: true, voidedById: true, voidedByName: true, voidedByCode: true, voidReason: true,
+  items: {
+    orderBy: { id: 'asc' as const },
+    select: {
+      id: true, productId: true, variantId: true,
+      productNameAtSale: true, categoryNameAtSale: true, skuAtSale: true,
+      colorAtSale: true, sizeAtSale: true, quantity: true,
+      unitSoldPrice: true, lineTotal: true,
+    },
+  },
+} as const
+const voidItemSelect = {
+  id: true, productId: true, variantId: true, quantity: true, unitCostAtSale: true,
+} as const
 
 type PersistedSale = Prisma.SaleGetPayload<{ select: typeof persistedSaleSelect }>
 type HistorySale = Prisma.SaleGetPayload<{ select: typeof historySaleSelect }>
 type DetailSale = Prisma.SaleGetPayload<{ select: typeof detailSaleSelect }>
+type PersistedVoidSale = Prisma.SaleGetPayload<{ select: typeof voidSaleSelect }>
+type VoidSaleItem = Prisma.SaleItemGetPayload<{ select: typeof voidItemSelect }>
 type SaleReader = Pick<PrismaClient, 'sale'>
 type AdvisoryVariant = { id: string; productId: string }
 type LockedAccount = { id: string; baseCurrency: string }
@@ -76,6 +96,20 @@ type LockedVariant = {
   currentStock: number
   isActive: boolean
 }
+type LockedVoidActor = {
+  id: string
+  voidedByName: string
+  employeeCode: string | null
+  role: UserRole
+  isActive: boolean
+}
+type LockedVoidSale = {
+  id: string
+  status: SaleStatus
+  voidedById: string | null
+  voidReason: string | null
+}
+type LockedVoidVariant = { id: string; currentStock: number }
 
 function unavailable(): HttpError {
   return new HttpError(404, 'SALE_VARIANT_UNAVAILABLE', 'A requested Variant is unavailable')
@@ -177,6 +211,44 @@ function detailView(sale: DetailSale, role: UserRole): SaleDetailView {
         },
       } : {}),
     },
+  }
+}
+
+function voidView(sale: PersistedVoidSale, idempotentReplay: boolean): SaleVoidView {
+  if (sale.status !== SaleStatus.VOIDED || !sale.voidedAt || !sale.voidedById ||
+      !sale.voidedByName || !sale.voidReason) {
+    throw new HttpError(500, 'SALE_VOID_INTEGRITY_ERROR', 'Sale Void history is incomplete')
+  }
+  return {
+    sale: {
+      id: sale.id,
+      status: SaleStatus.VOIDED,
+      currency: sale.currency,
+      subtotal: sale.subtotal.toFixed(2),
+      totalAmount: sale.totalAmount.toFixed(2),
+      createdAt: sale.createdAt,
+      seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+      void: {
+        voidedAt: sale.voidedAt,
+        voidedByName: sale.voidedByName,
+        voidedByCode: sale.voidedByCode,
+        reason: sale.voidReason,
+      },
+      items: sale.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productNameAtSale,
+        categoryName: item.categoryNameAtSale,
+        sku: item.skuAtSale,
+        color: item.colorAtSale,
+        size: item.sizeAtSale,
+        quantity: item.quantity,
+        unitSoldPrice: item.unitSoldPrice.toFixed(2),
+        lineTotal: item.lineTotal.toFixed(2),
+      })),
+    },
+    idempotentReplay,
   }
 }
 
@@ -433,5 +505,149 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
     }
   }
 
-  return { createSale, listSales, getSale }
+  async function persistedVoidSale(db: SaleReader, accountId: string, saleId: string): Promise<PersistedVoidSale> {
+    const sale = await db.sale.findUnique({
+      where: { id_accountId: { id: saleId, accountId } },
+      select: voidSaleSelect,
+    })
+    if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
+    return sale
+  }
+
+  async function performVoid(
+    accountId: string,
+    voidedById: string,
+    saleId: string,
+    input: SaleVoidInput,
+  ): Promise<SaleVoidView> {
+    return prisma.$transaction(async (transaction) => {
+      const accounts = await transaction.$queryRaw<{ id: string }[]>(
+        Prisma.sql`SELECT "id" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
+      )
+      if (!accounts[0]) throw new HttpError(409, 'SALE_VOID_ACCOUNT_UNAVAILABLE', 'Sale Account is unavailable')
+
+      const actors = await transaction.$queryRaw<LockedVoidActor[]>(
+        Prisma.sql`SELECT "id", btrim(concat_ws(' ', "firstName", "lastName")) AS "voidedByName", "employeeCode", "role", "isActive" FROM "User" WHERE "id" = ${voidedById}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
+      )
+      const actor = actors[0]
+      if (!actor || !actor.isActive || actor.role !== UserRole.OWNER) {
+        throw new HttpError(403, 'SALE_VOID_ACTOR_UNAVAILABLE', 'Only an active OWNER may Void a Sale')
+      }
+
+      const sales = await transaction.$queryRaw<LockedVoidSale[]>(
+        Prisma.sql`SELECT "id", "status", "voidedById", "voidReason" FROM "Sale" WHERE "id" = ${saleId}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
+      )
+      const sale = sales[0]
+      if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
+      if (sale.status === SaleStatus.VOIDED) {
+        if (sale.voidedById !== voidedById || sale.voidReason !== input.reason) {
+          throw new HttpError(409, 'SALE_VOID_CONFLICT', 'Sale was already Void-ed with different details')
+        }
+        return voidView(await persistedVoidSale(transaction, accountId, saleId), true)
+      }
+      if (sale.status !== SaleStatus.COMPLETED) {
+        throw new HttpError(409, 'SALE_VOID_NOT_ALLOWED', 'Sale cannot be Void-ed')
+      }
+
+      const existingReturn = await transaction.saleReturn.findFirst({
+        where: { accountId, saleId },
+        select: { id: true },
+      })
+      if (existingReturn) {
+        throw new HttpError(409, 'SALE_VOID_HAS_RETURNS', 'A Sale with Returns cannot be Void-ed')
+      }
+
+      // SaleItems are immutable database history, so the Sale row lock plus a
+      // tenant-qualified read is sufficient; Variant locks below protect stock.
+      const items = await transaction.saleItem.findMany({
+        where: { accountId, saleId },
+        select: voidItemSelect,
+        orderBy: { id: 'asc' },
+      })
+      if (items.length === 0) {
+        throw new HttpError(409, 'SALE_VOID_NO_ITEMS', 'A Sale without items cannot be Void-ed')
+      }
+
+      const variantIds = [...new Set(items.map((item) => item.variantId))].sort()
+      const variants = await transaction.$queryRaw<LockedVoidVariant[]>(
+        Prisma.sql`SELECT "id", "currentStock" FROM "ProductVariant" WHERE "accountId" = ${accountId}::uuid AND "id" IN (${Prisma.join(variantIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY "id" FOR UPDATE`,
+      )
+      if (variants.length !== variantIds.length) {
+        throw new HttpError(409, 'SALE_VOID_VARIANT_UNAVAILABLE', 'Historical Sale inventory is unavailable')
+      }
+
+      const quantityByVariant = new Map<string, number>()
+      for (const item of items) {
+        quantityByVariant.set(item.variantId, (quantityByVariant.get(item.variantId) ?? 0) + item.quantity)
+      }
+      for (const variant of variants) {
+        const quantity = quantityByVariant.get(variant.id) ?? 0
+        if (quantity > maxStock - variant.currentStock) {
+          throw new HttpError(409, 'INVENTORY_STOCK_OVERFLOW', 'Sale Void would exceed the stock limit')
+        }
+      }
+
+      // Safe sequence: restore stock, append every reversal movement, then let
+      // the final Sale transition trigger re-check Return exclusion.
+      for (const [variantId, quantity] of quantityByVariant) {
+        const incremented = await transaction.productVariant.updateMany({
+          where: { id: variantId, accountId, currentStock: { lte: maxStock - quantity } },
+          data: { currentStock: { increment: quantity } },
+        })
+        if (incremented.count !== 1) {
+          throw new HttpError(409, 'INVENTORY_STOCK_OVERFLOW', 'Sale Void would exceed the stock limit')
+        }
+      }
+
+      for (const item of items) {
+        await transaction.inventoryMovement.create({
+          data: {
+            accountId,
+            variantId: item.variantId,
+            type: InventoryMovementType.SALE_VOID,
+            quantityChange: item.quantity,
+            unitCost: item.unitCostAtSale,
+            performedById: voidedById,
+            saleItemId: item.id,
+            returnItemId: null,
+            note: null,
+            idempotencyKey: null,
+            requestFingerprint: null,
+          },
+          select: { id: true },
+        })
+      }
+
+      await transaction.sale.update({
+        where: { id_accountId: { id: saleId, accountId } },
+        data: {
+          status: SaleStatus.VOIDED,
+          voidedAt: new Date(),
+          voidedById,
+          voidedByName: actor.voidedByName,
+          voidedByCode: actor.employeeCode,
+          voidReason: input.reason,
+        },
+        select: { id: true },
+      })
+
+      return voidView(await persistedVoidSale(transaction, accountId, saleId), false)
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
+  }
+
+  async function voidSale(
+    accountId: string,
+    voidedById: string,
+    saleId: string,
+    input: SaleVoidInput,
+  ): Promise<SaleVoidView> {
+    try {
+      return await performVoid(accountId, voidedById, saleId, input)
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(503, 'SALE_VOID_UNAVAILABLE', 'Sale could not be Void-ed')
+    }
+  }
+
+  return { createSale, listSales, getSale, voidSale }
 }

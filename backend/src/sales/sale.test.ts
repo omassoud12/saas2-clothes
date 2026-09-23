@@ -502,6 +502,7 @@ describe('Sale route authorization and response', () => {
       async createSale() { throw Error('must not run') },
       async listSales() { throw Error('must not run') },
       async getSale() { throw Error('must not run') },
+      async voidSale() { throw Error('must not run') },
     }
     await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const response = await fetch(`${base}/api/sales`, { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(ownerInput()) })
@@ -528,6 +529,7 @@ describe('Sale route authorization and response', () => {
       async createSale() { throw Error('must not run') },
       async listSales() { throw Error('must not run') },
       async getSale() { throw Error('must not run') },
+      async voidSale() { throw Error('must not run') },
     }
     await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const headers = { Authorization: 'Bearer test' }
