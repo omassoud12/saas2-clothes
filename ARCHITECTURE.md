@@ -244,10 +244,10 @@ ProductVariant does not store averageCost.
 
 ProductVariant.sellingPrice is the normal/default catalog selling price for the
 variant. OWNER owns catalog selling-price changes. WAREHOUSE may read the
-catalog selling price but cannot set or update it. A future WAREHOUSE Sale must
-use the locked current catalog price; a differing submitted price is rejected
-as stale or unauthorized pricing. A future OWNER Sale may support an explicit
-per-line price override, but no Sale endpoint is implemented by this policy.
+catalog selling price but cannot set or update it. A WAREHOUSE Sale must use the
+locked current catalog price; a differing submitted price is rejected as stale
+or unauthorized pricing. An OWNER Sale may use an explicit positive per-line
+price override without changing the catalog price.
 
 SaleItem.unitSoldPrice is the actual price charged in a completed sale. It may
 differ from ProductVariant.sellingPrice without mutating the catalog price.
@@ -420,17 +420,39 @@ Sale must preserve the seller name and optional employee code as immutable
 snapshots. `soldById` is derived from the authenticated Supabase user. OWNER and
 WAREHOUSE may perform sales; SUPER_ADMIN may not perform tenant sales.
 
-Future Sale creation requires a client operation UUID stored as
+Sale creation through `POST /api/sales` is available to active OWNER and
+WAREHOUSE users and requires a client operation UUID stored as
 `Sale.idempotencyKey`, unique within the authenticated Account, and a
 server-computed lowercase SHA-256 `requestFingerprint`. Retrying the same key
 and semantic request returns the original Sale; reusing the key for a different
 request is a conflict. The client never supplies the authoritative fingerprint.
 
+The Sale request contains only a nonempty cart of at most 100 unique Variants,
+with a positive integer quantity of at most 1,000,000 and a positive decimal
+string price with at most two fractional digits per line. Duplicate Variants
+are rejected rather than merged. The fingerprint includes authenticated
+Account and seller IDs plus the cart normalized to two-decimal prices and
+sorted by Variant ID, so reordered equivalent requests replay safely.
+
+The transaction locks the Account, authenticated seller, Product rows sorted
+by ID, and ProductVariant rows sorted by ID. Products and Variants must be
+active. WAREHOUSE must submit the current locked non-null catalog price; OWNER
+may submit an explicit Sale-only price even when the catalog price is null.
+Every Variant must have a non-null `lastPurchaseCost`, which is copied exactly
+to `SaleItem.unitCostAtSale`. Currency comes from `Account.baseCurrency`, and
+seller, Product, Category, and Variant snapshots come from trusted database
+state. Decimal line totals and Sale totals are calculated by the backend;
+normal Sales cannot have zero-price lines or negative stock.
+
 Each inserted SALE InventoryMovement must use
 `quantityChange = -SaleItem.quantity` and
 `unitCost = SaleItem.unitCostAtSale`, resolved through the tenant-qualified
 SaleItem relation. The Sale API must create the Sale, SaleItems, stock
-decrements, and SALE movements atomically. No Sale API is implemented yet.
+decrements, and SALE movements atomically. Conditional stock decrements and
+movement inserts happen in the same transaction, and any failure rolls back
+the entire cart. DailyReport is not updated synchronously. This endpoint does
+not model payment/tender, customer, invoice, or sequential receipt-number data,
+and no frontend POS is implemented by this backend step.
 
 ---
 
