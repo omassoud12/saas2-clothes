@@ -10,8 +10,8 @@ import { AccountStatus, InventoryMovementType, SaleStatus, UserRole } from '../g
 import { errorHandler } from '../middleware/error-handler.js'
 import { createSaleRouter } from './sale.routes.js'
 import { canonicalSaleItems, encodeSaleCursor, maxSaleLines, parseSaleHistoryQuery, parseSaleId, parseSaleIdempotencyKey, parseSaleInput, saleFingerprint } from './sale.schemas.js'
-import { createSaleDependencies } from './sale.service.js'
-import type { SaleDependencies, SaleInput } from './sale.types.js'
+import { createSaleDependencies, createSaleInTransaction } from './sale.service.js'
+import type { SaleDependencies, SaleInput, SaleTransaction } from './sale.types.js'
 import type { ReturnDependencies } from '../returns/return.types.js'
 
 const accountA = '11111111-1111-4111-8111-111111111111'
@@ -86,6 +86,7 @@ class SaleDouble {
   failAt: 'saleItem' | 'stock' | 'movement' | null = null
   raceWinner: 'same' | 'different' | null = null
   raceConstraint = 'Sale_accountId_idempotencyKey_key'
+  transactionOpenCount = 0
   private tail: Promise<void> = Promise.resolve()
 
   private snapshot(): State {
@@ -106,8 +107,11 @@ class SaleDouble {
     return {
       sale: {
         async findUnique({ where }: Row) {
-          const key = where.accountId_idempotencyKey
-          const sale = current().sales.find((row) => row.accountId === key.accountId && row.idempotencyKey === key.idempotencyKey)
+          const idKey = where.id_accountId
+          const idempotency = where.accountId_idempotencyKey
+          const sale = idKey
+            ? current().sales.find((row) => row.id === idKey.id && row.accountId === idKey.accountId)
+            : current().sales.find((row) => row.accountId === idempotency.accountId && row.idempotencyKey === idempotency.idempotencyKey)
           return sale ? persisted(sale) : null
         },
         async create({ data }: Row) {
@@ -176,6 +180,7 @@ class SaleDouble {
       },
       async $transaction<T>(callback: (tx: PrismaClient) => Promise<T>): Promise<T> {
         assert.equal(transactional, false)
+        store.transactionOpenCount += 1
         let release!: () => void
         const previous = store.tail
         store.tail = new Promise<void>((resolve) => { release = resolve })
@@ -443,6 +448,76 @@ describe('Sale history service', () => {
 })
 
 describe('transactional Sale service', () => {
+  test('transaction primitive uses its supplied client and caller rollback removes every Sale effect', async () => {
+    const store = new SaleDouble()
+    const prisma = store.asClient()
+    const input = ownerInput()
+    const requestFingerprint = saleFingerprint(accountA, ownerA, input.items)
+    const synthetic = new Error('synthetic outer composition failure')
+
+    await assert.rejects(
+      prisma.$transaction(async (transaction) => {
+        const result = await createSaleInTransaction(
+          transaction as SaleTransaction,
+          { accountId: accountA, soldById: ownerA },
+          input,
+          { idempotencyKey: key, requestFingerprint },
+        )
+        assert.equal(result.status, SaleStatus.COMPLETED)
+        assert.equal(result.currency, 'USD')
+        assert.equal(result.subtotal.toFixed(2), '81.00')
+        assert.equal(result.totalAmount.toFixed(2), '81.00')
+        assert.equal(result.sellerNameAtSale, 'Ada Owner')
+        assert.equal(result.items.length, 1)
+        assert.deepEqual(
+          {
+            productId: result.items[0].productId,
+            variantId: result.items[0].variantId,
+            quantity: result.items[0].quantity,
+            price: result.items[0].unitSoldPrice.toFixed(2),
+            cost: result.items[0].unitCostAtSale.toFixed(4),
+            total: result.items[0].lineTotal.toFixed(2),
+          },
+          { productId: productA, variantId: variantA, quantity: 3, price: '27.00', cost: '12.3456', total: '81.00' },
+        )
+        throw synthetic
+      }),
+      (error) => error === synthetic,
+    )
+
+    assert.equal(store.transactionOpenCount, 1)
+    assert.deepEqual(store.locks.map((lock) => lock.kind), ['Account', 'User', 'Product', 'Variant'])
+    assert.equal(store.state.sales.length, 0)
+    assert.equal(store.state.items.length, 0)
+    assert.equal(store.state.movements.length, 0)
+    assert.equal(store.state.variants.get(variantA)!.currentStock, 10)
+  })
+
+  test('transaction primitive does not replay or recover a duplicate operation key', async () => {
+    const store = new SaleDouble()
+    store.state.sales.push({
+      id: randomUUID(), accountId: accountA, soldById: ownerA, idempotencyKey: key,
+      requestFingerprint: saleFingerprint(accountA, ownerA, ownerInput().items),
+      status: SaleStatus.COMPLETED, currency: 'USD', subtotal: new Prisma.Decimal('1.00'),
+      totalAmount: new Prisma.Decimal('1.00'), sellerNameAtSale: 'Ada Owner',
+      sellerCodeAtSale: null, createdAt: now,
+    })
+
+    await assert.rejects(
+      store.asClient().$transaction((transaction) => createSaleInTransaction(
+        transaction as SaleTransaction,
+        { accountId: accountA, soldById: ownerA },
+        ownerInput(),
+        { idempotencyKey: key, requestFingerprint: 'b'.repeat(64) },
+      )),
+      (error) => error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002',
+    )
+    assert.equal(store.state.sales.length, 1)
+    assert.equal(store.state.items.length, 0)
+    assert.equal(store.state.movements.length, 0)
+    assert.equal(store.state.variants.get(variantA)!.currentStock, 10)
+  })
+
   test('OWNER overrides price and atomically stores trusted snapshots, totals, cost, stock, and movement', async () => {
     const store = new SaleDouble()
     const result = await createSaleDependencies(store.asClient()).createSale(accountA, ownerA, key, ownerInput())
@@ -508,9 +583,10 @@ describe('transactional Sale service', () => {
   test('recovers only the Sale idempotency race and rolls back forced failures', async () => {
     const same = new SaleDouble(); same.raceWinner = 'same'
     assert.equal((await createSaleDependencies(same.asClient()).createSale(accountA, ownerA, key, ownerInput())).idempotentReplay, true)
-    assert.equal(same.state.variants.get(variantA)!.currentStock, 10)
+    assert.equal(same.state.variants.get(variantA)!.currentStock, 10); assert.equal(same.state.items.length, 0); assert.equal(same.state.movements.length, 0)
     const different = new SaleDouble(); different.raceWinner = 'different'
     await assert.rejects(createSaleDependencies(different.asClient()).createSale(accountA, ownerA, key, ownerInput()), (e) => expectHttp(e, 409, 'SALE_IDEMPOTENCY_CONFLICT'))
+    assert.equal(different.state.variants.get(variantA)!.currentStock, 10); assert.equal(different.state.items.length, 0); assert.equal(different.state.movements.length, 0)
     const unrelated = new SaleDouble(); unrelated.raceWinner = 'same'; unrelated.raceConstraint = 'unrelated_unique'
     await assert.rejects(createSaleDependencies(unrelated.asClient()).createSale(accountA, ownerA, key, ownerInput()), (e) => expectHttp(e, 503, 'SALE_UNAVAILABLE'))
     for (const point of ['saleItem','stock','movement'] as const) {

@@ -1,3 +1,5 @@
+import type { Prisma } from '../generated/prisma/client.js'
+
 export interface SaleLineInput {
   readonly variantId: string
   readonly quantity: number
@@ -101,6 +103,43 @@ export interface SaleView {
     }[]
   }
   readonly idempotentReplay: boolean
+}
+
+export type SaleTransaction = Prisma.TransactionClient
+
+export interface SaleTransactionContext {
+  readonly accountId: string
+  readonly soldById: string
+}
+
+export interface SaleOperationMetadata {
+  readonly idempotencyKey: string
+  readonly requestFingerprint: string
+}
+
+export interface SaleTransactionResult {
+  readonly id: string
+  readonly status: 'COMPLETED'
+  readonly currency: string
+  readonly subtotal: Prisma.Decimal
+  readonly totalAmount: Prisma.Decimal
+  readonly createdAt: Date
+  readonly sellerNameAtSale: string
+  readonly sellerCodeAtSale: string | null
+  readonly items: readonly {
+    readonly id: string
+    readonly productId: string
+    readonly variantId: string
+    readonly productNameAtSale: string
+    readonly categoryNameAtSale: string
+    readonly skuAtSale: string
+    readonly colorAtSale: string | null
+    readonly sizeAtSale: string | null
+    readonly quantity: number
+    readonly unitSoldPrice: Prisma.Decimal
+    readonly unitCostAtSale: Prisma.Decimal
+    readonly lineTotal: Prisma.Decimal
+  }[]
 }
 
 export interface SaleVoidInput {

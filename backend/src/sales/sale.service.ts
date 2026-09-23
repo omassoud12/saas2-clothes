@@ -2,7 +2,19 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import { canonicalSaleItems, encodeSaleCursor, saleFingerprint } from './sale.schemas.js'
-import type { SaleDependencies, SaleDetailView, SaleHistoryQuery, SaleInput, SaleView, SaleVoidInput, SaleVoidView } from './sale.types.js'
+import type {
+  SaleDependencies,
+  SaleDetailView,
+  SaleHistoryQuery,
+  SaleInput,
+  SaleOperationMetadata,
+  SaleTransaction,
+  SaleTransactionContext,
+  SaleTransactionResult,
+  SaleView,
+  SaleVoidInput,
+  SaleVoidView,
+} from './sale.types.js'
 
 const saleIdempotencyIndex = 'Sale_accountId_idempotencyKey_key'
 const maxMoney = new Prisma.Decimal('9999999999999999.99')
@@ -28,6 +40,33 @@ const persistedSaleSelect = {
       sizeAtSale: true,
       quantity: true,
       unitSoldPrice: true,
+      lineTotal: true,
+    },
+  },
+} as const
+const transactionSaleSelect = {
+  id: true,
+  status: true,
+  currency: true,
+  subtotal: true,
+  totalAmount: true,
+  createdAt: true,
+  sellerNameAtSale: true,
+  sellerCodeAtSale: true,
+  items: {
+    orderBy: { id: 'asc' as const },
+    select: {
+      id: true,
+      productId: true,
+      variantId: true,
+      productNameAtSale: true,
+      categoryNameAtSale: true,
+      skuAtSale: true,
+      colorAtSale: true,
+      sizeAtSale: true,
+      quantity: true,
+      unitSoldPrice: true,
+      unitCostAtSale: true,
       lineTotal: true,
     },
   },
@@ -119,7 +158,7 @@ function unavailable(): HttpError {
   return new HttpError(404, 'SALE_VARIANT_UNAVAILABLE', 'A requested Variant is unavailable')
 }
 
-function toView(sale: PersistedSale, idempotentReplay: boolean): SaleView {
+function toView(sale: PersistedSale | SaleTransactionResult, idempotentReplay: boolean): SaleView {
   return {
     sale: {
       id: sale.id,
@@ -278,6 +317,182 @@ function voidView(sale: PersistedVoidSale, idempotentReplay: boolean): SaleVoidV
   }
 }
 
+/**
+ * Transaction-scoped Sale primitive for trusted service composition. It owns
+ * no transaction boundary, replay lookup, unique-race recovery, or HTTP policy.
+ */
+export async function createSaleInTransaction(
+  transaction: SaleTransaction,
+  context: SaleTransactionContext,
+  input: SaleInput,
+  operation: SaleOperationMetadata,
+): Promise<SaleTransactionResult> {
+  const { accountId, soldById } = context
+  const { idempotencyKey, requestFingerprint } = operation
+  const items = canonicalSaleItems(input.items)
+  const variantIds = items.map((item) => item.variantId)
+
+  const accounts = await transaction.$queryRaw<LockedAccount[]>(
+    Prisma.sql`SELECT "id", "baseCurrency" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
+  )
+  const account = accounts[0]
+  if (!account || !/^[A-Z]{3}$/.test(account.baseCurrency)) {
+    throw new HttpError(409, 'SALE_ACCOUNT_UNAVAILABLE', 'Sale Account is unavailable')
+  }
+
+  const sellers = await transaction.$queryRaw<LockedSeller[]>(
+    Prisma.sql`SELECT "id", btrim(concat_ws(' ', "firstName", "lastName")) AS "sellerName", "employeeCode", "role", "isActive" FROM "User" WHERE "id" = ${soldById}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
+  )
+  const seller = sellers[0]
+  if (!seller || !seller.isActive || (seller.role !== UserRole.OWNER && seller.role !== UserRole.WAREHOUSE)) {
+    throw new HttpError(403, 'SALE_SELLER_UNAVAILABLE', 'Seller is not authorized to create Sales')
+  }
+
+  // This non-locking relationship lookup uses the caller's transaction state;
+  // authoritative Product and Variant rows are locked and revalidated below.
+  const advisory = await transaction.productVariant.findMany({
+    where: { accountId, id: { in: variantIds } },
+    select: { id: true, productId: true },
+  }) as AdvisoryVariant[]
+  if (advisory.length !== variantIds.length) throw unavailable()
+  const productIds = [...new Set(advisory.map((variant) => variant.productId))].sort()
+
+  const lockedProducts = await transaction.$queryRaw<LockedProduct[]>(
+    Prisma.sql`SELECT "id", "categoryId", "name", "isActive" FROM "Product" WHERE "accountId" = ${accountId}::uuid AND "id" IN (${Prisma.join(productIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY "id" FOR UPDATE`,
+  )
+  if (lockedProducts.length !== productIds.length) throw unavailable()
+  const productById = new Map(lockedProducts.map((product) => [product.id, product]))
+  if (lockedProducts.some((product) => !product.isActive)) {
+    throw new HttpError(409, 'SALE_PRODUCT_INACTIVE', 'Every Product in a Sale must be active')
+  }
+
+  const categoryIds = [...new Set(lockedProducts.map((product) => product.categoryId))]
+  const categories = await transaction.category.findMany({
+    where: { accountId, id: { in: categoryIds } },
+    select: { id: true, name: true },
+  })
+  if (categories.length !== categoryIds.length) throw unavailable()
+  const categoryById = new Map(categories.map((category) => [category.id, category]))
+
+  const lockedVariants = await transaction.$queryRaw<LockedVariant[]>(
+    Prisma.sql`SELECT "id", "productId", "sku", "color", "size", "sellingPrice", "lastPurchaseCost", "currentStock", "isActive" FROM "ProductVariant" WHERE "accountId" = ${accountId}::uuid AND "id" IN (${Prisma.join(variantIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY "id" FOR UPDATE`,
+  )
+  if (lockedVariants.length !== variantIds.length) throw unavailable()
+  const variantById = new Map(lockedVariants.map((variant) => [variant.id, variant]))
+
+  let subtotal = new Prisma.Decimal(0)
+  const trustedLines = items.map((item) => {
+    const variant = variantById.get(item.variantId)
+    if (!variant) throw unavailable()
+    const advisoryVariant = advisory.find((candidate) => candidate.id === item.variantId)
+    if (!advisoryVariant || advisoryVariant.productId !== variant.productId) throw unavailable()
+    const product = productById.get(variant.productId)
+    if (!product) throw unavailable()
+    const category = categoryById.get(product.categoryId)
+    if (!category) throw unavailable()
+    if (!variant.isActive) throw new HttpError(409, 'SALE_VARIANT_INACTIVE', 'Every Variant in a Sale must be active')
+    if (variant.lastPurchaseCost === null) {
+      throw new HttpError(409, 'SALE_COST_UNAVAILABLE', 'A requested Variant has no purchase cost')
+    }
+    const unitSoldPrice = new Prisma.Decimal(item.unitSoldPrice)
+    if (seller.role === UserRole.WAREHOUSE) {
+      if (variant.sellingPrice === null) {
+        throw new HttpError(409, 'SALE_VARIANT_NOT_PRICED', 'A requested Variant has no catalog price')
+      }
+      if (!decimal(variant.sellingPrice).equals(unitSoldPrice)) {
+        throw new HttpError(409, 'SALE_PRICE_CHANGED', 'A requested Variant price has changed')
+      }
+    }
+    if (variant.currentStock < item.quantity) {
+      throw new HttpError(409, 'INSUFFICIENT_STOCK', 'A requested Variant has insufficient stock')
+    }
+    const lineTotal = unitSoldPrice.mul(item.quantity)
+    if (lineTotal.decimalPlaces() > 2 || lineTotal.gt(maxMoney)) {
+      throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
+    }
+    subtotal = subtotal.add(lineTotal)
+    if (subtotal.gt(maxMoney)) {
+      throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
+    }
+    return { item, variant, product, category, unitSoldPrice, unitCostAtSale: decimal(variant.lastPurchaseCost), lineTotal }
+  })
+
+  const sale = await transaction.sale.create({
+    data: {
+      accountId,
+      soldById,
+      idempotencyKey,
+      requestFingerprint,
+      sellerNameAtSale: seller.sellerName,
+      sellerCodeAtSale: seller.employeeCode,
+      status: SaleStatus.COMPLETED,
+      currency: account.baseCurrency,
+      subtotal,
+      totalAmount: subtotal,
+    },
+    select: { id: true },
+  })
+
+  for (const line of trustedLines) {
+    const saleItem = await transaction.saleItem.create({
+      data: {
+        accountId,
+        saleId: sale.id,
+        productId: line.product.id,
+        variantId: line.variant.id,
+        categoryId: line.category.id,
+        productNameAtSale: line.product.name,
+        categoryNameAtSale: line.category.name,
+        skuAtSale: line.variant.sku,
+        colorAtSale: line.variant.color,
+        sizeAtSale: line.variant.size,
+        quantity: line.item.quantity,
+        unitSoldPrice: line.unitSoldPrice,
+        unitCostAtSale: line.unitCostAtSale,
+        lineTotal: line.lineTotal,
+      },
+      select: { id: true },
+    })
+    const decremented = await transaction.productVariant.updateMany({
+      where: {
+        id: line.variant.id,
+        accountId,
+        productId: line.product.id,
+        currentStock: { gte: line.item.quantity },
+      },
+      data: { currentStock: { decrement: line.item.quantity } },
+    })
+    if (decremented.count !== 1) {
+      throw new HttpError(409, 'INSUFFICIENT_STOCK', 'A requested Variant has insufficient stock')
+    }
+    await transaction.inventoryMovement.create({
+      data: {
+        accountId,
+        variantId: line.variant.id,
+        type: InventoryMovementType.SALE,
+        quantityChange: -line.item.quantity,
+        unitCost: line.unitCostAtSale,
+        performedById: soldById,
+        saleItemId: saleItem.id,
+        returnItemId: null,
+        note: null,
+        idempotencyKey: null,
+        requestFingerprint: null,
+      },
+      select: { id: true },
+    })
+  }
+
+  const persisted = await transaction.sale.findUnique({
+    where: { id_accountId: { id: sale.id, accountId } },
+    select: transactionSaleSelect,
+  })
+  if (!persisted || persisted.status !== SaleStatus.COMPLETED) {
+    throw new HttpError(500, 'SALE_INTEGRITY_ERROR', 'Sale record is incomplete')
+  }
+  return { ...persisted, status: SaleStatus.COMPLETED }
+}
+
 export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
   async function findSale(db: SaleReader, accountId: string, idempotencyKey: string): Promise<PersistedSale | null> {
     return db.sale.findUnique({
@@ -297,165 +512,28 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
     const existing = await findSale(prisma, accountId, idempotencyKey)
     if (existing) return replay(existing, fingerprint)
 
+    // Preserve the standalone endpoint's existing early availability check.
+    // The primitive independently rereads the relationship in its transaction.
     const variantIds = items.map((item) => item.variantId)
     const advisory = await prisma.productVariant.findMany({
       where: { accountId, id: { in: variantIds } },
       select: { id: true, productId: true },
     }) as AdvisoryVariant[]
     if (advisory.length !== variantIds.length) throw unavailable()
-    const productIds = [...new Set(advisory.map((variant) => variant.productId))].sort()
 
     try {
-      return await prisma.$transaction(async (transaction) => {
+      const outcome = await prisma.$transaction(async (transaction) => {
         const concurrentExisting = await findSale(transaction, accountId, idempotencyKey)
-        if (concurrentExisting) return replay(concurrentExisting, fingerprint)
-
-        const accounts = await transaction.$queryRaw<LockedAccount[]>(
-          Prisma.sql`SELECT "id", "baseCurrency" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
+        if (concurrentExisting) return { kind: 'replay' as const, sale: concurrentExisting }
+        const sale = await createSaleInTransaction(
+          transaction,
+          { accountId, soldById },
+          { items },
+          { idempotencyKey, requestFingerprint: fingerprint },
         )
-        const account = accounts[0]
-        if (!account || !/^[A-Z]{3}$/.test(account.baseCurrency)) {
-          throw new HttpError(409, 'SALE_ACCOUNT_UNAVAILABLE', 'Sale Account is unavailable')
-        }
-
-        const sellers = await transaction.$queryRaw<LockedSeller[]>(
-          Prisma.sql`SELECT "id", btrim(concat_ws(' ', "firstName", "lastName")) AS "sellerName", "employeeCode", "role", "isActive" FROM "User" WHERE "id" = ${soldById}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
-        )
-        const seller = sellers[0]
-        if (!seller || !seller.isActive || (seller.role !== UserRole.OWNER && seller.role !== UserRole.WAREHOUSE)) {
-          throw new HttpError(403, 'SALE_SELLER_UNAVAILABLE', 'Seller is not authorized to create Sales')
-        }
-
-        const lockedProducts = await transaction.$queryRaw<LockedProduct[]>(
-          Prisma.sql`SELECT "id", "categoryId", "name", "isActive" FROM "Product" WHERE "accountId" = ${accountId}::uuid AND "id" IN (${Prisma.join(productIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY "id" FOR UPDATE`,
-        )
-        if (lockedProducts.length !== productIds.length) throw unavailable()
-        const productById = new Map(lockedProducts.map((product) => [product.id, product]))
-        if (lockedProducts.some((product) => !product.isActive)) {
-          throw new HttpError(409, 'SALE_PRODUCT_INACTIVE', 'Every Product in a Sale must be active')
-        }
-
-        const categoryIds = [...new Set(lockedProducts.map((product) => product.categoryId))]
-        const categories = await transaction.category.findMany({
-          where: { accountId, id: { in: categoryIds } },
-          select: { id: true, name: true },
-        })
-        if (categories.length !== categoryIds.length) throw unavailable()
-        const categoryById = new Map(categories.map((category) => [category.id, category]))
-
-        const lockedVariants = await transaction.$queryRaw<LockedVariant[]>(
-          Prisma.sql`SELECT "id", "productId", "sku", "color", "size", "sellingPrice", "lastPurchaseCost", "currentStock", "isActive" FROM "ProductVariant" WHERE "accountId" = ${accountId}::uuid AND "id" IN (${Prisma.join(variantIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY "id" FOR UPDATE`,
-        )
-        if (lockedVariants.length !== variantIds.length) throw unavailable()
-        const variantById = new Map(lockedVariants.map((variant) => [variant.id, variant]))
-
-        let subtotal = new Prisma.Decimal(0)
-        const trustedLines = items.map((item) => {
-          const variant = variantById.get(item.variantId)
-          if (!variant) throw unavailable()
-          const advisoryVariant = advisory.find((candidate) => candidate.id === item.variantId)
-          if (!advisoryVariant || advisoryVariant.productId !== variant.productId) throw unavailable()
-          const product = productById.get(variant.productId)
-          if (!product) throw unavailable()
-          const category = categoryById.get(product.categoryId)
-          if (!category) throw unavailable()
-          if (!variant.isActive) throw new HttpError(409, 'SALE_VARIANT_INACTIVE', 'Every Variant in a Sale must be active')
-          if (variant.lastPurchaseCost === null) {
-            throw new HttpError(409, 'SALE_COST_UNAVAILABLE', 'A requested Variant has no purchase cost')
-          }
-          const unitSoldPrice = new Prisma.Decimal(item.unitSoldPrice)
-          if (seller.role === UserRole.WAREHOUSE) {
-            if (variant.sellingPrice === null) {
-              throw new HttpError(409, 'SALE_VARIANT_NOT_PRICED', 'A requested Variant has no catalog price')
-            }
-            if (!decimal(variant.sellingPrice).equals(unitSoldPrice)) {
-              throw new HttpError(409, 'SALE_PRICE_CHANGED', 'A requested Variant price has changed')
-            }
-          }
-          if (variant.currentStock < item.quantity) {
-            throw new HttpError(409, 'INSUFFICIENT_STOCK', 'A requested Variant has insufficient stock')
-          }
-          const lineTotal = unitSoldPrice.mul(item.quantity)
-          if (lineTotal.decimalPlaces() > 2 || lineTotal.gt(maxMoney)) {
-            throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
-          }
-          subtotal = subtotal.add(lineTotal)
-          if (subtotal.gt(maxMoney)) {
-            throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
-          }
-          return { item, variant, product, category, unitSoldPrice, unitCostAtSale: decimal(variant.lastPurchaseCost), lineTotal }
-        })
-
-        const sale = await transaction.sale.create({
-          data: {
-            accountId,
-            soldById,
-            idempotencyKey,
-            requestFingerprint: fingerprint,
-            sellerNameAtSale: seller.sellerName,
-            sellerCodeAtSale: seller.employeeCode,
-            status: SaleStatus.COMPLETED,
-            currency: account.baseCurrency,
-            subtotal,
-            totalAmount: subtotal,
-          },
-          select: { id: true },
-        })
-
-        for (const line of trustedLines) {
-          const saleItem = await transaction.saleItem.create({
-            data: {
-              accountId,
-              saleId: sale.id,
-              productId: line.product.id,
-              variantId: line.variant.id,
-              categoryId: line.category.id,
-              productNameAtSale: line.product.name,
-              categoryNameAtSale: line.category.name,
-              skuAtSale: line.variant.sku,
-              colorAtSale: line.variant.color,
-              sizeAtSale: line.variant.size,
-              quantity: line.item.quantity,
-              unitSoldPrice: line.unitSoldPrice,
-              unitCostAtSale: line.unitCostAtSale,
-              lineTotal: line.lineTotal,
-            },
-            select: { id: true },
-          })
-          const decremented = await transaction.productVariant.updateMany({
-            where: {
-              id: line.variant.id,
-              accountId,
-              productId: line.product.id,
-              currentStock: { gte: line.item.quantity },
-            },
-            data: { currentStock: { decrement: line.item.quantity } },
-          })
-          if (decremented.count !== 1) {
-            throw new HttpError(409, 'INSUFFICIENT_STOCK', 'A requested Variant has insufficient stock')
-          }
-          await transaction.inventoryMovement.create({
-            data: {
-              accountId,
-              variantId: line.variant.id,
-              type: InventoryMovementType.SALE,
-              quantityChange: -line.item.quantity,
-              unitCost: line.unitCostAtSale,
-              performedById: soldById,
-              saleItemId: saleItem.id,
-              returnItemId: null,
-              note: null,
-              idempotencyKey: null,
-              requestFingerprint: null,
-            },
-            select: { id: true },
-          })
-        }
-
-        const persisted = await findSale(transaction, accountId, idempotencyKey)
-        if (!persisted) throw new HttpError(500, 'SALE_INTEGRITY_ERROR', 'Sale record is incomplete')
-        return toView(persisted, false)
+        return { kind: 'created' as const, sale }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
+      return outcome.kind === 'replay' ? replay(outcome.sale, fingerprint) : toView(outcome.sale, false)
     } catch (error) {
       if (isSaleIdempotencyViolation(error)) {
         const winner = await findSale(prisma, accountId, idempotencyKey)

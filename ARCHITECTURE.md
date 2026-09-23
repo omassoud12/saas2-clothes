@@ -568,6 +568,25 @@ server-computed lowercase SHA-256 `requestFingerprint`. Retrying the same key
 and semantic request returns the original Sale; reusing the key for a different
 request is a conflict. The client never supplies the authoritative fingerprint.
 
+Standalone Sale creation keeps its public idempotency wrapper separate from a
+reusable transaction-scoped `createSaleInTransaction` primitive. The wrapper
+owns replay lookup, the interactive transaction boundary, post-rollback
+recovery for the exact Sale idempotency unique race, and public serialization.
+The primitive receives a caller-provided Prisma transaction plus trusted
+Account/seller context and required internal `idempotencyKey` and
+`requestFingerprint` metadata. It opens no nested transaction and performs no
+replay lookup or unique-race recovery; it locks authoritative state and creates
+the Sale, SaleItems, stock decrements, and SALE movements, returning persisted
+Sale data to its caller. Existing standalone Sale behavior is unchanged.
+
+A future Exchange transaction can compose the existing Return primitive and
+this Sale primitive before inserting its Exchange link, so failure of any step
+can roll back every child effect. Exchange runtime is not implemented yet. The
+Sale primitive retains the standalone Account, seller, sorted Product, and
+sorted Variant lock sequence. Future Exchange work must define one unified
+outer locking strategy when Return and Sale touch the same Variants; this step
+does not introduce a lock-skipping flag or change standalone ordering.
+
 The Sale request contains only a nonempty cart of at most 100 unique Variants,
 with a positive integer quantity of at most 1,000,000 and a positive decimal
 string price with at most two fractional digits per line. Duplicate Variants
