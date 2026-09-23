@@ -230,20 +230,22 @@ model Expense {
 }
 
 model Sale {
-  id               String     @id @default(uuid()) @db.Uuid
-  accountId        String     @db.Uuid
-  soldById         String     @db.Uuid
-  sellerNameAtSale String
-  sellerCodeAtSale String?
-  status           SaleStatus @default(COMPLETED)
-  currency         String     @db.Char(3)
-  subtotal         Decimal    @db.Decimal(18, 2)
-  totalAmount      Decimal    @db.Decimal(18, 2)
-  voidedAt         DateTime?  @db.Timestamptz(3)
-  voidedById       String?    @db.Uuid
-  voidedByName     String?
-  voidedByCode     String?
-  voidReason       String?
+  id                 String     @id @default(uuid()) @db.Uuid
+  accountId          String     @db.Uuid
+  soldById           String     @db.Uuid
+  idempotencyKey     String     @db.Uuid
+  requestFingerprint String     @db.VarChar(64)
+  sellerNameAtSale   String
+  sellerCodeAtSale   String?
+  status             SaleStatus @default(COMPLETED)
+  currency           String     @db.Char(3)
+  subtotal           Decimal    @db.Decimal(18, 2)
+  totalAmount        Decimal    @db.Decimal(18, 2)
+  voidedAt           DateTime?  @db.Timestamptz(3)
+  voidedById         String?    @db.Uuid
+  voidedByName       String?
+  voidedByCode       String?
+  voidReason         String?
 
   account           Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
   soldBy            User             @relation("SaleSoldBy", fields: [soldById, accountId], references: [id, accountId], onDelete: Restrict)
@@ -257,6 +259,7 @@ model Sale {
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   @@unique([id, accountId])
+  @@unique([accountId, idempotencyKey])
   @@index([accountId, createdAt])
   @@index([accountId, soldById, createdAt])
   @@index([accountId, status, createdAt])

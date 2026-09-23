@@ -420,6 +420,18 @@ Sale must preserve the seller name and optional employee code as immutable
 snapshots. `soldById` is derived from the authenticated Supabase user. OWNER and
 WAREHOUSE may perform sales; SUPER_ADMIN may not perform tenant sales.
 
+Future Sale creation requires a client operation UUID stored as
+`Sale.idempotencyKey`, unique within the authenticated Account, and a
+server-computed lowercase SHA-256 `requestFingerprint`. Retrying the same key
+and semantic request returns the original Sale; reusing the key for a different
+request is a conflict. The client never supplies the authoritative fingerprint.
+
+Each inserted SALE InventoryMovement must use
+`quantityChange = -SaleItem.quantity` and
+`unitCost = SaleItem.unitCostAtSale`, resolved through the tenant-qualified
+SaleItem relation. The Sale API must create the Sale, SaleItems, stock
+decrements, and SALE movements atomically. No Sale API is implemented yet.
+
 ---
 
 ## 9. Sale Transaction
