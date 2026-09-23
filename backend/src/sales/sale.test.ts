@@ -9,7 +9,7 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { AccountStatus, InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { errorHandler } from '../middleware/error-handler.js'
 import { createSaleRouter } from './sale.routes.js'
-import { canonicalSaleItems, maxSaleLines, parseSaleIdempotencyKey, parseSaleInput, saleFingerprint } from './sale.schemas.js'
+import { canonicalSaleItems, encodeSaleCursor, maxSaleLines, parseSaleHistoryQuery, parseSaleId, parseSaleIdempotencyKey, parseSaleInput, saleFingerprint } from './sale.schemas.js'
 import { createSaleDependencies } from './sale.service.js'
 import type { SaleDependencies, SaleInput } from './sale.types.js'
 
@@ -29,6 +29,9 @@ const categoryB = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
 const key = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 const categoryOther = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
 const now = new Date('2026-09-23T00:00:00.000Z')
+const saleA = '10000000-0000-4000-8000-000000000001'
+const saleB = '20000000-0000-4000-8000-000000000002'
+const saleOther = '30000000-0000-4000-8000-000000000003'
 
 type Row = Record<string, any>
 type State = {
@@ -189,6 +192,87 @@ class SaleDouble {
   asClient(): PrismaClient { return this.client(this.state, false) }
 }
 
+class HistoryDouble {
+  readonly currentCatalog = { sellerName: 'New Seller', productName: 'New Product', sku: 'NEW-SKU' }
+  readonly sales: Row[] = [
+    {
+      id: saleA, accountId: accountA, soldById: ownerA, status: SaleStatus.COMPLETED,
+      currency: 'USD', subtotal: new Prisma.Decimal('60.00'), totalAmount: new Prisma.Decimal('60.00'),
+      createdAt: new Date('2026-09-22T12:00:00.000Z'), sellerNameAtSale: 'Old Seller', sellerCodeAtSale: 'OLD-1',
+      voidedAt: null, voidedByName: null, voidedByCode: null, voidReason: null,
+    },
+    {
+      id: saleB, accountId: accountA, soldById: warehouseA, status: SaleStatus.VOIDED,
+      currency: 'USD', subtotal: new Prisma.Decimal('16.00'), totalAmount: new Prisma.Decimal('16.00'),
+      createdAt: new Date('2026-09-22T12:00:00.000Z'), sellerNameAtSale: 'Warehouse Snapshot', sellerCodeAtSale: null,
+      voidedAt: new Date('2026-09-23T08:00:00.000Z'), voidedByName: 'Owner Snapshot', voidedByCode: 'OWN-1', voidReason: 'Duplicate sale',
+    },
+    {
+      id: saleOther, accountId: accountB, soldById: ownerB, status: SaleStatus.COMPLETED,
+      currency: 'LBP', subtotal: new Prisma.Decimal('999.00'), totalAmount: new Prisma.Decimal('999.00'),
+      createdAt: new Date('2026-09-23T12:00:00.000Z'), sellerNameAtSale: 'Foreign Seller', sellerCodeAtSale: null,
+      voidedAt: null, voidedByName: null, voidedByCode: null, voidReason: null,
+    },
+  ]
+  readonly items: Row[] = [
+    {
+      id: '40000000-0000-4000-8000-000000000001', accountId: accountA, saleId: saleA,
+      productId: productA, variantId: variantA, productNameAtSale: 'Old Product', categoryNameAtSale: 'Old Category',
+      skuAtSale: 'OLD-SKU', colorAtSale: 'Black', sizeAtSale: 'M', quantity: 2,
+      unitSoldPrice: new Prisma.Decimal('30.00'), unitCostAtSale: new Prisma.Decimal('12.3456'), lineTotal: new Prisma.Decimal('60.00'),
+    },
+    {
+      id: '40000000-0000-4000-8000-000000000002', accountId: accountA, saleId: saleB,
+      productId: productA, variantId: variantA, productNameAtSale: 'Second Product', categoryNameAtSale: 'Old Category',
+      skuAtSale: 'SECOND-SKU', colorAtSale: null, sizeAtSale: null, quantity: 2,
+      unitSoldPrice: new Prisma.Decimal('5.00'), unitCostAtSale: new Prisma.Decimal('2.0000'), lineTotal: new Prisma.Decimal('10.00'),
+    },
+    {
+      id: '40000000-0000-4000-8000-000000000003', accountId: accountA, saleId: saleB,
+      productId: productB, variantId: variantB, productNameAtSale: 'Third Product', categoryNameAtSale: 'Old Category',
+      skuAtSale: 'THIRD-SKU', colorAtSale: 'Blue', sizeAtSale: 'L', quantity: 3,
+      unitSoldPrice: new Prisma.Decimal('2.00'), unitCostAtSale: new Prisma.Decimal('1.0000'), lineTotal: new Prisma.Decimal('6.00'),
+    },
+  ]
+  groupQueries = 0
+
+  asClient(): PrismaClient {
+    const store = this
+    return {
+      sale: {
+        async findMany({ where, take }: Row) {
+          let rows = store.sales.filter((sale) => sale.accountId === where.accountId)
+          if (where.status) rows = rows.filter((sale) => sale.status === where.status)
+          if (where.soldById) rows = rows.filter((sale) => sale.soldById === where.soldById)
+          if (where.createdAt?.gte) rows = rows.filter((sale) => sale.createdAt >= where.createdAt.gte)
+          if (where.createdAt?.lte) rows = rows.filter((sale) => sale.createdAt <= where.createdAt.lte)
+          if (where.OR) {
+            const before = where.OR[0].createdAt.lt as Date
+            const cursorId = where.OR[1].id.lt as string
+            rows = rows.filter((sale) => sale.createdAt < before || (sale.createdAt.getTime() === before.getTime() && sale.id < cursorId))
+          }
+          return rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime() || right.id.localeCompare(left.id))
+            .slice(0, take).map((sale) => ({ ...sale, _count: { items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).length } }))
+        },
+        async findUnique({ where }: Row) {
+          const key = where.id_accountId
+          const sale = store.sales.find((candidate) => candidate.id === key.id && candidate.accountId === key.accountId)
+          return sale ? { ...sale, items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).sort((a, b) => a.id.localeCompare(b.id)) } : null
+        },
+      },
+      saleItem: {
+        async groupBy({ where }: Row) {
+          store.groupQueries += 1
+          return where.saleId.in.map((id: string) => ({
+            saleId: id,
+            _sum: { quantity: store.items.filter((item) => item.accountId === where.accountId && item.saleId === id).reduce((sum, item) => sum + item.quantity, 0) },
+          }))
+        },
+      },
+    } as unknown as PrismaClient
+  }
+}
+
 const ownerInput = (price = '27.00'): SaleInput => ({ items: [{ variantId: variantA, quantity: 3, unitSoldPrice: price }] })
 
 describe('Sale input and fingerprint', () => {
@@ -217,6 +301,82 @@ describe('Sale input and fingerprint', () => {
     assert.equal(saleFingerprint(accountA, ownerA, a.items), saleFingerprint(accountA, ownerA, b.items))
     assert.notEqual(saleFingerprint(accountA, ownerA, a.items), saleFingerprint(accountA, warehouseA, a.items))
     assert.match(saleFingerprint(accountA, ownerA, a.items), /^[0-9a-f]{64}$/)
+  })
+})
+
+describe('Sale history validation', () => {
+  test('validates bounded filters, dates, identifiers, and limits', () => {
+    assert.deepEqual(parseSaleHistoryQuery({}), { limit: 25 })
+    const parsed = parseSaleHistoryQuery({ status: 'VOIDED', soldById: ownerA, from: '2026-09-01T00:00:00Z', to: '2026-09-30T23:59:59.999Z', limit: '100' })
+    assert.equal(parsed.status, SaleStatus.VOIDED); assert.equal(parsed.soldById, ownerA); assert.equal(parsed.limit, 100)
+    assert.equal(parsed.from!.toISOString(), '2026-09-01T00:00:00.000Z'); assert.equal(parsed.to!.toISOString(), '2026-09-30T23:59:59.999Z')
+    for (const query of [
+      { status: 'RETURNED' }, { soldById: 'bad' }, { from: '2026-09-01' },
+      { from: '2026-09-02T00:00:00Z', to: '2026-09-01T00:00:00Z' },
+      { limit: '0' }, { limit: '101' }, { limit: '1.5' }, { accountId: accountA },
+    ]) assert.throws(() => parseSaleHistoryQuery(query), (e) => expectHttp(e, 422, 'INVALID_SALE_FILTER'))
+    assert.equal(parseSaleId(saleA), saleA)
+    assert.throws(() => parseSaleId('bad'), (e) => expectHttp(e, 422, 'INVALID_SALE_ID'))
+  })
+
+  test('round-trips a stable two-field cursor and rejects malformed cursors', () => {
+    const cursor = encodeSaleCursor(now, saleA)
+    assert.deepEqual(parseSaleHistoryQuery({ cursor }).cursor, { createdAt: now, id: saleA })
+    for (const invalid of ['bad!', Buffer.from('{}').toString('base64url'), Buffer.from(JSON.stringify({ createdAt: now.toISOString(), id: 'bad' })).toString('base64url')]) {
+      assert.throws(() => parseSaleHistoryQuery({ cursor: invalid }), (e) => expectHttp(e, 422, 'INVALID_SALE_FILTER'))
+    }
+  })
+})
+
+describe('Sale history service', () => {
+  test('lists tenant Sales with snapshot summaries, line counts, unit totals, and no N+1 query', async () => {
+    const store = new HistoryDouble()
+    const result = await createSaleDependencies(store.asClient()).listSales(accountA, { limit: 25 })
+    assert.deepEqual(result.sales.map((sale) => sale.id), [saleB, saleA])
+    assert.deepEqual(result.sales.map(({ itemCount, totalUnits }) => ({ itemCount, totalUnits })), [{ itemCount: 2, totalUnits: 5 }, { itemCount: 1, totalUnits: 2 }])
+    assert.deepEqual(result.sales[1].seller, { name: 'Old Seller', employeeCode: 'OLD-1' })
+    assert.equal(result.nextCursor, null); assert.equal(store.groupQueries, 1)
+    const json = JSON.stringify(result)
+    for (const secret of ['unitCostAtSale','totalCOGS','grossProfit','idempotencyKey','requestFingerprint']) assert.equal(json.includes(secret), false)
+    assert.deepEqual(await createSaleDependencies(store.asClient()).listSales('99999999-0000-4000-8000-000000000009', { limit: 25 }), { sales: [], nextCursor: null })
+  })
+
+  test('applies status, seller, from, to, and combined date filters inside the tenant', async () => {
+    const service = createSaleDependencies(new HistoryDouble().asClient())
+    assert.deepEqual((await service.listSales(accountA, { status: SaleStatus.VOIDED, limit: 25 })).sales.map((sale) => sale.id), [saleB])
+    assert.deepEqual((await service.listSales(accountA, { soldById: ownerA, limit: 25 })).sales.map((sale) => sale.id), [saleA])
+    assert.equal((await service.listSales(accountA, { from: new Date('2026-09-22T12:00:00Z'), limit: 25 })).sales.length, 2)
+    assert.equal((await service.listSales(accountA, { to: new Date('2026-09-22T11:59:59Z'), limit: 25 })).sales.length, 0)
+    assert.equal((await service.listSales(accountA, { from: new Date('2026-09-22T11:00:00Z'), to: new Date('2026-09-22T13:00:00Z'), limit: 25 })).sales.length, 2)
+    assert.equal((await service.listSales(accountA, { soldById: ownerB, limit: 25 })).sales.length, 0)
+  })
+
+  test('paginates deterministically across equal createdAt values using id DESC', async () => {
+    const service = createSaleDependencies(new HistoryDouble().asClient())
+    const first = await service.listSales(accountA, { limit: 1 })
+    assert.equal(first.sales[0].id, saleB); assert.ok(first.nextCursor)
+    const cursor = parseSaleHistoryQuery({ cursor: first.nextCursor! }).cursor!
+    const second = await service.listSales(accountA, { limit: 1, cursor })
+    assert.equal(second.sales[0].id, saleA); assert.equal(second.nextCursor, null)
+  })
+
+  test('returns stored detail snapshots and Decimal-safe OWNER economics', async () => {
+    const store = new HistoryDouble()
+    store.currentCatalog.sellerName = 'Renamed Seller'; store.currentCatalog.productName = 'Renamed Product'; store.currentCatalog.sku = 'RENAMED-SKU'
+    const result = await createSaleDependencies(store.asClient()).getSale(accountA, UserRole.OWNER, saleA)
+    assert.equal(result.sale.seller.name, 'Old Seller'); assert.equal(result.sale.items[0].productName, 'Old Product'); assert.equal(result.sale.items[0].sku, 'OLD-SKU')
+    assert.equal(result.sale.void, null)
+    assert.deepEqual(result.sale.items[0], { ...result.sale.items[0], unitCostAtSale: '12.3456', lineCost: '24.6912', lineGrossProfit: '35.3088' })
+    assert.deepEqual(result.sale.economics, { totalCOGS: '24.6912', grossProfit: '35.3088' })
+  })
+
+  test('uses stored void snapshots, hides all economics from WAREHOUSE, and tenant-scopes detail', async () => {
+    const service = createSaleDependencies(new HistoryDouble().asClient())
+    const result = await service.getSale(accountA, UserRole.WAREHOUSE, saleB)
+    assert.deepEqual(result.sale.void, { voidedAt: new Date('2026-09-23T08:00:00.000Z'), voidedByName: 'Owner Snapshot', voidedByCode: 'OWN-1', voidReason: 'Duplicate sale' })
+    const json = JSON.stringify(result)
+    for (const secret of ['unitCostAtSale','lineCost','lineGrossProfit','totalCOGS','grossProfit','margin','lastPurchaseCost','idempotencyKey','requestFingerprint']) assert.equal(json.includes(secret), false)
+    await assert.rejects(service.getSale(accountB, UserRole.OWNER, saleA), (e) => expectHttp(e, 404, 'SALE_NOT_FOUND'))
   })
 })
 
@@ -336,9 +496,41 @@ describe('Sale route authorization and response', () => {
         assert.equal((await fetch(`${base}/api/sales`, options)).status, 200)
       })
     }
-    await withServer(UserRole.SUPER_ADMIN, { async createSale() { throw Error('must not run') } }, async (base) => {
+    const forbidden: SaleDependencies = {
+      async createSale() { throw Error('must not run') },
+      async listSales() { throw Error('must not run') },
+      async getSale() { throw Error('must not run') },
+    }
+    await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const response = await fetch(`${base}/api/sales`, { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(ownerInput()) })
       assert.equal(response.status, 403)
+    })
+  })
+
+  test('OWNER and WAREHOUSE can list/detail while malformed IDs and SUPER_ADMIN are rejected', async () => {
+    for (const role of [UserRole.OWNER, UserRole.WAREHOUSE]) {
+      await withServer(role, createSaleDependencies(new HistoryDouble().asClient()), async (base) => {
+        const headers = { Authorization: 'Bearer test' }
+        const list = await fetch(`${base}/api/sales?limit=1`, { headers })
+        assert.equal(list.status, 200); assert.equal((await list.json() as Row).sales.length, 1)
+        const detail = await fetch(`${base}/api/sales/${saleA}`, { headers })
+        assert.equal(detail.status, 200)
+        const detailJson = await detail.json() as Row
+        assert.equal(detailJson.sale.id, saleA)
+        assert.equal(JSON.stringify(detailJson).includes('unitCostAtSale'), role === UserRole.OWNER)
+        const malformed = await fetch(`${base}/api/sales/not-a-uuid`, { headers })
+        assert.equal(malformed.status, 422); assert.equal((await malformed.json() as Row).error.code, 'INVALID_SALE_ID')
+      })
+    }
+    const forbidden: SaleDependencies = {
+      async createSale() { throw Error('must not run') },
+      async listSales() { throw Error('must not run') },
+      async getSale() { throw Error('must not run') },
+    }
+    await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
+      const headers = { Authorization: 'Bearer test' }
+      assert.equal((await fetch(`${base}/api/sales`, { headers })).status, 403)
+      assert.equal((await fetch(`${base}/api/sales/${saleA}`, { headers })).status, 403)
     })
   })
 })

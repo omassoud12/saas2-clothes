@@ -444,6 +444,24 @@ seller, Product, Category, and Variant snapshots come from trusted database
 state. Decimal line totals and Sale totals are calculated by the backend;
 normal Sales cannot have zero-price lines or negative stock.
 
+Sales history is exposed read-only through `GET /api/sales` and
+`GET /api/sales/:saleId` to active OWNER and WAREHOUSE users. Both endpoints
+derive the Account from authenticated tenant context. The list supports
+optional status, seller, and `createdAt` timestamp-range filters and uses a
+bounded cursor ordered by `createdAt DESC, id DESC` (default 25, maximum 100).
+It returns stored Sale totals and seller snapshots plus line and unit counts,
+without cost or profit data.
+
+Sale detail uses the immutable seller and SaleItem catalog snapshots rather
+than current User, Product, Category, or ProductVariant values. OWNER detail
+also derives historical economics from `SaleItem.unitCostAtSale`: `lineCost`,
+`totalCOGS`, `lineGrossProfit`, and `grossProfit` use Decimal arithmetic and
+are serialized to four fractional digits without being persisted. WAREHOUSE
+detail omits all cost and profit fields. Neither history endpoint exposes Sale
+idempotency metadata or inventory state, and neither endpoint changes Sales,
+stock, InventoryMovement, Return, Void, Exchange, or DailyReport state. Return
+history serialization remains deferred to the Return runtime step.
+
 Each inserted SALE InventoryMovement must use
 `quantityChange = -SaleItem.quantity` and
 `unitCost = SaleItem.unitCostAtSale`, resolved through the tenant-qualified

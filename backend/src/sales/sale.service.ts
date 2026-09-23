@@ -1,8 +1,8 @@
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
-import { canonicalSaleItems, saleFingerprint } from './sale.schemas.js'
-import type { SaleDependencies, SaleInput, SaleView } from './sale.types.js'
+import { canonicalSaleItems, encodeSaleCursor, saleFingerprint } from './sale.schemas.js'
+import type { SaleDependencies, SaleDetailView, SaleHistoryQuery, SaleInput, SaleView } from './sale.types.js'
 
 const saleIdempotencyIndex = 'Sale_accountId_idempotencyKey_key'
 const maxMoney = new Prisma.Decimal('9999999999999999.99')
@@ -31,8 +31,29 @@ const persistedSaleSelect = {
     },
   },
 } as const
+const historySaleSelect = {
+  id: true, status: true, currency: true, subtotal: true, totalAmount: true, createdAt: true,
+  sellerNameAtSale: true, sellerCodeAtSale: true,
+  _count: { select: { items: true } },
+} as const
+const detailSaleSelect = {
+  id: true, status: true, currency: true, subtotal: true, totalAmount: true, createdAt: true,
+  sellerNameAtSale: true, sellerCodeAtSale: true,
+  voidedAt: true, voidedByName: true, voidedByCode: true, voidReason: true,
+  items: {
+    orderBy: { id: 'asc' as const },
+    select: {
+      id: true, productId: true, variantId: true,
+      productNameAtSale: true, categoryNameAtSale: true, skuAtSale: true,
+      colorAtSale: true, sizeAtSale: true, quantity: true,
+      unitSoldPrice: true, unitCostAtSale: true, lineTotal: true,
+    },
+  },
+} as const
 
 type PersistedSale = Prisma.SaleGetPayload<{ select: typeof persistedSaleSelect }>
+type HistorySale = Prisma.SaleGetPayload<{ select: typeof historySaleSelect }>
+type DetailSale = Prisma.SaleGetPayload<{ select: typeof detailSaleSelect }>
 type SaleReader = Pick<PrismaClient, 'sale'>
 type AdvisoryVariant = { id: string; productId: string }
 type LockedAccount = { id: string; baseCurrency: string }
@@ -101,6 +122,62 @@ function isSaleIdempotencyViolation(error: unknown): boolean {
 
 function decimal(value: Prisma.Decimal | string): Prisma.Decimal {
   return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value)
+}
+
+function safeUnits(value: number | bigint): number {
+  const units = Number(value)
+  if (!Number.isSafeInteger(units) || units < 0) {
+    throw new HttpError(503, 'SALES_HISTORY_UNAVAILABLE', 'Sale history value exceeds the safe display range')
+  }
+  return units
+}
+
+function detailView(sale: DetailSale, role: UserRole): SaleDetailView {
+  let totalCOGS = new Prisma.Decimal(0)
+  const items = sale.items.map((item) => {
+    const base = {
+      id: item.id, productId: item.productId, variantId: item.variantId,
+      productName: item.productNameAtSale, categoryName: item.categoryNameAtSale,
+      sku: item.skuAtSale, color: item.colorAtSale, size: item.sizeAtSale,
+      quantity: item.quantity, unitSoldPrice: item.unitSoldPrice.toFixed(2), lineTotal: item.lineTotal.toFixed(2),
+    }
+    if (role !== UserRole.OWNER) return base
+    const lineCost = item.unitCostAtSale.mul(item.quantity)
+    totalCOGS = totalCOGS.add(lineCost)
+    return {
+      ...base,
+      unitCostAtSale: item.unitCostAtSale.toFixed(4),
+      lineCost: lineCost.toFixed(4),
+      lineGrossProfit: item.lineTotal.sub(lineCost).toFixed(4),
+    }
+  })
+  let voidInfo: SaleDetailView['sale']['void'] = null
+  if (sale.status === SaleStatus.VOIDED) {
+    if (!sale.voidedAt || !sale.voidedByName || !sale.voidReason) {
+      throw new HttpError(500, 'SALE_HISTORY_INTEGRITY_ERROR', 'Sale void history is incomplete')
+    }
+    voidInfo = {
+      voidedAt: sale.voidedAt,
+      voidedByName: sale.voidedByName,
+      voidedByCode: sale.voidedByCode,
+      voidReason: sale.voidReason,
+    }
+  }
+  return {
+    sale: {
+      id: sale.id, status: sale.status, currency: sale.currency,
+      subtotal: sale.subtotal.toFixed(2), totalAmount: sale.totalAmount.toFixed(2), createdAt: sale.createdAt,
+      seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+      void: voidInfo,
+      items,
+      ...(role === UserRole.OWNER ? {
+        economics: {
+          totalCOGS: totalCOGS.toFixed(4),
+          grossProfit: sale.totalAmount.sub(totalCOGS).toFixed(4),
+        },
+      } : {}),
+    },
+  }
 }
 
 export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
@@ -300,5 +377,61 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
     }
   }
 
-  return { createSale }
+  async function listSales(accountId: string, query: SaleHistoryQuery) {
+    try {
+      const where: Prisma.SaleWhereInput = {
+        accountId,
+        ...(query.status ? { status: query.status } : {}),
+        ...(query.soldById ? { soldById: query.soldById } : {}),
+        ...(query.from || query.to ? {
+          createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) },
+        } : {}),
+        ...(query.cursor ? { OR: [
+          { createdAt: { lt: query.cursor.createdAt } },
+          { createdAt: query.cursor.createdAt, id: { lt: query.cursor.id } },
+        ] } : {}),
+      }
+      const rows = await prisma.sale.findMany({
+        where, select: historySaleSelect,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: query.limit + 1,
+      })
+      const page = rows.slice(0, query.limit)
+      const totals = page.length ? await prisma.saleItem.groupBy({
+        by: ['saleId'],
+        where: { accountId, saleId: { in: page.map((sale) => sale.id) } },
+        _sum: { quantity: true },
+      }) : []
+      const unitsBySale = new Map(totals.map((total) => [total.saleId, safeUnits(total._sum.quantity ?? 0)]))
+      const last = page.at(-1)
+      return {
+        sales: page.map((sale: HistorySale) => ({
+          id: sale.id, status: sale.status, currency: sale.currency,
+          subtotal: sale.subtotal.toFixed(2), totalAmount: sale.totalAmount.toFixed(2), createdAt: sale.createdAt,
+          seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+          itemCount: sale._count.items,
+          totalUnits: unitsBySale.get(sale.id) ?? 0,
+        })),
+        nextCursor: rows.length > query.limit && last ? encodeSaleCursor(last.createdAt, last.id) : null,
+      }
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(503, 'SALES_HISTORY_UNAVAILABLE', 'Sales history is temporarily unavailable')
+    }
+  }
+
+  async function getSale(accountId: string, role: UserRole, saleId: string): Promise<SaleDetailView> {
+    try {
+      const sale = await prisma.sale.findUnique({
+        where: { id_accountId: { id: saleId, accountId } },
+        select: detailSaleSelect,
+      })
+      if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
+      return detailView(sale, role)
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(503, 'SALES_HISTORY_UNAVAILABLE', 'Sales history is temporarily unavailable')
+    }
+  }
+
+  return { createSale, listSales, getSale }
 }
