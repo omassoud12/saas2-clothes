@@ -71,7 +71,7 @@ export function createVariant(dependencies: ProductDependencies): RequestHandler
         context.accountId,
         parseCatalogId(request.params.productId, 'productId'),
         context.role,
-        parseVariantCreate(request.body),
+        parseVariantCreate(request.body, context.role === UserRole.OWNER),
       )
       response.status(201).json({ variant })
     } catch (error) { next(error) }
@@ -87,7 +87,7 @@ export function updateVariant(dependencies: ProductDependencies): RequestHandler
         parseCatalogId(request.params.productId, 'productId'),
         parseCatalogId(request.params.variantId, 'variantId'),
         context.role,
-        parseVariantUpdate(request.body),
+        parseVariantUpdate(request.body, context.role === UserRole.OWNER),
       )
       response.json({ variant })
     } catch (error) { next(error) }

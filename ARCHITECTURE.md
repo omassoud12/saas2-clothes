@@ -243,7 +243,11 @@ average cost or a total invoice amount.
 ProductVariant does not store averageCost.
 
 ProductVariant.sellingPrice is the normal/default catalog selling price for the
-variant.
+variant. OWNER owns catalog selling-price changes. WAREHOUSE may read the
+catalog selling price but cannot set or update it. A future WAREHOUSE Sale must
+use the locked current catalog price; a differing submitted price is rejected
+as stale or unauthorized pricing. A future OWNER Sale may support an explicit
+per-line price override, but no Sale endpoint is implemented by this policy.
 
 SaleItem.unitSoldPrice is the actual price charged in a completed sale. It may
 differ from ProductVariant.sellingPrice without mutating the catalog price.

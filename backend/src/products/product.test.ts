@@ -234,16 +234,25 @@ describe('Product catalog input', () => {
   })
 
   test('rejects stock/cost and validates Variant catalog fields', () => {
-    assert.throws(() => parseVariantCreate({ sku: 'SKU', currentStock: 5 }), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
-    assert.throws(() => parseVariantCreate({ sku: 'SKU', lastPurchaseCost: '10' }), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
-    assert.throws(() => parseVariantUpdate({ currentStock: 5 }), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
-    assert.throws(() => parseVariantUpdate({ productId: productB }), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
-    assert.throws(() => parseVariantCreate({ sku: ' ', sellingPrice: '-1' }), (error) => error instanceof HttpError)
-    assert.throws(() => parseVariantCreate({ sku: 'SKU', sellingPrice: '-1' }), (error) => expectError(error, 422, 'INVALID_CATALOG_PRICE'))
-    assert.equal(parseVariantCreate({ sku: ' SKU ', barcode: '  ', sellingPrice: '25.00' }).barcode, null)
-    assert.equal(parseVariantCreate({ sku: ' SKU ' }).sku, 'SKU')
+    assert.throws(() => parseVariantCreate({ sku: 'SKU', currentStock: 5 }, true), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
+    assert.throws(() => parseVariantCreate({ sku: 'SKU', lastPurchaseCost: '10' }, true), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
+    assert.throws(() => parseVariantUpdate({ currentStock: 5 }, true), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
+    assert.throws(() => parseVariantUpdate({ productId: productB }, true), (error) => expectError(error, 422, 'INVALID_VARIANT_INPUT'))
+    assert.throws(() => parseVariantCreate({ sku: ' ', sellingPrice: '-1' }, true), (error) => error instanceof HttpError)
+    assert.throws(() => parseVariantCreate({ sku: 'SKU', sellingPrice: '-1' }, true), (error) => expectError(error, 422, 'INVALID_CATALOG_PRICE'))
+    assert.equal(parseVariantCreate({ sku: ' SKU ', barcode: '  ', sellingPrice: '25.00' }, true).barcode, null)
+    assert.equal(parseVariantCreate({ sku: ' SKU ' }, false).sku, 'SKU')
     assert.equal(parseProductList({}).limit, 20)
     assert.throws(() => parseProductList({ limit: '1000' }), (error) => expectError(error, 422, 'INVALID_PRODUCT_FILTER'))
+  })
+
+  test('sellingPrice is writable only for OWNER', () => {
+    assert.equal(parseVariantCreate({ sku: 'SKU', sellingPrice: '25.00' }, true).sellingPrice, '25.00')
+    assert.equal(parseVariantUpdate({ sellingPrice: null }, true).sellingPrice, null)
+    for (const sellingPrice of ['25.00', null]) {
+      assert.throws(() => parseVariantCreate({ sku: 'SKU', sellingPrice }, false), (error) => expectError(error, 403, 'SENSITIVE_FIELD_FORBIDDEN'))
+      assert.throws(() => parseVariantUpdate({ sellingPrice }, false), (error) => expectError(error, 403, 'SENSITIVE_FIELD_FORBIDDEN'))
+    }
   })
 })
 
@@ -302,18 +311,46 @@ describe('Product and Variant service', () => {
     assert.equal(store.variants.size, 1)
   })
 
-  test('new Variant has stock zero and null cost; WAREHOUSE cannot see cost', async () => {
+  test('OWNER controls sellingPrice while stock and cost initialization remain protected', async () => {
     const store = new CatalogDouble()
     store.addProduct()
     const service = createProductDependencies(store.asClient(), () => new ImageDouble())
-    const created = await service.createVariant(accountA, productA, UserRole.WAREHOUSE, parseVariantCreate({ sku: 'SKU-NEW', barcode: ' BAR ', sellingPrice: '25.00' }))
+    const priced = await service.createVariant(accountA, productA, UserRole.OWNER, parseVariantCreate({ sku: 'SKU-PRICED', sellingPrice: '25.00' }, true))
+    assert.equal(priced.sellingPrice, '25')
+    assert.equal(store.variants.get(variantA)?.sellingPrice?.toFixed(2), '25.00')
+    assert.equal(priced.currentStock, 0)
+    assert.equal(priced.lastPurchaseCost, null)
+
+    const unpriced = await service.createVariant(accountA, productA, UserRole.OWNER, parseVariantCreate({ sku: 'SKU-UNPRICED' }, true))
+    assert.equal(unpriced.sellingPrice, null)
+    const updated = await service.updateVariant(accountA, productA, unpriced.id, UserRole.OWNER, { sellingPrice: '30.00' })
+    assert.equal(updated.sellingPrice, '30')
+  })
+
+  test('WAREHOUSE may create unpriced Variants and read price, but cannot mutate price or see cost', async () => {
+    const store = new CatalogDouble()
+    store.addProduct()
+    const service = createProductDependencies(store.asClient(), () => new ImageDouble())
+    const created = await service.createVariant(accountA, productA, UserRole.WAREHOUSE, parseVariantCreate({ sku: 'SKU-NEW', barcode: ' BAR ' }, false))
+    assert.equal(created.sellingPrice, null)
     assert.equal(created.currentStock, 0)
     assert.equal(Object.hasOwn(created, 'lastPurchaseCost'), false)
     assert.equal(store.variants.get(variantA)?.lastPurchaseCost, null)
     assert.equal(store.variants.get(variantA)?.barcode, 'BAR')
+
+    const initialCount = store.variants.size
+    await assert.rejects(service.createVariant(accountA, productA, UserRole.WAREHOUSE, { sku: 'FORBIDDEN', sellingPrice: '10.00' }), (error) => expectError(error, 403, 'SENSITIVE_FIELD_FORBIDDEN'))
+    assert.equal(store.variants.size, initialCount)
+
+    store.variants.get(variantA)!.sellingPrice = new Prisma.Decimal('25.00')
     store.variants.get(variantA)!.lastPurchaseCost = new Prisma.Decimal('12.00')
+    for (const sellingPrice of ['25.00', null]) {
+      await assert.rejects(service.updateVariant(accountA, productA, variantA, UserRole.WAREHOUSE, { sellingPrice }), (error) => expectError(error, 403, 'SENSITIVE_FIELD_FORBIDDEN'))
+      assert.equal(store.variants.get(variantA)?.sellingPrice?.toFixed(2), '25.00')
+    }
     const limited = await service.getProduct(accountA, productA, UserRole.WAREHOUSE)
     assert.equal(Object.hasOwn(limited, 'profitMarginOverride'), false)
+    assert.equal(limited.variants[0].sellingPrice, '25')
     assert.equal(Object.hasOwn(limited.variants[0], 'lastPurchaseCost'), false)
     const owner = await service.getProduct(accountA, productA, UserRole.OWNER)
     assert.equal(owner.variants[0].lastPurchaseCost, '12')
@@ -427,6 +464,7 @@ describe('Product routes', () => {
   test('authenticates tenant, rejects hard-delete and privileged input, checks ownership before parsing upload', async () => {
     const store = new CatalogDouble()
     store.addProduct()
+    store.addVariant()
     const images = new ImageDouble()
     const app = express()
     app.use(express.json())
@@ -442,6 +480,20 @@ describe('Product routes', () => {
       assert.equal(unauthorized.status, 401)
       const forbidden = await fetch(base, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ categoryId: categoryA, name: 'Pants', profitMarginOverride: '0.5' }) })
       assert.equal(forbidden.status, 422)
+      const variantCount = store.variants.size
+      const forbiddenPriceCreate = await fetch(`${base}/${productA}/variants`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ sku: 'FORBIDDEN-PRICE', sellingPrice: '10.00' }) })
+      assert.equal(forbiddenPriceCreate.status, 403)
+      assert.equal(store.variants.size, variantCount)
+      for (const sellingPrice of ['25.00', null]) {
+        const forbiddenPriceUpdate = await fetch(`${base}/${productA}/variants/${variantA}`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ sellingPrice }) })
+        assert.equal(forbiddenPriceUpdate.status, 403)
+        assert.equal(store.variants.get(variantA)?.sellingPrice?.toFixed(2), '25.00')
+      }
+      const unpricedCreate = await fetch(`${base}/${productA}/variants`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ sku: 'WAREHOUSE-UNPRICED' }) })
+      assert.equal(unpricedCreate.status, 201)
+      const unpricedBody = await unpricedCreate.json() as { variant: Record<string, unknown> }
+      assert.equal(unpricedBody.variant.sellingPrice, null)
+      assert.equal(Object.hasOwn(unpricedBody.variant, 'lastPurchaseCost'), false)
       const missingImage = await fetch(`${base}/${productB}/image`, { method: 'POST', headers })
       assert.equal(missingImage.status, 404)
       const hardDelete = await fetch(`${base}/${productA}`, { method: 'DELETE', headers })
@@ -455,6 +507,9 @@ describe('Product routes', () => {
       const detail = await fetch(`${base}/${productA}`, { headers })
       const body = await detail.json() as { product: Record<string, unknown> }
       assert.equal(Object.hasOwn(body.product, 'profitMarginOverride'), false)
+      const variants = body.product.variants as Record<string, unknown>[]
+      assert.equal(variants.some((variant) => variant.sellingPrice === '25'), true)
+      assert.equal(variants.every((variant) => !Object.hasOwn(variant, 'lastPurchaseCost')), true)
       assert.deepEqual(images.calls, [])
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))

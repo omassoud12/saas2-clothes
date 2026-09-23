@@ -13,6 +13,10 @@ function invalid(code: string, message: string): never {
   throw new HttpError(422, code, message)
 }
 
+function forbidden(message: string): never {
+  throw new HttpError(403, 'SENSITIVE_FIELD_FORBIDDEN', message)
+}
+
 export function parseCatalogId(value: unknown, name: string): string {
   if (typeof value !== 'string' || !uuidPattern.test(value)) {
     throw new HttpError(400, 'INVALID_CATALOG_ID', `${name} must be a valid UUID`)
@@ -87,9 +91,10 @@ export function parseProductUpdate(body: unknown, isOwner: boolean): ProductUpda
   }
 }
 
-export function parseVariantCreate(body: unknown): VariantCreateInput {
+export function parseVariantCreate(body: unknown, isOwner: boolean): VariantCreateInput {
   const input = objectWithKeys(body, ['sku', 'barcode', 'color', 'size', 'sellingPrice'], 'INVALID_VARIANT_INPUT')
   if (!Object.hasOwn(input, 'sku')) invalid('INVALID_VARIANT_INPUT', 'sku is required')
+  if (!isOwner && Object.hasOwn(input, 'sellingPrice')) forbidden('sellingPrice is OWNER-only')
   return {
     sku: requiredText(input.sku, 'sku', 100),
     ...(Object.hasOwn(input, 'barcode') ? { barcode: optionalText(input.barcode, 'barcode', 100) } : {}),
@@ -99,8 +104,9 @@ export function parseVariantCreate(body: unknown): VariantCreateInput {
   }
 }
 
-export function parseVariantUpdate(body: unknown): VariantUpdateInput {
+export function parseVariantUpdate(body: unknown, isOwner: boolean): VariantUpdateInput {
   const input = objectWithKeys(body, ['sku', 'barcode', 'color', 'size', 'sellingPrice', 'isActive'], 'INVALID_VARIANT_INPUT')
+  if (!isOwner && Object.hasOwn(input, 'sellingPrice')) forbidden('sellingPrice is OWNER-only')
   return {
     ...(Object.hasOwn(input, 'sku') ? { sku: requiredText(input.sku, 'sku', 100) } : {}),
     ...(Object.hasOwn(input, 'barcode') ? { barcode: optionalText(input.barcode, 'barcode', 100) } : {}),

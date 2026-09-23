@@ -205,6 +205,9 @@ export function createProductDependencies(
   }
 
   async function createVariant(accountId: string, productId: string, role: UserRole, input: VariantCreateInput): Promise<VariantView> {
+    if (role !== UserRole.OWNER && Object.hasOwn(input, 'sellingPrice')) {
+      throw new HttpError(403, 'SENSITIVE_FIELD_FORBIDDEN', 'sellingPrice is OWNER-only')
+    }
     const product = await prisma.product.findUnique({
       where: { id_accountId: { id: productId, accountId } },
       select: { id: true, isActive: true },
@@ -213,7 +216,19 @@ export function createProductDependencies(
     if (!product.isActive) throw new HttpError(409, 'PRODUCT_INACTIVE', 'Variants require an active Product')
     try {
       const variant = await prisma.productVariant.create({
-        data: { accountId, productId, currentStock: 0, lastPurchaseCost: null, ...input },
+        data: {
+          accountId,
+          productId,
+          sku: input.sku,
+          currentStock: 0,
+          lastPurchaseCost: null,
+          ...(input.barcode !== undefined ? { barcode: input.barcode } : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.size !== undefined ? { size: input.size } : {}),
+          ...(role === UserRole.OWNER && input.sellingPrice !== undefined
+            ? { sellingPrice: input.sellingPrice }
+            : {}),
+        },
         select: variantSelect,
       })
       return variantView(variant, role)
@@ -225,10 +240,22 @@ export function createProductDependencies(
   }
 
   async function updateVariant(accountId: string, productId: string, variantId: string, role: UserRole, input: VariantUpdateInput): Promise<VariantView> {
+    if (role !== UserRole.OWNER && Object.hasOwn(input, 'sellingPrice')) {
+      throw new HttpError(403, 'SENSITIVE_FIELD_FORBIDDEN', 'sellingPrice is OWNER-only')
+    }
     try {
       const variant = await prisma.productVariant.update({
         where: { id_productId_accountId: { id: variantId, productId, accountId } },
-        data: input,
+        data: {
+          ...(input.sku !== undefined ? { sku: input.sku } : {}),
+          ...(input.barcode !== undefined ? { barcode: input.barcode } : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.size !== undefined ? { size: input.size } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+          ...(role === UserRole.OWNER && input.sellingPrice !== undefined
+            ? { sellingPrice: input.sellingPrice }
+            : {}),
+        },
         select: variantSelect,
       })
       return variantView(variant, role)
