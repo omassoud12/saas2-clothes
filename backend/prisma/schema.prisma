@@ -366,10 +366,12 @@ model SaleReturnItem {
 }
 
 model Exchange {
-  id        String @id @default(uuid()) @db.Uuid
-  accountId String @db.Uuid
-  returnId  String @db.Uuid
-  newSaleId String @db.Uuid
+  id                 String @id @default(uuid()) @db.Uuid
+  accountId          String @db.Uuid
+  returnId           String @db.Uuid
+  newSaleId          String @db.Uuid
+  idempotencyKey     String @db.Uuid
+  requestFingerprint String @db.VarChar(64)
 
   account    Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
   saleReturn SaleReturn @relation("ExchangeReturn", fields: [returnId, accountId], references: [id, accountId], onDelete: Restrict)
@@ -380,6 +382,7 @@ model Exchange {
   @@unique([id, accountId])
   @@unique([returnId, accountId])
   @@unique([newSaleId, accountId])
+  @@unique([accountId, idempotencyKey])
   @@index([accountId, createdAt])
 }
 

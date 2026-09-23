@@ -501,6 +501,58 @@ to one distinct new Sale. Exchange contains no stock or money fields; its
 monetary difference is derived from the new Sale total minus the ReturnItems'
 refund total.
 
+No Exchange endpoint is implemented yet. The future transactional Exchange
+operation is expected to allow active OWNER and WAREHOUSE users and to compose
+one Return plus one replacement Sale inside one outer transaction. It reuses
+the existing Return rules unchanged for the historical items, even when their
+current Products or Variants are inactive, and reuses the existing Sale rules
+unchanged for replacement items, whose current Products and Variants must be
+active. The authenticated actor must be both the Return processor and the
+replacement Sale seller; this actor consistency is a future runtime guarantee,
+not a separate Exchange actor column.
+
+The original Sale is derived only through `Exchange -> SaleReturn -> Sale`.
+The replacement Sale must belong to the same Account, differ from the original
+Sale, be COMPLETED when the Exchange link is inserted, and use the same
+currency as the original Sale. It may later follow the normal Return or Void
+lifecycle. Exchange remains append-only, with at most one Exchange per Return
+and at most one Exchange per replacement Sale.
+
+The future public Exchange request requires one client-generated UUID in the
+`Idempotency-Key` header. `Exchange.idempotencyKey` is unique within the
+authenticated Account, and the backend stores its own lowercase SHA-256
+`requestFingerprint`; the frontend cannot supply the authoritative fingerprint.
+An identical tenant/key/fingerprint retry replays the persisted Exchange with
+no duplicate Return, replacement Sale, or stock mutation. Reusing the key with
+different semantics returns `409 EXCHANGE_IDEMPOTENCY_CONFLICT`; only an
+Exchange tenant/key unique collision participates in Exchange race recovery.
+
+The Exchange fingerprint is SHA-256 over deterministic fixed-order UTF-8 JSON.
+Its semantic content is: `type` set to `"EXCHANGE"`; lowercase authenticated
+`accountId` and `actorId`; lowercase original `saleId`; the normalized Return
+reason or JSON null; Return items sorted by lowercase `saleItemId`, each with
+`saleItemId` and integer `quantity`; and replacement items sorted by lowercase
+`variantId`, each with `variantId`, integer `quantity`, and `unitSoldPrice`
+normalized to exactly two decimals. Duplicate Return `saleItemId` values and
+duplicate replacement `variantId` values are rejected rather than merged.
+Refund amounts, costs, generated Return, replacement Sale, and Exchange IDs,
+timestamps, stock, current catalog snapshots, and current purchase costs are
+excluded. The stored fingerprint is exactly 64 lowercase hexadecimal
+characters.
+
+The public Exchange owns this single external idempotency key. Its internal
+Return and replacement Sale operations must be composed deterministically by
+future transaction-scoped creation primitives; they must not depend on random
+child keys or require three client keys. Standalone Return and Sale
+idempotency behavior remains independent and unchanged.
+
+Exchange has no payment or settlement semantics: a derived replacement total
+minus Return refund total does not prove that money was paid or refunded.
+There is no Exchange InventoryMovement type; the Return produces RETURN
+movements and the replacement Sale produces SALE movements. DailyReport is
+rebuilt from those authoritative child events, not from a separate Exchange
+financial record.
+
 SaleReturn, SaleReturnItem, Exchange, and InventoryMovement are append-only.
 SaleItem remains immutable and non-deletable. Returns and voids must not rewrite
 the original Sale or SaleItems.
