@@ -10,6 +10,35 @@ export interface ReturnInput {
   readonly items: readonly ReturnLineInput[]
 }
 
+export interface ReturnHistoryQuery {
+  readonly cursor?: { readonly createdAt: Date; readonly id: string }
+  readonly limit: number
+}
+
+export interface ReturnHistoryItem {
+  readonly id: string
+  readonly saleId: string
+  readonly createdAt: Date
+  readonly reason: string | null
+  readonly processor: { readonly name: string; readonly employeeCode: string | null }
+  readonly totalRefund: string
+  readonly itemCount: number
+  readonly totalUnits: number
+  readonly items: readonly {
+    readonly id: string
+    readonly saleItemId: string
+    readonly productId: string
+    readonly variantId: string
+    readonly productName: string
+    readonly categoryName: string
+    readonly sku: string
+    readonly color: string | null
+    readonly size: string | null
+    readonly quantity: number
+    readonly refundAmount: string
+  }[]
+}
+
 export interface ReturnView {
   readonly return: {
     readonly id: string
@@ -47,6 +76,11 @@ export interface ReturnTransactionInput {
 }
 
 export interface ReturnDependencies {
+  listReturns(
+    accountId: string,
+    saleId: string,
+    query: ReturnHistoryQuery,
+  ): Promise<{ returns: readonly ReturnHistoryItem[]; nextCursor: string | null }>
   createReturn(
     accountId: string,
     processedById: string,

@@ -455,7 +455,6 @@ The Sale remains COMPLETED and DailyReport is not updated synchronously.
 The Return service exposes a transaction-scoped creation primitive in addition
 to the public transaction-opening operation, allowing a future Exchange to
 compose Return work inside one outer transaction without nested transactions.
-Public Return history and Sale-detail Return summaries remain deferred.
 
 Every RETURN movement quantity must equal its SaleReturnItem quantity, and
 every SALE_VOID movement quantity must equal the original SaleItem quantity.
@@ -547,10 +546,36 @@ than current User, Product, Category, or ProductVariant values. OWNER detail
 also derives historical economics from `SaleItem.unitCostAtSale`: `lineCost`,
 `totalCOGS`, `lineGrossProfit`, and `grossProfit` use Decimal arithmetic and
 are serialized to four fractional digits without being persisted. WAREHOUSE
-detail omits all cost and profit fields. Neither history endpoint exposes Sale
-idempotency metadata or inventory state, and neither endpoint changes Sales,
-stock, InventoryMovement, Return, Void, Exchange, or DailyReport state. Return
-history serialization remains deferred to the Return runtime step.
+detail omits all cost and profit fields. Sale detail also exposes a derived,
+bounded `returnSummary`: whether any Returns exist, Return header count, total
+returned units, and the sum of stored ReturnItem refund amounts. Every SaleItem
+includes its cumulative returned quantity and remaining returnable quantity.
+These additions do not redefine the original Sale economics or invent a
+`RETURNED` or `PARTIALLY_RETURNED` Sale status; `Sale.status` remains COMPLETED
+or VOIDED.
+
+Return history is exposed read-only through
+`GET /api/sales/:saleId/returns` to active OWNER and WAREHOUSE users after a
+tenant-qualified Sale ownership check. It is cursor-paginated by
+`createdAt DESC, id DESC`, defaults to 25 Return headers, and permits at most
+100 per page. The cursor contains only the timestamp and Return ID and conveys
+no tenant authority. Header paging happens before ReturnItems are loaded, so
+the endpoint never provides an unbounded history mode.
+
+Return history uses immutable `SaleReturn.processedByName` and
+`processedByCode` snapshots for the processor, immutable SaleItem snapshots
+for Product, Category, SKU, color, and size, and stored
+`SaleReturnItem.refundAmount` values for line and Return refund totals. It
+reports ReturnItem line count separately from summed returned units. OWNER and
+WAREHOUSE receive the same Return-history shape: neither receives Return cost,
+COGS, profit, margin, inventory state or movement data, or Return idempotency
+metadata. Sale detail summaries and Return history are strictly read-only and
+do not change Sales, stock, InventoryMovement, Return, Void, Exchange, or
+DailyReport state.
+
+Neither Sales history endpoint exposes Sale idempotency metadata or inventory
+state. Existing OWNER Sale-detail economics remain based on the original Sale,
+while WAREHOUSE continues to receive no cost or profit fields.
 
 Each inserted SALE InventoryMovement must use
 `quantityChange = -SaleItem.quantity` and

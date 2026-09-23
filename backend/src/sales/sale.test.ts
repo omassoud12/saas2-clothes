@@ -235,6 +235,8 @@ class HistoryDouble {
       unitSoldPrice: new Prisma.Decimal('2.00'), unitCostAtSale: new Prisma.Decimal('1.0000'), lineTotal: new Prisma.Decimal('6.00'),
     },
   ]
+  readonly returns: Row[] = []
+  readonly returnItems: Row[] = []
   groupQueries = 0
 
   asClient(): PrismaClient {
@@ -267,6 +269,25 @@ class HistoryDouble {
           return where.saleId.in.map((id: string) => ({
             saleId: id,
             _sum: { quantity: store.items.filter((item) => item.accountId === where.accountId && item.saleId === id).reduce((sum, item) => sum + item.quantity, 0) },
+          }))
+        },
+      },
+      saleReturn: {
+        async count({ where }: Row) {
+          return store.returns.filter((row) => row.accountId === where.accountId && row.saleId === where.saleId).length
+        },
+      },
+      saleReturnItem: {
+        async groupBy({ where }: Row) {
+          const relevant = store.returnItems.filter((row) => row.accountId === where.accountId && row.saleId === where.saleId)
+          const byItem = new Map<string, Row[]>()
+          for (const row of relevant) byItem.set(row.saleItemId, [...(byItem.get(row.saleItemId) ?? []), row])
+          return [...byItem].map(([saleItemId, rows]) => ({
+            saleItemId,
+            _sum: {
+              quantity: rows.reduce((sum, row) => sum + row.quantity, 0),
+              refundAmount: rows.reduce((sum, row) => sum.add(row.refundAmount), new Prisma.Decimal(0)),
+            },
           }))
         },
       },
@@ -367,14 +388,54 @@ describe('Sale history service', () => {
     const result = await createSaleDependencies(store.asClient()).getSale(accountA, UserRole.OWNER, saleA)
     assert.equal(result.sale.seller.name, 'Old Seller'); assert.equal(result.sale.items[0].productName, 'Old Product'); assert.equal(result.sale.items[0].sku, 'OLD-SKU')
     assert.equal(result.sale.void, null)
-    assert.deepEqual(result.sale.items[0], { ...result.sale.items[0], unitCostAtSale: '12.3456', lineCost: '24.6912', lineGrossProfit: '35.3088' })
+    assert.deepEqual(result.sale.returnSummary, { hasReturns: false, returnCount: 0, totalReturnedUnits: 0, totalReturnedAmount: '0.00' })
+    assert.deepEqual(result.sale.items[0], { ...result.sale.items[0], returnedQuantity: 0, remainingReturnableQuantity: 2, unitCostAtSale: '12.3456', lineCost: '24.6912', lineGrossProfit: '35.3088' })
     assert.deepEqual(result.sale.economics, { totalCOGS: '24.6912', grossProfit: '35.3088' })
+  })
+
+  test('derives one partial Return from stored ReturnItems', async () => {
+    const store = new HistoryDouble()
+    store.returns.push({ id: randomUUID(), accountId: accountA, saleId: saleA })
+    store.returnItems.push({
+      accountId: accountA, saleId: saleA, saleItemId: store.items[0].id,
+      quantity: 1, refundAmount: new Prisma.Decimal('30.00'),
+    })
+    const result = await createSaleDependencies(store.asClient()).getSale(accountA, UserRole.OWNER, saleA)
+    assert.deepEqual(result.sale.returnSummary, { hasReturns: true, returnCount: 1, totalReturnedUnits: 1, totalReturnedAmount: '30.00' })
+    assert.equal(result.sale.items[0].returnedQuantity, 1)
+    assert.equal(result.sale.items[0].remainingReturnableQuantity, 1)
+  })
+
+  test('aggregates multiple partial Returns across SaleItems without changing original economics', async () => {
+    const store = new HistoryDouble()
+    const secondItem = {
+      ...store.items[1], id: '40000000-0000-4000-8000-000000000004', saleId: saleA,
+      quantity: 3, lineTotal: new Prisma.Decimal('15.00'), unitCostAtSale: new Prisma.Decimal('2.0000'),
+    }
+    store.items.push(secondItem)
+    store.returns.push(
+      { id: randomUUID(), accountId: accountA, saleId: saleA },
+      { id: randomUUID(), accountId: accountA, saleId: saleA },
+    )
+    store.returnItems.push(
+      { accountId: accountA, saleId: saleA, saleItemId: store.items[0].id, quantity: 1, refundAmount: new Prisma.Decimal('30.00') },
+      { accountId: accountA, saleId: saleA, saleItemId: store.items[0].id, quantity: 1, refundAmount: new Prisma.Decimal('30.00') },
+      { accountId: accountA, saleId: saleA, saleItemId: secondItem.id, quantity: 2, refundAmount: new Prisma.Decimal('10.00') },
+    )
+    const result = await createSaleDependencies(store.asClient()).getSale(accountA, UserRole.OWNER, saleA)
+    assert.deepEqual(result.sale.returnSummary, { hasReturns: true, returnCount: 2, totalReturnedUnits: 4, totalReturnedAmount: '70.00' })
+    assert.deepEqual(result.sale.items.map(({ returnedQuantity, remainingReturnableQuantity }) => ({ returnedQuantity, remainingReturnableQuantity })), [
+      { returnedQuantity: 2, remainingReturnableQuantity: 0 },
+      { returnedQuantity: 2, remainingReturnableQuantity: 1 },
+    ])
+    assert.deepEqual(result.sale.economics, { totalCOGS: '30.6912', grossProfit: '29.3088' })
   })
 
   test('uses stored void snapshots, hides all economics from WAREHOUSE, and tenant-scopes detail', async () => {
     const service = createSaleDependencies(new HistoryDouble().asClient())
     const result = await service.getSale(accountA, UserRole.WAREHOUSE, saleB)
     assert.deepEqual(result.sale.void, { voidedAt: new Date('2026-09-23T08:00:00.000Z'), voidedByName: 'Owner Snapshot', voidedByCode: 'OWN-1', voidReason: 'Duplicate sale' })
+    assert.deepEqual(result.sale.returnSummary, { hasReturns: false, returnCount: 0, totalReturnedUnits: 0, totalReturnedAmount: '0.00' })
     const json = JSON.stringify(result)
     for (const secret of ['unitCostAtSale','lineCost','lineGrossProfit','totalCOGS','grossProfit','margin','lastPurchaseCost','idempotencyKey','requestFingerprint']) assert.equal(json.includes(secret), false)
     await assert.rejects(service.getSale(accountB, UserRole.OWNER, saleA), (e) => expectHttp(e, 404, 'SALE_NOT_FOUND'))

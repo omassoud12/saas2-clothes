@@ -12,9 +12,11 @@ import { createSaleRouter } from '../sales/sale.routes.js'
 import type { SaleDependencies } from '../sales/sale.types.js'
 import {
   canonicalReturnItems,
+  encodeReturnCursor,
   maxReturnLines,
   maxReturnReasonCharacters,
   parseReturnIdempotencyKey,
+  parseReturnHistoryQuery,
   parseReturnInput,
   parseReturnSaleId,
   returnFingerprint,
@@ -40,6 +42,8 @@ const productA = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 const productB = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
 const key = '10000000-0000-4000-8000-000000000001'
 const now = new Date('2026-09-23T12:00:00.000Z')
+const returnA = 'a0000000-0000-4000-8000-000000000001'
+const returnB = 'b0000000-0000-4000-8000-000000000002'
 
 type Row = Record<string, any>
 type State = {
@@ -261,6 +265,83 @@ class ReturnDouble {
   asClient(): PrismaClient { return this.client(this.state, false) }
 }
 
+class ReturnHistoryDouble {
+  readonly currentCatalog = { productName: 'New Shirt', sku: 'NEW-SKU' }
+  readonly currentUser = { name: 'New Employee', employeeCode: 'EMP-99' }
+  readonly sales = [
+    { id: saleA, accountId: accountA },
+    { id: saleOther, accountId: accountB },
+  ]
+  readonly returns: Row[] = [
+    {
+      id: returnA, accountId: accountA, saleId: saleA,
+      processedByName: 'Old Employee', processedByCode: 'EMP-01', reason: null,
+      createdAt: now, idempotencyKey: 'private-a', requestFingerprint: 'a'.repeat(64),
+    },
+    {
+      id: returnB, accountId: accountA, saleId: saleA,
+      processedByName: 'Snapshot Processor', processedByCode: null, reason: 'Stored reason',
+      createdAt: now, idempotencyKey: 'private-b', requestFingerprint: 'b'.repeat(64),
+    },
+  ]
+  readonly items: Row[] = [
+    {
+      id: 'd0000000-0000-4000-8000-000000000001', accountId: accountA, returnId: returnB,
+      saleId: saleA, saleItemId: itemA, variantId: variantA, quantity: 2,
+      refundAmount: new Prisma.Decimal('25.00'),
+      saleItem: { productId: productA, productNameAtSale: 'Old Shirt', categoryNameAtSale: 'Old Category', skuAtSale: 'OLD-SKU', colorAtSale: 'Black', sizeAtSale: 'M' },
+    },
+    {
+      id: 'd0000000-0000-4000-8000-000000000002', accountId: accountA, returnId: returnB,
+      saleId: saleA, saleItemId: itemB, variantId: variantB, quantity: 3,
+      refundAmount: new Prisma.Decimal('60.00'),
+      saleItem: { productId: productB, productNameAtSale: 'Old Jeans', categoryNameAtSale: 'Old Denim', skuAtSale: 'OLD-JEAN', colorAtSale: 'Blue', sizeAtSale: 'L' },
+    },
+    {
+      id: 'd0000000-0000-4000-8000-000000000003', accountId: accountA, returnId: returnA,
+      saleId: saleA, saleItemId: itemA, variantId: variantA, quantity: 1,
+      refundAmount: new Prisma.Decimal('12.50'),
+      saleItem: { productId: productA, productNameAtSale: 'Old Shirt', categoryNameAtSale: 'Old Category', skuAtSale: 'OLD-SKU', colorAtSale: 'Black', sizeAtSale: 'M' },
+    },
+  ]
+  headerQueries = 0
+  itemQueries = 0
+
+  asClient(): PrismaClient {
+    const store = this
+    return {
+      sale: {
+        async findUnique({ where }: Row) {
+          const key = where.id_accountId
+          const sale = store.sales.find((row) => row.id === key.id && row.accountId === key.accountId)
+          return sale ? { id: sale.id } : null
+        },
+      },
+      saleReturn: {
+        async findMany({ where, take }: Row) {
+          store.headerQueries += 1
+          let rows = store.returns.filter((row) => row.accountId === where.accountId && row.saleId === where.saleId)
+          if (where.OR) {
+            const createdAt = where.OR[0].createdAt.lt as Date
+            const id = where.OR[1].id.lt as string
+            rows = rows.filter((row) => row.createdAt < createdAt || (row.createdAt.getTime() === createdAt.getTime() && row.id < id))
+          }
+          return rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime() || right.id.localeCompare(left.id))
+            .slice(0, take).map((row) => ({ ...row }))
+        },
+      },
+      saleReturnItem: {
+        async findMany({ where }: Row) {
+          store.itemQueries += 1
+          return store.items.filter((row) => row.accountId === where.accountId && row.saleId === where.saleId && where.returnId.in.includes(row.returnId))
+            .sort((left, right) => left.returnId.localeCompare(right.returnId) || left.saleItemId.localeCompare(right.saleItemId) || left.id.localeCompare(right.id))
+            .map((row) => ({ ...row, saleItem: { ...row.saleItem } }))
+        },
+      },
+    } as unknown as PrismaClient
+  }
+}
+
 const input = (quantity = 2, reason: string | null = 'Customer return'): ReturnInput => ({
   reason,
   items: [{ saleItemId: itemA, quantity }],
@@ -313,6 +394,62 @@ describe('Return input and canonical fingerprint', () => {
     assert.notEqual(fingerprint, returnFingerprint(accountA, warehouseA, saleA, b))
     assert.notEqual(fingerprint, returnFingerprint(accountA, ownerA, saleB, b))
     assert.notEqual(fingerprint, returnFingerprint(accountB, ownerA, saleA, b))
+  })
+})
+
+describe('Return history validation and service', () => {
+  test('validates bounded limits and a stable createdAt/id cursor', () => {
+    assert.deepEqual(parseReturnHistoryQuery({}), { limit: 25 })
+    assert.equal(parseReturnHistoryQuery({ limit: '100' }).limit, 100)
+    const cursor = encodeReturnCursor(now, returnB)
+    assert.deepEqual(parseReturnHistoryQuery({ cursor }), { limit: 25, cursor: { createdAt: now, id: returnB } })
+    for (const query of [
+      { limit: '0' }, { limit: '101' }, { limit: '1.5' }, { accountId: accountA },
+      { cursor: 'bad!' },
+      { cursor: Buffer.from('{}').toString('base64url') },
+      { cursor: Buffer.from(JSON.stringify({ createdAt: now.toISOString(), id: 'bad' })).toString('base64url') },
+    ]) assert.throws(() => parseReturnHistoryQuery(query), (error) => expectHttp(error, 422, 'INVALID_RETURN_HISTORY_FILTER'))
+  })
+
+  test('returns stored processor, catalog, and refund snapshots in a uniform private shape', async () => {
+    const store = new ReturnHistoryDouble()
+    assert.deepEqual(store.currentCatalog, { productName: 'New Shirt', sku: 'NEW-SKU' })
+    assert.deepEqual(store.currentUser, { name: 'New Employee', employeeCode: 'EMP-99' })
+    const result = await createReturnDependencies(store.asClient()).listReturns(accountA, saleA, { limit: 25 })
+    assert.deepEqual(result.returns.map((row) => row.id), [returnB, returnA])
+    assert.equal(result.nextCursor, null)
+    assert.deepEqual(result.returns[0].processor, { name: 'Snapshot Processor', employeeCode: null })
+    assert.equal(result.returns[0].reason, 'Stored reason')
+    assert.deepEqual(
+      { totalRefund: result.returns[0].totalRefund, itemCount: result.returns[0].itemCount, totalUnits: result.returns[0].totalUnits },
+      { totalRefund: '85.00', itemCount: 2, totalUnits: 5 },
+    )
+    assert.deepEqual(result.returns[0].items[0], {
+      id: 'd0000000-0000-4000-8000-000000000001', saleItemId: itemA, productId: productA, variantId: variantA,
+      productName: 'Old Shirt', categoryName: 'Old Category', sku: 'OLD-SKU', color: 'Black', size: 'M',
+      quantity: 2, refundAmount: '25.00',
+    })
+    assert.deepEqual(result.returns[1].processor, { name: 'Old Employee', employeeCode: 'EMP-01' })
+    assert.equal(store.headerQueries, 1); assert.equal(store.itemQueries, 1)
+    const json = JSON.stringify(result)
+    for (const privateField of [
+      'idempotencyKey','requestFingerprint','unitCostAtSale','lastPurchaseCost','currentStock',
+      'stockAfter','InventoryMovement','totalCOGS','grossProfit','margin','movementId',
+    ]) assert.equal(json.includes(privateField), false)
+  })
+
+  test('paginates deterministically across equal timestamps and handles empty and foreign Sales', async () => {
+    const service = createReturnDependencies(new ReturnHistoryDouble().asClient())
+    const first = await service.listReturns(accountA, saleA, { limit: 1 })
+    assert.equal(first.returns[0].id, returnB); assert.ok(first.nextCursor)
+    const cursor = parseReturnHistoryQuery({ cursor: first.nextCursor! }).cursor!
+    const second = await service.listReturns(accountA, saleA, { limit: 1, cursor })
+    assert.equal(second.returns[0].id, returnA); assert.equal(second.nextCursor, null)
+
+    const empty = new ReturnHistoryDouble(); empty.returns.length = 0; empty.items.length = 0
+    assert.deepEqual(await createReturnDependencies(empty.asClient()).listReturns(accountA, saleA, { limit: 25 }), { returns: [], nextCursor: null })
+    assert.equal(empty.itemQueries, 0)
+    await assert.rejects(service.listReturns(accountB, saleA, { limit: 25 }), (error) => expectHttp(error, 404, 'RETURN_SALE_NOT_FOUND'))
   })
 })
 
@@ -493,6 +630,37 @@ async function withServer(role: UserRole, returns: ReturnDependencies, run: (bas
 }
 
 describe('Return route authorization and status', () => {
+  test('allows OWNER and WAREHOUSE Return history and rejects SUPER_ADMIN', async () => {
+    for (const role of [UserRole.OWNER, UserRole.WAREHOUSE]) {
+      await withServer(role, createReturnDependencies(new ReturnHistoryDouble().asClient()), async (base) => {
+        const response = await fetch(`${base}/api/sales/${saleA}/returns?limit=1`, { headers: { Authorization: 'Bearer test' } })
+        assert.equal(response.status, 200)
+        const body = await response.json() as Row
+        assert.equal(body.returns.length, 1); assert.ok(body.nextCursor)
+      })
+    }
+    await withServer(UserRole.SUPER_ADMIN, createReturnDependencies(new ReturnHistoryDouble().asClient()), async (base) => {
+      assert.equal((await fetch(`${base}/api/sales/${saleA}/returns`, { headers: { Authorization: 'Bearer test' } })).status, 403)
+    })
+  })
+
+  test('validates Return history Sale IDs, cursors, and limits before service access', async () => {
+    const unused = {
+      async listReturns() { throw Error('must not run') },
+      async createReturn() { throw Error('must not run') },
+    } satisfies ReturnDependencies
+    await withServer(UserRole.OWNER, unused, async (base) => {
+      for (const [path, code] of [
+        ['/api/sales/not-a-uuid/returns', 'INVALID_RETURN_SALE_ID'],
+        [`/api/sales/${saleA}/returns?cursor=bad!`, 'INVALID_RETURN_HISTORY_FILTER'],
+        [`/api/sales/${saleA}/returns?limit=101`, 'INVALID_RETURN_HISTORY_FILTER'],
+      ]) {
+        const response = await fetch(`${base}${path}`, { headers: { Authorization: 'Bearer test' } })
+        assert.equal(response.status, 422); assert.equal((await response.json() as Row).error.code, code)
+      }
+    })
+  })
+
   test('allows OWNER and WAREHOUSE with 201/200 and rejects SUPER_ADMIN', async () => {
     for (const role of [UserRole.OWNER, UserRole.WAREHOUSE]) {
       const store = new ReturnDouble()
@@ -506,7 +674,10 @@ describe('Return route authorization and status', () => {
         assert.equal((await fetch(`${base}/api/sales/${saleA}/returns`, options)).status, 200)
       })
     }
-    const forbidden: ReturnDependencies = { async createReturn() { throw Error('must not run') } }
+    const forbidden: ReturnDependencies = {
+      async listReturns() { throw Error('must not run') },
+      async createReturn() { throw Error('must not run') },
+    }
     await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const response = await fetch(`${base}/api/sales/${saleA}/returns`, {
         method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(input()),
@@ -516,7 +687,10 @@ describe('Return route authorization and status', () => {
   })
 
   test('returns safe validation errors without invoking the service', async () => {
-    const unused: ReturnDependencies = { async createReturn() { throw Error('must not run') } }
+    const unused: ReturnDependencies = {
+      async listReturns() { throw Error('must not run') },
+      async createReturn() { throw Error('must not run') },
+    }
     await withServer(UserRole.OWNER, unused, async (base) => {
       const common = { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' }, body: JSON.stringify(input()) }
       const missing = await fetch(`${base}/api/sales/${saleA}/returns`, common)

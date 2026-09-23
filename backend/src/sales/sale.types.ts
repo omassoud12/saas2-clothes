@@ -44,6 +44,12 @@ export interface SaleDetailView {
       readonly voidedByCode: string | null
       readonly voidReason: string
     }
+    readonly returnSummary: {
+      readonly hasReturns: boolean
+      readonly returnCount: number
+      readonly totalReturnedUnits: number
+      readonly totalReturnedAmount: string
+    }
     readonly items: readonly ({
       readonly id: string
       readonly productId: string
@@ -56,6 +62,8 @@ export interface SaleDetailView {
       readonly quantity: number
       readonly unitSoldPrice: string
       readonly lineTotal: string
+      readonly returnedQuantity: number
+      readonly remainingReturnableQuantity: number
     } & {
       readonly unitCostAtSale?: string
       readonly lineCost?: string

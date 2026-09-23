@@ -72,6 +72,10 @@ const voidItemSelect = {
 type PersistedSale = Prisma.SaleGetPayload<{ select: typeof persistedSaleSelect }>
 type HistorySale = Prisma.SaleGetPayload<{ select: typeof historySaleSelect }>
 type DetailSale = Prisma.SaleGetPayload<{ select: typeof detailSaleSelect }>
+type DetailReturnAggregate = {
+  readonly saleItemId: string
+  readonly _sum: { readonly quantity: number | null; readonly refundAmount: Prisma.Decimal | null }
+}
 type PersistedVoidSale = Prisma.SaleGetPayload<{ select: typeof voidSaleSelect }>
 type VoidSaleItem = Prisma.SaleItemGetPayload<{ select: typeof voidItemSelect }>
 type SaleReader = Pick<PrismaClient, 'sale'>
@@ -166,14 +170,30 @@ function safeUnits(value: number | bigint): number {
   return units
 }
 
-function detailView(sale: DetailSale, role: UserRole): SaleDetailView {
+function detailView(
+  sale: DetailSale,
+  role: UserRole,
+  returnCount: number,
+  returnAggregates: readonly DetailReturnAggregate[],
+): SaleDetailView {
   let totalCOGS = new Prisma.Decimal(0)
+  let totalReturnedUnits = 0
+  let totalReturnedAmount = new Prisma.Decimal(0)
+  const returnedBySaleItem = new Map<string, number>()
+  for (const aggregate of returnAggregates) {
+    const returnedQuantity = safeUnits(aggregate._sum.quantity ?? 0)
+    returnedBySaleItem.set(aggregate.saleItemId, returnedQuantity)
+    totalReturnedUnits = safeUnits(totalReturnedUnits + returnedQuantity)
+    totalReturnedAmount = totalReturnedAmount.add(aggregate._sum.refundAmount ?? 0)
+  }
   const items = sale.items.map((item) => {
+    const returnedQuantity = returnedBySaleItem.get(item.id) ?? 0
     const base = {
       id: item.id, productId: item.productId, variantId: item.variantId,
       productName: item.productNameAtSale, categoryName: item.categoryNameAtSale,
       sku: item.skuAtSale, color: item.colorAtSale, size: item.sizeAtSale,
       quantity: item.quantity, unitSoldPrice: item.unitSoldPrice.toFixed(2), lineTotal: item.lineTotal.toFixed(2),
+      returnedQuantity, remainingReturnableQuantity: item.quantity - returnedQuantity,
     }
     if (role !== UserRole.OWNER) return base
     const lineCost = item.unitCostAtSale.mul(item.quantity)
@@ -203,6 +223,12 @@ function detailView(sale: DetailSale, role: UserRole): SaleDetailView {
       subtotal: sale.subtotal.toFixed(2), totalAmount: sale.totalAmount.toFixed(2), createdAt: sale.createdAt,
       seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
       void: voidInfo,
+      returnSummary: {
+        hasReturns: returnCount > 0,
+        returnCount,
+        totalReturnedUnits,
+        totalReturnedAmount: totalReturnedAmount.toFixed(2),
+      },
       items,
       ...(role === UserRole.OWNER ? {
         economics: {
@@ -498,7 +524,15 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         select: detailSaleSelect,
       })
       if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
-      return detailView(sale, role)
+      const [returnCount, returnAggregates] = await Promise.all([
+        prisma.saleReturn.count({ where: { accountId, saleId } }),
+        prisma.saleReturnItem.groupBy({
+          by: ['saleItemId'],
+          where: { accountId, saleId },
+          _sum: { quantity: true, refundAmount: true },
+        }),
+      ])
+      return detailView(sale, role, returnCount, returnAggregates)
     } catch (error) {
       if (error instanceof HttpError) throw error
       throw new HttpError(503, 'SALES_HISTORY_UNAVAILABLE', 'Sales history is temporarily unavailable')

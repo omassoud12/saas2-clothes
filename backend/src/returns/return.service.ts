@@ -1,9 +1,11 @@
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
-import { canonicalReturnItems, returnFingerprint } from './return.schemas.js'
+import { canonicalReturnItems, encodeReturnCursor, returnFingerprint } from './return.schemas.js'
 import type {
   ReturnDependencies,
+  ReturnHistoryItem,
+  ReturnHistoryQuery,
   ReturnInput,
   ReturnTransaction,
   ReturnTransactionInput,
@@ -12,6 +14,34 @@ import type {
 
 const returnIdempotencyIndex = 'SaleReturn_accountId_idempotencyKey_key'
 const maxStock = 2_147_483_647
+
+const returnHistoryHeaderSelect = {
+  id: true,
+  saleId: true,
+  processedByName: true,
+  processedByCode: true,
+  reason: true,
+  createdAt: true,
+} as const
+
+const returnHistoryItemSelect = {
+  id: true,
+  returnId: true,
+  saleItemId: true,
+  variantId: true,
+  quantity: true,
+  refundAmount: true,
+  saleItem: {
+    select: {
+      productId: true,
+      productNameAtSale: true,
+      categoryNameAtSale: true,
+      skuAtSale: true,
+      colorAtSale: true,
+      sizeAtSale: true,
+    },
+  },
+} as const
 
 const persistedReturnSelect = {
   id: true,
@@ -43,6 +73,8 @@ const persistedReturnSelect = {
 } as const
 
 type PersistedReturn = Prisma.SaleReturnGetPayload<{ select: typeof persistedReturnSelect }>
+type ReturnHistoryHeader = Prisma.SaleReturnGetPayload<{ select: typeof returnHistoryHeaderSelect }>
+type ReturnHistoryRow = Prisma.SaleReturnItemGetPayload<{ select: typeof returnHistoryItemSelect }>
 type ReturnReader = Pick<PrismaClient, 'saleReturn'>
 type LockedProcessor = {
   id: string
@@ -62,6 +94,20 @@ type LockedSaleItem = {
   unitCostAtSale: Prisma.Decimal | string
 }
 type LockedVariant = { id: string; currentStock: number }
+type SafeReturnItemSource = {
+  readonly saleItemId: string
+  readonly variantId: string
+  readonly quantity: number
+  readonly refundAmount: Prisma.Decimal
+  readonly saleItem: {
+    readonly productId: string
+    readonly productNameAtSale: string
+    readonly categoryNameAtSale: string
+    readonly skuAtSale: string
+    readonly colorAtSale: string | null
+    readonly sizeAtSale: string | null
+  }
+}
 
 function saleNotFound(): HttpError {
   return new HttpError(404, 'RETURN_SALE_NOT_FOUND', 'Sale does not exist')
@@ -75,22 +121,55 @@ function decimal(value: Prisma.Decimal | string): Prisma.Decimal {
   return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value)
 }
 
+function safeReturnItem(item: SafeReturnItemSource) {
+  return {
+    saleItemId: item.saleItemId,
+    productId: item.saleItem.productId,
+    variantId: item.variantId,
+    productName: item.saleItem.productNameAtSale,
+    categoryName: item.saleItem.categoryNameAtSale,
+    sku: item.saleItem.skuAtSale,
+    color: item.saleItem.colorAtSale,
+    size: item.saleItem.sizeAtSale,
+    quantity: item.quantity,
+    refundAmount: item.refundAmount.toFixed(2),
+  }
+}
+
+function safeUnits(value: number | bigint): number {
+  const units = Number(value)
+  if (!Number.isSafeInteger(units) || units < 0) {
+    throw new HttpError(503, 'RETURN_HISTORY_UNAVAILABLE', 'Return history value exceeds the safe display range')
+  }
+  return units
+}
+
+function historyView(header: ReturnHistoryHeader, rows: readonly ReturnHistoryRow[]): ReturnHistoryItem {
+  let totalRefund = new Prisma.Decimal(0)
+  let totalUnits = 0
+  const items = rows.map((item) => {
+    totalRefund = totalRefund.add(item.refundAmount)
+    totalUnits = safeUnits(totalUnits + item.quantity)
+    return { id: item.id, ...safeReturnItem(item) }
+  })
+  return {
+    id: header.id,
+    saleId: header.saleId,
+    createdAt: header.createdAt,
+    reason: header.reason,
+    processor: { name: header.processedByName, employeeCode: header.processedByCode },
+    totalRefund: totalRefund.toFixed(2),
+    itemCount: items.length,
+    totalUnits,
+    items,
+  }
+}
+
 function toView(record: PersistedReturn, idempotentReplay: boolean): ReturnView {
   let totalRefund = new Prisma.Decimal(0)
   const items = record.items.map((item) => {
     totalRefund = totalRefund.add(item.refundAmount)
-    return {
-      saleItemId: item.saleItemId,
-      productId: item.saleItem.productId,
-      variantId: item.variantId,
-      productName: item.saleItem.productNameAtSale,
-      categoryName: item.saleItem.categoryNameAtSale,
-      sku: item.saleItem.skuAtSale,
-      color: item.saleItem.colorAtSale,
-      size: item.saleItem.sizeAtSale,
-      quantity: item.quantity,
-      refundAmount: item.refundAmount.toFixed(2),
-    }
+    return safeReturnItem(item)
   })
   return {
     return: {
@@ -275,6 +354,54 @@ export async function createReturnInTransaction(
 }
 
 export function createReturnDependencies(prisma: PrismaClient): ReturnDependencies {
+  async function listReturns(
+    accountId: string,
+    saleId: string,
+    query: ReturnHistoryQuery,
+  ): Promise<{ returns: readonly ReturnHistoryItem[]; nextCursor: string | null }> {
+    try {
+      const sale = await prisma.sale.findUnique({
+        where: { id_accountId: { id: saleId, accountId } },
+        select: { id: true },
+      })
+      if (!sale) throw saleNotFound()
+
+      const headers = await prisma.saleReturn.findMany({
+        where: {
+          accountId,
+          saleId,
+          ...(query.cursor ? { OR: [
+            { createdAt: { lt: query.cursor.createdAt } },
+            { createdAt: query.cursor.createdAt, id: { lt: query.cursor.id } },
+          ] } : {}),
+        },
+        select: returnHistoryHeaderSelect,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: query.limit + 1,
+      })
+      const page = headers.slice(0, query.limit)
+      const rows = page.length ? await prisma.saleReturnItem.findMany({
+        where: { accountId, saleId, returnId: { in: page.map((header) => header.id) } },
+        select: returnHistoryItemSelect,
+        orderBy: [{ returnId: 'asc' }, { saleItemId: 'asc' }, { id: 'asc' }],
+      }) : []
+      const rowsByReturn = new Map<string, ReturnHistoryRow[]>()
+      for (const row of rows) {
+        const grouped = rowsByReturn.get(row.returnId)
+        if (grouped) grouped.push(row)
+        else rowsByReturn.set(row.returnId, [row])
+      }
+      const last = page.at(-1)
+      return {
+        returns: page.map((header) => historyView(header, rowsByReturn.get(header.id) ?? [])),
+        nextCursor: headers.length > query.limit && last ? encodeReturnCursor(last.createdAt, last.id) : null,
+      }
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(503, 'RETURN_HISTORY_UNAVAILABLE', 'Return history is temporarily unavailable')
+    }
+  }
+
   async function performReturn(
     accountId: string,
     processedById: string,
@@ -324,5 +451,5 @@ export function createReturnDependencies(prisma: PrismaClient): ReturnDependenci
     }
   }
 
-  return { createReturn }
+  return { listReturns, createReturn }
 }

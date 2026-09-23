@@ -1,11 +1,54 @@
 import { createHash } from 'node:crypto'
 import { HttpError } from '../errors/http-error.js'
-import type { ReturnInput, ReturnLineInput } from './return.types.js'
+import type { ReturnHistoryQuery, ReturnInput, ReturnLineInput } from './return.types.js'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export const maxReturnLines = 100
 export const maxReturnQuantity = 1_000_000
 export const maxReturnReasonCharacters = 2_000
+
+function invalidHistoryFilter(message: string): never {
+  throw new HttpError(422, 'INVALID_RETURN_HISTORY_FILTER', message)
+}
+
+export function encodeReturnCursor(createdAt: Date, id: string): string {
+  return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id })).toString('base64url')
+}
+
+export function parseReturnHistoryQuery(query: Record<string, unknown>): ReturnHistoryQuery {
+  if (Object.keys(query).some((key) => key !== 'cursor' && key !== 'limit')) {
+    invalidHistoryFilter('Unsupported Return history filter')
+  }
+  let limit = 25
+  if (query.limit !== undefined) {
+    if (typeof query.limit !== 'string' || !/^[1-9]\d*$/.test(query.limit)) {
+      invalidHistoryFilter('limit must be a positive integer')
+    }
+    limit = Number(query.limit)
+    if (!Number.isSafeInteger(limit) || limit > 100) invalidHistoryFilter('limit must be at most 100')
+  }
+  if (query.cursor === undefined) return { limit }
+  if (typeof query.cursor !== 'string' || query.cursor.length > 500 || !/^[A-Za-z0-9_-]+$/.test(query.cursor)) {
+    invalidHistoryFilter('Invalid Return cursor')
+  }
+  try {
+    const decoded: unknown = JSON.parse(Buffer.from(query.cursor, 'base64url').toString('utf8'))
+    if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) invalidHistoryFilter('Invalid Return cursor')
+    const cursor = decoded as Record<string, unknown>
+    if (Object.keys(cursor).length !== 2 || typeof cursor.createdAt !== 'string' ||
+        typeof cursor.id !== 'string' || !uuidPattern.test(cursor.id)) {
+      invalidHistoryFilter('Invalid Return cursor')
+    }
+    const createdAt = new Date(cursor.createdAt)
+    if (!Number.isFinite(createdAt.getTime()) || createdAt.toISOString() !== cursor.createdAt) {
+      invalidHistoryFilter('Invalid Return cursor')
+    }
+    return { limit, cursor: { createdAt, id: cursor.id.toLowerCase() } }
+  } catch (error) {
+    if (error instanceof HttpError) throw error
+    return invalidHistoryFilter('Invalid Return cursor')
+  }
+}
 
 export function parseReturnIdempotencyKey(headers: Record<string, unknown>, rawHeaders: readonly string[]): string {
   let count = 0
