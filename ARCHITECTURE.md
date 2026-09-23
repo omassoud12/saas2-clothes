@@ -403,25 +403,59 @@ over-return under concurrent transactions.
 SaleReturnItem.refundAmount equals its quantity multiplied by the original
 SaleItem.unitSoldPrice. The frontend never supplies authoritative refund value.
 
-The future Return API is not implemented yet. It will require one client
-operation UUID in `Idempotency-Key`, stored as `SaleReturn.idempotencyKey` and
-unique within the authenticated Account. The backend will store its own
-lowercase SHA-256 `requestFingerprint`; the client cannot supply the
-authoritative fingerprint. Its fixed-order UTF-8 JSON input is `type` set to
-`"RETURN"`, lowercase authenticated `accountId`, lowercase authenticated
-`processedById`, lowercase `saleId`, items sorted by lowercase `saleItemId`
-with integer quantities, and the normalized reason or JSON null. Refunds,
-costs, Variant IDs, timestamps, generated Return IDs, and current stock are
-excluded. A matching key and fingerprint replays the original Return; the same
-key with different semantics conflicts.
+The transactional `POST /api/sales/:saleId/returns` endpoint is available to
+active OWNER and WAREHOUSE users; SUPER_ADMIN cannot process tenant Returns.
+It requires one client operation UUID in `Idempotency-Key`, stored as
+`SaleReturn.idempotencyKey` and unique within the authenticated Account. The
+backend stores its own lowercase SHA-256 `requestFingerprint`; the client
+cannot supply the authoritative fingerprint. Its fixed-order UTF-8 JSON input
+is `type` set to `"RETURN"`, lowercase authenticated `accountId`, lowercase
+authenticated `processedById`, lowercase route `saleId`, items sorted by
+lowercase `saleItemId` with integer quantities, and the normalized reason or
+JSON null. Refunds, costs, Variant IDs, timestamps, generated Return IDs, and
+current stock are excluded. A matching key and fingerprint replays the
+persisted Return with HTTP 200; the same key with different semantics conflicts.
+The tenant-scoped database unique constraint is the final concurrent-key guard,
+and its losing transaction is rolled back before the winner is re-read.
 
-Return requests will be nonempty and reject duplicate SaleItem IDs rather than
-merge them. An optional reason is Unicode-NFC normalized and trimmed, with an
-empty result represented by null and a maximum of 2,000 characters. Active
-OWNER and WAREHOUSE users may process Returns. The runtime must derive the
-Account and processor from authentication and write that processor consistently
-to both SaleReturn and its RETURN movements; this actor equality remains a
-runtime transaction guarantee rather than a database constraint.
+Return requests contain only an optional reason and a nonempty array of at most
+100 unique SaleItem IDs with positive integer quantities no greater than
+1,000,000. Duplicate SaleItem IDs are rejected rather than merged. The reason
+is Unicode-NFC normalized and trimmed, with an empty result represented by null
+and a maximum of 2,000 characters. Fingerprinting and persistence use the same
+normalized value. The runtime derives the Account and processor from
+authentication, rechecks that processor under a row lock, and writes that actor
+consistently to both SaleReturn and every RETURN movement; this actor equality
+is a runtime transaction guarantee rather than a database constraint.
+
+A new Return runs in one READ COMMITTED transaction and locks the Account,
+processor, Sale, requested SaleItems sorted by ID, and affected Variants sorted
+by ID. The Sale must be tenant-owned and COMPLETED. Each SaleItem must belong to
+that Sale and Account. After locking, the service sums authoritative prior
+SaleReturnItem quantities and rejects the entire request if any line exceeds
+its remaining sold quantity. Sale and SaleItem locks serialize competing
+Return and future Void operations; the database cumulative-quantity and
+Return/Void triggers remain final integrity backstops.
+
+Refund amounts come only from the immutable `SaleItem.unitSoldPrice`, and
+RETURN movement costs come only from `SaleItem.unitCostAtSale`. Current catalog
+prices and costs are not authorities. Historical Product, Category, SKU,
+color, and size display in the mutation/replay response comes from the original
+SaleItem snapshots. A Product or Variant becoming inactive does not block a
+historical Return and does not reactivate it.
+
+The transaction creates one SaleReturn, one SaleReturnItem per requested line,
+one RETURN InventoryMovement per ReturnItem, and atomically restores stock to
+the exact historical Variant after checking PostgreSQL integer capacity. Any
+header, item, movement, or stock failure rolls back the entire Return. The safe
+OWNER and WAREHOUSE mutation response includes refund amounts but omits costs,
+profit, stock, movement identifiers, idempotency metadata, and fingerprints.
+The Sale remains COMPLETED and DailyReport is not updated synchronously.
+
+The Return service exposes a transaction-scoped creation primitive in addition
+to the public transaction-opening operation, allowing a future Exchange to
+compose Return work inside one outer transaction without nested transactions.
+Public Return history and Sale-detail Return summaries remain deferred.
 
 Every RETURN movement quantity must equal its SaleReturnItem quantity, and
 every SALE_VOID movement quantity must equal the original SaleItem quantity.

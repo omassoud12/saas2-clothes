@@ -12,6 +12,7 @@ import type { CategoryDependencies } from '../categories/category.types.js'
 import type { InventoryAuditDependencies } from '../inventory/inventory.types.js'
 import type { ProductDependencies } from '../products/product.types.js'
 import type { SaleDependencies } from '../sales/sale.types.js'
+import type { ReturnDependencies } from '../returns/return.types.js'
 import {
   createApproveAccount,
   createRejectAccount,
@@ -286,6 +287,7 @@ describe('admin Account authorization', () => {
       products: {} as ProductDependencies,
       inventory: {} as InventoryAuditDependencies,
       sales: {} as SaleDependencies,
+      returns: {} as ReturnDependencies,
       categories: {
         async listCategories() {
           return []

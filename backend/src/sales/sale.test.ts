@@ -12,6 +12,7 @@ import { createSaleRouter } from './sale.routes.js'
 import { canonicalSaleItems, encodeSaleCursor, maxSaleLines, parseSaleHistoryQuery, parseSaleId, parseSaleIdempotencyKey, parseSaleInput, saleFingerprint } from './sale.schemas.js'
 import { createSaleDependencies } from './sale.service.js'
 import type { SaleDependencies, SaleInput } from './sale.types.js'
+import type { ReturnDependencies } from '../returns/return.types.js'
 
 const accountA = '11111111-1111-4111-8111-111111111111'
 const accountB = '22222222-2222-4222-8222-222222222222'
@@ -479,7 +480,8 @@ function auth(role: UserRole): AuthDependencies {
 }
 
 async function withServer(role: UserRole, sales: SaleDependencies, run: (base: string) => Promise<void>) {
-  const app = express(); app.use(express.json()); app.use('/api/sales', createSaleRouter(auth(role), sales)); app.use(errorHandler)
+  const returns = {} as ReturnDependencies
+  const app = express(); app.use(express.json()); app.use('/api/sales', createSaleRouter(auth(role), sales, returns)); app.use(errorHandler)
   const server = app.listen(0)
   try { const address = server.address() as AddressInfo; await run(`http://127.0.0.1:${address.port}`) }
   finally { await new Promise<void>((resolve) => server.close(() => resolve())) }

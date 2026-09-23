@@ -13,6 +13,7 @@ import { createProductRouter } from './products/product.routes.js'
 import type { ProductDependencies } from './products/product.types.js'
 import { createSaleRouter } from './sales/sale.routes.js'
 import type { SaleDependencies } from './sales/sale.types.js'
+import type { ReturnDependencies } from './returns/return.types.js'
 
 export interface AppDependencies {
   readonly auth: AuthDependencies
@@ -21,6 +22,7 @@ export interface AppDependencies {
   readonly products: ProductDependencies
   readonly inventory: InventoryAuditDependencies
   readonly sales: SaleDependencies
+  readonly returns: ReturnDependencies
 }
 
 export function createApp(dependencies: AppDependencies) {
@@ -40,7 +42,7 @@ export function createApp(dependencies: AppDependencies) {
   )
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
   app.use('/api/inventory', createInventoryRouter(dependencies.auth, dependencies.inventory))
-  app.use('/api/sales', createSaleRouter(dependencies.auth, dependencies.sales))
+  app.use('/api/sales', createSaleRouter(dependencies.auth, dependencies.sales, dependencies.returns))
   app.use(
     '/api/admin/accounts',
     createAdminAccountRouter(dependencies.auth, dependencies.adminAccounts),
