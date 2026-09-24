@@ -17,6 +17,8 @@ import type { ReturnDependencies } from './returns/return.types.js'
 import type { ExchangeDependencies } from './exchanges/exchange.types.js'
 import { createExchangeHistoryRouter } from './exchanges/exchange.history.routes.js'
 import type { ExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
+import { createExpenseRouter } from './expenses/expense.routes.js'
+import type { ExpenseDependencies } from './expenses/expense.types.js'
 
 export interface AppDependencies {
   readonly auth: AuthDependencies
@@ -28,6 +30,7 @@ export interface AppDependencies {
   readonly returns: ReturnDependencies
   readonly exchanges?: ExchangeDependencies
   readonly exchangeHistory?: ExchangeHistoryDependencies
+  readonly expenses?: ExpenseDependencies
 }
 
 export function createApp(dependencies: AppDependencies) {
@@ -55,6 +58,9 @@ export function createApp(dependencies: AppDependencies) {
   ))
   if (dependencies.exchangeHistory) {
     app.use('/api/exchanges', createExchangeHistoryRouter(dependencies.auth, dependencies.exchangeHistory))
+  }
+  if (dependencies.expenses) {
+    app.use('/api/expenses', createExpenseRouter(dependencies.auth, dependencies.expenses))
   }
   app.use(
     '/api/admin/accounts',

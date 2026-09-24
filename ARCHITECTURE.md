@@ -794,13 +794,22 @@ creator relation, and a currency snapshot derived from the locked Account base
 currency. It does not store a creator name/code snapshot, so future reads must
 not promise immutable creator display data.
 
-Future `POST /api/expenses` is OWNER-only and accepts only a positive decimal
-string amount with at most two fractional digits, a required NFC-normalized and
-trimmed description of at most 2,000 characters, and `expenseDate` as
-`YYYY-MM-DD`. The backend derives Account, creator, and currency; there is no
-client currency, category, note, or `occurredAt`. Future OWNER-only
-`GET /api/expenses` uses bounded `expenseDate DESC, id DESC` pagination with
-`from` and `to` date filters. No Expense PATCH or DELETE endpoint is approved.
+`POST /api/expenses` and `GET /api/expenses` are implemented for active OWNER
+users only. WAREHOUSE cannot access Expense data, and SUPER_ADMIN has no tenant
+financial authority. Create accepts only a positive decimal-string amount with
+at most two fractional digits, a required NFC-normalized and trimmed
+description of at most 2,000 characters, and `expenseDate` as `YYYY-MM-DD`.
+The backend derives Account, creator, and the locked Account base-currency
+snapshot; there is no client currency, category, note, or `occurredAt`.
+
+Expense history is tenant-scoped and uses bounded keyset pagination ordered by
+`expenseDate DESC, id DESC` (default 25, maximum 100), with inclusive `from`
+and `to` DATE filters. Responses use the persisted Expense currency and
+creator ID without joining current User display data. No Expense PATCH, PUT,
+DELETE, correction, or reversal endpoint exists. Expense creation inserts only
+the authoritative Expense row and does not update DailyReport, inventory, or
+other financial history. Expense has no idempotency contract in this MVP, so
+each successful POST creates one immutable record.
 
 Revenue, refunds, expenses, and report fields use two decimal places.
 Historical unit cost uses four. Each daily gross, returned, or voided COGS
