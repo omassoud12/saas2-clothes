@@ -216,6 +216,7 @@ model Expense {
   accountId   String   @db.Uuid
   description String
   amount      Decimal  @db.Decimal(18, 2)
+  currency    String   @db.Char(3)
   expenseDate DateTime @db.Date
   createdById String   @db.Uuid
 
@@ -226,6 +227,7 @@ model Expense {
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   @@index([accountId, expenseDate])
+  @@index([accountId, expenseDate(sort: Desc), id(sort: Desc)])
   @@index([createdById, accountId])
 }
 
@@ -261,6 +263,7 @@ model Sale {
   @@unique([id, accountId])
   @@unique([accountId, idempotencyKey])
   @@index([accountId, createdAt])
+  @@index([accountId, voidedAt])
   @@index([accountId, soldById, createdAt])
   @@index([accountId, status, createdAt])
   @@index([soldById, accountId])
@@ -332,6 +335,7 @@ model SaleReturn {
   @@unique([id, saleId, accountId])
   @@unique([accountId, idempotencyKey])
   @@index([accountId, saleId, createdAt])
+  @@index([accountId, createdAt])
   @@index([saleId, accountId])
   @@index([processedById, accountId, createdAt])
 }
@@ -390,6 +394,7 @@ model DailyReport {
   id                String   @id @default(uuid()) @db.Uuid
   accountId         String   @db.Uuid
   reportDate        DateTime @db.Date
+  currency          String   @db.Char(3)
   grossRevenue      Decimal  @default(0) @db.Decimal(18, 2)
   returnedRevenue   Decimal  @default(0) @db.Decimal(18, 2)
   voidedRevenue     Decimal  @default(0) @db.Decimal(18, 2)
@@ -403,7 +408,7 @@ model DailyReport {
   netProfit         Decimal  @default(0) @db.Decimal(18, 2)
   salesCount        Int
   totalUnitsSold    Int
-  stockValue        Decimal  @db.Decimal(18, 2)
+  stockValue        Decimal? @db.Decimal(18, 2)
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
 

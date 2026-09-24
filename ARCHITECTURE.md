@@ -773,12 +773,43 @@ Daily accounting distinguishes gross activity from reversals:
 - `netProfit = grossProfit - operatingExpenses`.
 
 Gross, returned, and voided magnitude fields, operating expenses, and stock
-value cannot be negative. Net revenue, net COGS, gross profit, and net profit
-may be negative.
+value, when available, cannot be negative. Net revenue, net COGS, gross profit,
+and net profit may be negative. `DailyReport.stockValue` is nullable: null means
+that historical stock valuation is unavailable or was not computed, while zero
+is reserved for a future approved valuation engine that proves a zero value.
 
-Reversals are attributed to the date they occur, not the date of the original
-sale. This preserves the existing `reportDate` business-day convention and does
-not introduce a new timezone boundary.
+The reporting day is the UTC calendar day. Timestamp-backed Sale, SaleReturn,
+and Void events for `YYYY-MM-DD` are grouped in the half-open interval from
+`YYYY-MM-DD 00:00:00 UTC` through the next day at `00:00:00 UTC`. Reversals are
+attributed to the UTC day they occur, not the original Sale day. Expense uses
+its explicit `expenseDate` directly without timezone conversion. There is no
+6AM, Lebanon-local, browser-local, or Account-timezone boundary in this MVP.
+
+Expense is authoritative append-only history. MVP operations are CREATE and
+READ only; updates and deletes are rejected by the database, and corrections
+require a separately approved reversal design. Expense has no category, note,
+soft-delete state, or occurrence timestamp. It stores a required description,
+strictly positive two-decimal amount, explicit report `expenseDate`, trusted
+creator relation, and a currency snapshot derived from the locked Account base
+currency. It does not store a creator name/code snapshot, so future reads must
+not promise immutable creator display data.
+
+Future `POST /api/expenses` is OWNER-only and accepts only a positive decimal
+string amount with at most two fractional digits, a required NFC-normalized and
+trimmed description of at most 2,000 characters, and `expenseDate` as
+`YYYY-MM-DD`. The backend derives Account, creator, and currency; there is no
+client currency, category, note, or `occurredAt`. Future OWNER-only
+`GET /api/expenses` uses bounded `expenseDate DESC, id DESC` pagination with
+`from` and `to` date filters. No Expense PATCH or DELETE endpoint is approved.
+
+Revenue, refunds, expenses, and report fields use two decimal places.
+Historical unit cost uses four. Each daily gross, returned, or voided COGS
+component is calculated by multiplying quantities by historical
+`unitCostAtSale`, summing at full Decimal precision, and rounding the daily
+aggregate once to two decimals with `ROUND_HALF_UP`. Lines are not rounded to
+two decimals before summation. Net COGS and profit fields are then derived from
+the stored rounded report components so database equations remain exact. JS
+Number is never used for financial arithmetic.
 
 ---
 
@@ -795,6 +826,11 @@ The authoritative accounting history wins.
 
 DailyReport can be rebuilt.
 
+DailyReport stores the Account base-currency snapshot used for its computation.
+Its `computedAt` records when the cache row was calculated; it is not proof that
+the row is currently fresh. Sale, Return, Void, Exchange, and Expense writes do
+not synchronously update this cache.
+
 `DailyReport.operatingExpenses` is only the cached per-business-day aggregate
 of authoritative Expense records; it does not replace or duplicate them.
 
@@ -805,7 +841,35 @@ historical gross counts. Future return, void, or net count metrics require
 explicit new fields rather than overloading these fields.
 
 Exchanges are represented by their linked return and replacement sale; those
-underlying records contribute to the report on the dates they occur.
+underlying records contribute to the report on the dates they occur. Exchange
+itself contributes no financial value: its Return child supplies returned
+revenue/COGS, its replacement Sale supplies gross revenue/COGS, and a later
+replacement Void supplies voided revenue/COGS.
+
+The authoritative daily sources are persisted Sale totals by `Sale.createdAt`,
+persisted ReturnItem refunds by `SaleReturn.createdAt`, original Sale totals by
+`Sale.voidedAt`, and Expense amounts by `Expense.expenseDate`. Gross COGS uses
+original SaleItem quantity and historical unit cost; returned COGS uses returned
+quantity and the original SaleItem historical cost; voided COGS uses the full
+original SaleItem quantity and historical cost. Gross Sale counts and units are
+based on Sales created that UTC day, including Sales later returned or voided.
+
+Historical stock-value rebuild is deferred. Current stock and last purchase
+cost are present-state fields. Inventory movements can reconstruct quantities,
+but historical cost basis still has unavailable or ambiguous cases. Until a
+separate valuation algorithm is approved, `DailyReport.stockValue` remains
+null; current stock multiplied by current cost and missing cost treated as zero
+are both forbidden substitutes.
+
+Future financial reads are OWNER-only and calculate bounded results from
+authoritative history under a consistent database snapshot; they must not
+silently trust possibly stale DailyReport rows. WAREHOUSE receives no Expense,
+COGS, profit, operating-expense, or stock-valuation data, and SUPER_ADMIN gains
+no tenant financial authority. The shared future calculation primitive is
+`computeDailyFinancials(accountId, UTC reportDate)`, used by live reads and by
+an internal `rebuildDailyReport(accountId, reportDate)` cache primitive. A
+bounded range wrapper may rebuild multiple dates, but no public arbitrary
+tenant rebuild endpoint is approved.
 
 ---
 
