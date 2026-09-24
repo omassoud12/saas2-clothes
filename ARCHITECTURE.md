@@ -870,15 +870,51 @@ separate valuation algorithm is approved, `DailyReport.stockValue` remains
 null; current stock multiplied by current cost and missing cost treated as zero
 are both forbidden substitutes.
 
-Future financial reads are OWNER-only and calculate bounded results from
-authoritative history under a consistent database snapshot; they must not
-silently trust possibly stale DailyReport rows. WAREHOUSE receives no Expense,
-COGS, profit, operating-expense, or stock-valuation data, and SUPER_ADMIN gains
-no tenant financial authority. The shared future calculation primitive is
-`computeDailyFinancials(accountId, UTC reportDate)`, used by live reads and by
-an internal `rebuildDailyReport(accountId, reportDate)` cache primitive. A
-bounded range wrapper may rebuild multiple dates, but no public arbitrary
-tenant rebuild endpoint is approved.
+The internal authoritative calculation core is implemented as transaction-
+scoped `computeFinancialRangeInTransaction` and
+`computeDailyFinancialsInTransaction` primitives. Callers supply the Prisma
+transaction and a trusted Account ID; the calculation layer is not an HTTP
+authorization layer and opens no nested transaction. It accepts strict UTC
+calendar dates, permits bounded inclusive ranges of at most 366 days, and
+returns every date in ascending order, including zero-activity dates.
+
+Financial sources are aggregated in one parameterized, set-based PostgreSQL
+query independent of range length. Gross Sale revenue/counts and original
+units/COGS remain on `Sale.createdAt`; Return refund and historical COGS
+reversals use `SaleReturn.createdAt`; Void revenue and full historical COGS use
+`Sale.voidedAt`; and Expense uses its DATE-valued `expenseDate` directly.
+Exchange is never queried as an independent amount source because its Return
+and replacement Sale already represent its financial activity.
+
+Each day's gross, returned, and voided COGS is summed at full numeric precision
+and rounded once per component to two decimals with `ROUND_HALF_UP`. Derived
+net revenue, net COGS, gross profit, and net profit use those two-decimal daily
+components. Range summaries sum the already-rounded daily components, rather
+than rounding a hidden whole-range raw COGS value. All outputs are checked
+against Decimal(18,2), and daily counts/units are checked against PostgreSQL
+Int bounds. Mixed Sale/Expense currency metadata fails as a financial invariant;
+the engine never converts or relabels currency. Historical stock valuation
+remains unavailable, so daily and summary `stockValue` is always null.
+
+The internal `rebuildDailyReport(accountId, reportDate)` service opens one
+`READ COMMITTED` transaction, locks the Account row, calculates the day from
+authoritative history in one aggregate query, and upserts the unique
+`(accountId, reportDate)` cache row with a new `computedAt`. All current
+financial writers lock the Account before mutation, so this rebuild lock
+serializes same-Account writes and rebuilds while the source set is calculated
+and persisted. `READ COMMITTED` is intentional here: if the lock waits for an
+earlier writer, the following aggregate sees that writer's committed rows;
+new same-Account writers remain blocked until rebuild commit. A repeatable-read
+snapshot taken before a lock wait could otherwise precede a writer that commits
+while the rebuild is waiting. `computedAt` records computation time only and
+does not prove ongoing freshness. Sale, Return, Void, Exchange, and Expense
+write paths do not synchronously rebuild DailyReport.
+
+Future public financial reads are OWNER-only and will reuse the calculation
+core under a consistent read snapshot rather than trust possibly stale cache
+rows. WAREHOUSE receives no Expense, COGS, profit, operating-expense, or
+stock-valuation data, and SUPER_ADMIN gains no tenant financial authority.
+No public Report API or public rebuild endpoint exists yet.
 
 ---
 
