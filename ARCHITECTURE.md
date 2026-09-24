@@ -950,6 +950,34 @@ DailyReport rebuild or other Report mutation endpoint exists.
 - Do not store user passwords in the application database when using Supabase Auth.
 - Secrets must never be committed to Git.
 
+### Supabase database access boundary
+
+The frontend uses Supabase directly for authentication only. All tenant
+business-data requests go through the Express API, which derives authorization
+and Account scope before Prisma accesses PostgreSQL. The public-schema
+application tables are not a client-facing Supabase Data API.
+
+The deployed and verified production database boundary enables row-level
+security on every application business table without creating `anon` or
+`authenticated` policies, and revokes those roles' direct table privileges.
+This is deliberate deny-by-default protection rather than tenant-aware
+frontend RLS: neither role may read or mutate business data directly. Backend
+Prisma remains the database authority through its separately configured
+database role.
+
+The same boundary enables RLS and removes `anon` and `authenticated` table
+privileges on Prisma's `_prisma_migrations` metadata table. It also removes
+those roles from the `postgres` role's default table and sequence privileges in
+the `public` schema so future backend-owned objects remain closed by default.
+Prisma migration deploy remains compatible because its configured database
+role owns the objects and bypasses RLS.
+
+No frontend business CRUD policy exists. Any future proposal to access
+business data directly through Supabase PostgREST, GraphQL, or another Data API
+requires a separate security design and explicit approval. The FBH1 migration
+that establishes this boundary is deployed and verified against the Supabase
+development database.
+
 ---
 
 ## 14. Deployment
