@@ -15,6 +15,8 @@ import { createSaleRouter } from './sales/sale.routes.js'
 import type { SaleDependencies } from './sales/sale.types.js'
 import type { ReturnDependencies } from './returns/return.types.js'
 import type { ExchangeDependencies } from './exchanges/exchange.types.js'
+import { createExchangeHistoryRouter } from './exchanges/exchange.history.routes.js'
+import type { ExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
 
 export interface AppDependencies {
   readonly auth: AuthDependencies
@@ -25,6 +27,7 @@ export interface AppDependencies {
   readonly sales: SaleDependencies
   readonly returns: ReturnDependencies
   readonly exchanges?: ExchangeDependencies
+  readonly exchangeHistory?: ExchangeHistoryDependencies
 }
 
 export function createApp(dependencies: AppDependencies) {
@@ -50,6 +53,9 @@ export function createApp(dependencies: AppDependencies) {
     dependencies.returns,
     dependencies.exchanges,
   ))
+  if (dependencies.exchangeHistory) {
+    app.use('/api/exchanges', createExchangeHistoryRouter(dependencies.auth, dependencies.exchangeHistory))
+  }
   app.use(
     '/api/admin/accounts',
     createAdminAccountRouter(dependencies.auth, dependencies.adminAccounts),

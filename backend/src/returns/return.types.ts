@@ -18,6 +18,7 @@ export interface ReturnHistoryQuery {
 export interface ReturnHistoryItem {
   readonly id: string
   readonly saleId: string
+  readonly exchangeId: string | null
   readonly createdAt: Date
   readonly reason: string | null
   readonly processor: { readonly name: string; readonly employeeCode: string | null }

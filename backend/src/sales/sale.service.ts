@@ -214,6 +214,8 @@ function detailView(
   role: UserRole,
   returnCount: number,
   returnAggregates: readonly DetailReturnAggregate[],
+  originalExchangeCount: number,
+  replacementForExchangeId: string | null,
 ): SaleDetailView {
   let totalCOGS = new Prisma.Decimal(0)
   let totalReturnedUnits = 0
@@ -268,6 +270,7 @@ function detailView(
         totalReturnedUnits,
         totalReturnedAmount: totalReturnedAmount.toFixed(2),
       },
+      exchangeSummary: { originalExchangeCount, replacementForExchangeId },
       items,
       ...(role === UserRole.OWNER ? {
         economics: {
@@ -602,15 +605,17 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         select: detailSaleSelect,
       })
       if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
-      const [returnCount, returnAggregates] = await Promise.all([
+      const [returnCount, returnAggregates, originalExchangeCount, replacementExchange] = await Promise.all([
         prisma.saleReturn.count({ where: { accountId, saleId } }),
         prisma.saleReturnItem.groupBy({
           by: ['saleItemId'],
           where: { accountId, saleId },
           _sum: { quantity: true, refundAmount: true },
         }),
+        prisma.exchange.count({ where: { accountId, saleReturn: { accountId, saleId } } }),
+        prisma.exchange.findFirst({ where: { accountId, newSaleId: saleId }, select: { id: true } }),
       ])
-      return detailView(sale, role, returnCount, returnAggregates)
+      return detailView(sale, role, returnCount, returnAggregates, originalExchangeCount, replacementExchange?.id ?? null)
     } catch (error) {
       if (error instanceof HttpError) throw error
       throw new HttpError(503, 'SALES_HISTORY_UNAVAILABLE', 'Sales history is temporarily unavailable')

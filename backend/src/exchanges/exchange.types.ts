@@ -67,3 +67,22 @@ export interface ExchangeDependencies {
     input: ExchangeInput,
   ): Promise<ExchangeView>
 }
+
+export interface ExchangeHistoryQuery {
+  readonly from?: Date
+  readonly to?: Date
+  readonly cursor?: { readonly createdAt: Date; readonly id: string }
+  readonly limit: number
+}
+
+export interface ExchangeHistoryItem {
+  readonly id: string
+  readonly createdAt: Date
+  readonly originalSaleId: string
+  readonly replacementSaleId: string
+  readonly currency: string
+  readonly totalRefund: string
+  readonly replacementTotal: string
+  readonly differenceAmount: string
+  readonly processor: { readonly name: string; readonly employeeCode: string | null }
+}

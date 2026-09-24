@@ -22,7 +22,7 @@ import type { ExchangeDependencies, ExchangeInput, ExchangeView } from './exchan
 
 const exchangeIdempotencyIndex = 'Exchange_accountId_idempotencyKey_key'
 
-const persistedExchangeSelect = {
+export const persistedExchangeSelect = {
   id: true,
   requestFingerprint: true,
   createdAt: true,
@@ -85,7 +85,7 @@ const persistedExchangeSelect = {
   },
 } as const
 
-type PersistedExchange = Prisma.ExchangeGetPayload<{ select: typeof persistedExchangeSelect }>
+export type PersistedExchange = Prisma.ExchangeGetPayload<{ select: typeof persistedExchangeSelect }>
 type ExchangeReader = Pick<PrismaClient, 'exchange'>
 type LockedAccount = { id: string; baseCurrency: string }
 type LockedActor = { id: string; role: UserRole; isActive: boolean }
@@ -134,6 +134,10 @@ function exchangeConflict(): HttpError {
 
 function toView(record: PersistedExchange, fingerprint: string, idempotentReplay: boolean): ExchangeView {
   if (record.requestFingerprint !== fingerprint) throw exchangeConflict()
+  return { exchange: serializeExchangeDetail(record), idempotentReplay }
+}
+
+export function serializeExchangeDetail(record: PersistedExchange): ExchangeView['exchange'] {
   let totalRefund = new Prisma.Decimal(0)
   const returnedItems = record.saleReturn.items.map((item) => {
     totalRefund = totalRefund.add(item.refundAmount)
@@ -151,46 +155,43 @@ function toView(record: PersistedExchange, fingerprint: string, idempotentReplay
     }
   })
   return {
-    exchange: {
-      id: record.id,
-      createdAt: record.createdAt,
-      originalSaleId: record.saleReturn.saleId,
-      currency: record.saleReturn.sale.currency,
-      return: {
-        id: record.saleReturn.id,
-        createdAt: record.saleReturn.createdAt,
-        reason: record.saleReturn.reason,
-        processor: {
-          name: record.saleReturn.processedByName,
-          employeeCode: record.saleReturn.processedByCode,
-        },
-        totalRefund: totalRefund.toFixed(2),
-        items: returnedItems,
+    id: record.id,
+    createdAt: record.createdAt,
+    originalSaleId: record.saleReturn.saleId,
+    currency: record.saleReturn.sale.currency,
+    return: {
+      id: record.saleReturn.id,
+      createdAt: record.saleReturn.createdAt,
+      reason: record.saleReturn.reason,
+      processor: {
+        name: record.saleReturn.processedByName,
+        employeeCode: record.saleReturn.processedByCode,
       },
-      replacementSale: {
-        id: record.newSale.id,
-        status: record.newSale.status,
-        createdAt: record.newSale.createdAt,
-        seller: { name: record.newSale.sellerNameAtSale, employeeCode: record.newSale.sellerCodeAtSale },
-        subtotal: record.newSale.subtotal.toFixed(2),
-        totalAmount: record.newSale.totalAmount.toFixed(2),
-        items: record.newSale.items.map((item) => ({
-          id: item.id,
-          productId: item.productId,
-          variantId: item.variantId,
-          productName: item.productNameAtSale,
-          categoryName: item.categoryNameAtSale,
-          sku: item.skuAtSale,
-          color: item.colorAtSale,
-          size: item.sizeAtSale,
-          quantity: item.quantity,
-          unitSoldPrice: item.unitSoldPrice.toFixed(2),
-          lineTotal: item.lineTotal.toFixed(2),
-        })),
-      },
-      differenceAmount: record.newSale.totalAmount.sub(totalRefund).toFixed(2),
+      totalRefund: totalRefund.toFixed(2),
+      items: returnedItems,
     },
-    idempotentReplay,
+    replacementSale: {
+      id: record.newSale.id,
+      status: record.newSale.status,
+      createdAt: record.newSale.createdAt,
+      seller: { name: record.newSale.sellerNameAtSale, employeeCode: record.newSale.sellerCodeAtSale },
+      subtotal: record.newSale.subtotal.toFixed(2),
+      totalAmount: record.newSale.totalAmount.toFixed(2),
+      items: record.newSale.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productNameAtSale,
+        categoryName: item.categoryNameAtSale,
+        sku: item.skuAtSale,
+        color: item.colorAtSale,
+        size: item.sizeAtSale,
+        quantity: item.quantity,
+        unitSoldPrice: item.unitSoldPrice.toFixed(2),
+        lineTotal: item.lineTotal.toFixed(2),
+      })),
+    },
+    differenceAmount: record.newSale.totalAmount.sub(totalRefund).toFixed(2),
   }
 }
 

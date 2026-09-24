@@ -18,6 +18,7 @@ const maxStock = 2_147_483_647
 const returnHistoryHeaderSelect = {
   id: true,
   saleId: true,
+  exchange: { select: { id: true } },
   processedByName: true,
   processedByCode: true,
   reason: true,
@@ -155,6 +156,7 @@ function historyView(header: ReturnHistoryHeader, rows: readonly ReturnHistoryRo
   return {
     id: header.id,
     saleId: header.saleId,
+    exchangeId: header.exchange?.id ?? null,
     createdAt: header.createdAt,
     reason: header.reason,
     processor: { name: header.processedByName, employeeCode: header.processedByCode },

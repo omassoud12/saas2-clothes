@@ -573,9 +573,32 @@ movements, and all Exchange or child idempotency metadata.
 Failure during Return creation, replacement Sale creation, stock mutation,
 movement creation, or Exchange-link insertion rolls back the entire graph. The
 operation never changes the original Sale status, creates no EXCHANGE movement,
-and does not synchronously update DailyReport. Exchange-specific read/history
-references remain deferred to Step 9G4; the child Return and replacement Sale
-naturally appear in their existing history endpoints.
+and does not synchronously update DailyReport. The child Return and replacement
+Sale naturally appear in their existing history endpoints.
+
+Active OWNER and WAREHOUSE users may read tenant-owned Exchanges through
+`GET /api/exchanges` and `GET /api/exchanges/:exchangeId`. Exchange history
+uses a bounded cursor ordered by `createdAt DESC, id DESC` (default 25,
+maximum 100) with optional UTC `from` and `to` filters. Detail IDs and all
+queries are tenant-qualified; foreign Exchanges return a safe 404. The list
+loads a bounded page and grouped stored ReturnItem refunds without per-Exchange
+queries. Detail uses immutable Return processor, original SaleItem, replacement
+seller, and replacement SaleItem snapshots; it never rebuilds display values
+from current Users or catalog. Currency comes from the historical original
+Sale, replacement totals from the persisted replacement Sale, and
+`differenceAmount` remains a Decimal-safe mathematical difference without
+payment or settlement meaning. A later VOIDED replacement Sale remains visible
+with its current stored status and the original Exchange history intact.
+
+Sale detail includes only `exchangeSummary.originalExchangeCount` (counting
+Exchange-linked Returns for that original Sale) and
+`exchangeSummary.replacementForExchangeId` (the optional Exchange for which it
+is the replacement). Each Return-history entry includes `exchangeId` or null.
+The Sales list remains unchanged. These read APIs expose neither cost/profit,
+inventory state, movement IDs, nor any Exchange or child idempotency metadata
+to either role. They do not write Sale, Return, Exchange, inventory, or
+DailyReport state and introduce no synthetic Sale status. No frontend Exchange
+UI is included in this backend step.
 
 Exchange has no payment or settlement semantics: a derived replacement total
 minus Return refund total does not prove that money was paid or refunded.

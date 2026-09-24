@@ -242,6 +242,7 @@ class HistoryDouble {
   ]
   readonly returns: Row[] = []
   readonly returnItems: Row[] = []
+  readonly exchanges: Row[] = []
   groupQueries = 0
 
   asClient(): PrismaClient {
@@ -294,6 +295,15 @@ class HistoryDouble {
               refundAmount: rows.reduce((sum, row) => sum.add(row.refundAmount), new Prisma.Decimal(0)),
             },
           }))
+        },
+      },
+      exchange: {
+        async count({ where }: Row) {
+          return store.exchanges.filter((row) => row.accountId === where.accountId &&
+            row.originalSaleId === where.saleReturn.saleId).length
+        },
+        async findFirst({ where }: Row) {
+          return store.exchanges.find((row) => row.accountId === where.accountId && row.newSaleId === where.newSaleId) ?? null
         },
       },
     } as unknown as PrismaClient
@@ -394,8 +404,25 @@ describe('Sale history service', () => {
     assert.equal(result.sale.seller.name, 'Old Seller'); assert.equal(result.sale.items[0].productName, 'Old Product'); assert.equal(result.sale.items[0].sku, 'OLD-SKU')
     assert.equal(result.sale.void, null)
     assert.deepEqual(result.sale.returnSummary, { hasReturns: false, returnCount: 0, totalReturnedUnits: 0, totalReturnedAmount: '0.00' })
+    assert.deepEqual(result.sale.exchangeSummary, { originalExchangeCount: 0, replacementForExchangeId: null })
     assert.deepEqual(result.sale.items[0], { ...result.sale.items[0], returnedQuantity: 0, remainingReturnableQuantity: 2, unitCostAtSale: '12.3456', lineCost: '24.6912', lineGrossProfit: '35.3088' })
     assert.deepEqual(result.sale.economics, { totalCOGS: '24.6912', grossProfit: '35.3088' })
+  })
+
+  test('counts multiple original Exchanges and identifies one replacement Exchange without adding list joins', async () => {
+    const store = new HistoryDouble()
+    const firstId = randomUUID(); const secondId = randomUUID()
+    store.exchanges.push(
+      { id: firstId, accountId: accountA, originalSaleId: saleA, newSaleId: saleB },
+      { id: secondId, accountId: accountA, originalSaleId: saleA, newSaleId: randomUUID() },
+      { id: randomUUID(), accountId: accountB, originalSaleId: saleA, newSaleId: saleA },
+    )
+    const service = createSaleDependencies(store.asClient())
+    const original = await service.getSale(accountA, UserRole.WAREHOUSE, saleA)
+    assert.deepEqual(original.sale.exchangeSummary, { originalExchangeCount: 2, replacementForExchangeId: null })
+    const replacement = await service.getSale(accountA, UserRole.WAREHOUSE, saleB)
+    assert.deepEqual(replacement.sale.exchangeSummary, { originalExchangeCount: 0, replacementForExchangeId: firstId })
+    assert.equal((await service.listSales(accountA, { limit: 25 })).sales.length, 2)
   })
 
   test('derives one partial Return from stored ReturnItems', async () => {

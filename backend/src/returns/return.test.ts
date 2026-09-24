@@ -327,7 +327,7 @@ class ReturnHistoryDouble {
             rows = rows.filter((row) => row.createdAt < createdAt || (row.createdAt.getTime() === createdAt.getTime() && row.id < id))
           }
           return rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime() || right.id.localeCompare(left.id))
-            .slice(0, take).map((row) => ({ ...row }))
+            .slice(0, take).map((row) => ({ ...row, exchange: row.exchangeId ? { id: row.exchangeId } : null }))
         },
       },
       saleReturnItem: {
@@ -420,6 +420,7 @@ describe('Return history validation and service', () => {
     assert.equal(result.nextCursor, null)
     assert.deepEqual(result.returns[0].processor, { name: 'Snapshot Processor', employeeCode: null })
     assert.equal(result.returns[0].reason, 'Stored reason')
+    assert.equal(result.returns[0].exchangeId, null)
     assert.deepEqual(
       { totalRefund: result.returns[0].totalRefund, itemCount: result.returns[0].itemCount, totalUnits: result.returns[0].totalUnits },
       { totalRefund: '85.00', itemCount: 2, totalUnits: 5 },
@@ -436,6 +437,16 @@ describe('Return history validation and service', () => {
       'idempotencyKey','requestFingerprint','unitCostAtSale','lastPurchaseCost','currentStock',
       'stockAfter','InventoryMovement','totalCOGS','grossProfit','margin','movementId',
     ]) assert.equal(json.includes(privateField), false)
+  })
+
+  test('returns a tenant-scoped lightweight Exchange ID only for linked Returns', async () => {
+    const store = new ReturnHistoryDouble()
+    const exchangeId = randomUUID()
+    store.returns.find((row) => row.id === returnB)!.exchangeId = exchangeId
+    const result = await createReturnDependencies(store.asClient()).listReturns(accountA, saleA, { limit: 25 })
+    assert.equal(result.returns.find((row) => row.id === returnB)?.exchangeId, exchangeId)
+    assert.equal(result.returns.find((row) => row.id === returnA)?.exchangeId, null)
+    assert.doesNotMatch(JSON.stringify(result), /idempotencyKey|requestFingerprint|currentStock|unitCostAtSale/)
   })
 
   test('paginates deterministically across equal timestamps and handles empty and foreign Sales', async () => {

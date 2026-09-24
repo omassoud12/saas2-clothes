@@ -52,6 +52,10 @@ export interface SaleDetailView {
       readonly totalReturnedUnits: number
       readonly totalReturnedAmount: string
     }
+    readonly exchangeSummary: {
+      readonly originalExchangeCount: number
+      readonly replacementForExchangeId: string | null
+    }
     readonly items: readonly ({
       readonly id: string
       readonly productId: string

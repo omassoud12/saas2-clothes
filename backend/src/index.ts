@@ -11,6 +11,7 @@ import { createR2ProductImageStore, loadR2Environment } from './product-images/r
 import { createSaleDependencies } from './sales/sale.service.js'
 import { createReturnDependencies } from './returns/return.service.js'
 import { createExchangeDependencies } from './exchanges/exchange.service.js'
+import { createExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
 import { createSupabaseClients } from './supabase.js'
 
 const environment = loadEnvironment()
@@ -28,7 +29,8 @@ const inventory = createInventoryAuditDependencies(prisma)
 const sales = createSaleDependencies(prisma)
 const returns = createReturnDependencies(prisma)
 const exchanges = createExchangeDependencies(prisma)
-const app = createApp({ auth, adminAccounts, categories, products, inventory, sales, returns, exchanges })
+const exchangeHistory = createExchangeHistoryDependencies(prisma)
+const app = createApp({ auth, adminAccounts, categories, products, inventory, sales, returns, exchanges, exchangeHistory })
 
 app.listen(environment.port, () => {
   console.log(`API listening on http://localhost:${environment.port}`)
