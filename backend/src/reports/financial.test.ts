@@ -181,6 +181,25 @@ describe('financial range calculation', () => {
     assert.equal(store.queryCount, 2)
   })
 
+  test('encodes exact half-open UTC boundaries without Sale status or Expense timestamp authority', async () => {
+    const store = new FinancialStore()
+    await computeFinancialRangeInTransaction(store.transaction(), accountId, '2026-09-23', '2026-09-24')
+    const saleCtes = store.aggregateSql.split('sale_totals AS (')[1]?.split('return_totals AS (')[0] ?? ''
+    const returnCte = store.aggregateSql.split('return_totals AS (')[1]?.split('void_totals AS (')[0] ?? ''
+    const voidCtes = store.aggregateSql.split('void_totals AS (')[1]?.split('expense_totals AS (')[0] ?? ''
+    const expenseCte = store.aggregateSql.split('expense_totals AS (')[1]?.split('SELECT d.report_date')[0] ?? ''
+
+    assert.match(saleCtes, /s\."createdAt" >= \(b\.from_date::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.match(saleCtes, /s\."createdAt" < \(\(b\.to_date \+ 1\)::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.doesNotMatch(saleCtes, /s\."status"/)
+    assert.match(returnCte, /sr\."createdAt" >= \(b\.from_date::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.match(returnCte, /sr\."createdAt" < \(\(b\.to_date \+ 1\)::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.match(voidCtes, /s\."voidedAt" >= \(b\.from_date::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.match(voidCtes, /s\."voidedAt" < \(\(b\.to_date \+ 1\)::timestamp AT TIME ZONE 'UTC'\)/)
+    assert.match(expenseCte, /e\."expenseDate" BETWEEN b\.from_date AND b\.to_date/)
+    assert.doesNotMatch(expenseCte, /"createdAt"|AT TIME ZONE/)
+  })
+
   test('keeps header totals exact for a multi-item Sale, multiple Returns/Expenses, and multi-item Void', async () => {
     const store = new FinancialStore()
     store.rows = [rawDay('2026-09-24', {
@@ -224,6 +243,42 @@ describe('financial range calculation', () => {
     assert.doesNotMatch(expenseCte, /JOIN/)
   })
 
+  test('keeps multiple Sales, partial Returns, and Voids on their exact occurrence days', async () => {
+    const store = new FinancialStore()
+    store.rows = [
+      rawDay('2026-09-21', {
+        salesCount: 2n, totalUnitsSold: 7n, grossRevenue: '170.00', rawGrossCOGS: '80.0049',
+      }),
+      rawDay('2026-09-22', { returnedRevenue: '15.00', rawReturnedCOGS: '6.0049' }),
+      rawDay('2026-09-23', { returnedRevenue: '20.00', rawReturnedCOGS: '8.0050' }),
+      rawDay('2026-09-24', { voidedRevenue: '90.00', rawVoidedCOGS: '42.0050' }),
+    ]
+    const days = await computeFinancialRangeInTransaction(
+      store.transaction(), accountId, '2026-09-21', '2026-09-24',
+    )
+    assert.deepEqual(days.map((day) => ({
+      reportDate: day.reportDate,
+      salesCount: day.salesCount,
+      grossRevenue: day.grossRevenue,
+      returnedRevenue: day.returnedRevenue,
+      voidedRevenue: day.voidedRevenue,
+    })), [
+      { reportDate: '2026-09-21', salesCount: 2, grossRevenue: '170.00', returnedRevenue: '0.00', voidedRevenue: '0.00' },
+      { reportDate: '2026-09-22', salesCount: 0, grossRevenue: '0.00', returnedRevenue: '15.00', voidedRevenue: '0.00' },
+      { reportDate: '2026-09-23', salesCount: 0, grossRevenue: '0.00', returnedRevenue: '20.00', voidedRevenue: '0.00' },
+      { reportDate: '2026-09-24', salesCount: 0, grossRevenue: '0.00', returnedRevenue: '0.00', voidedRevenue: '90.00' },
+    ])
+    const summary = summarizeFinancialDays(days)
+    assert.equal(summary.totalUnitsSold, 7)
+    assert.equal(summary.netRevenue, '45.00')
+    assert.equal(summary.grossCOGS, '80.00')
+    assert.equal(summary.returnedCOGS, '14.01')
+    assert.equal(summary.voidedCOGS, '42.01')
+    assert.equal(summary.netCOGS, '23.98')
+    assert.equal(summary.grossProfit, '21.02')
+    assert.equal(summary.netProfit, '21.02')
+  })
+
   test('keeps replacement Sale gross activity and its later Void on their own UTC days', async () => {
     const store = new FinancialStore()
     store.rows = [
@@ -243,6 +298,8 @@ describe('financial range calculation', () => {
   test('rounds each daily COGS component once with HALF_UP before range summarization', async () => {
     assert.equal(roundDailyCogs('0.0049'), '0.00')
     assert.equal(roundDailyCogs('0.0050'), '0.01')
+    assert.equal(roundDailyCogs('0.0051'), '0.01')
+    assert.equal(roundDailyCogs('123456789.9950'), '123456790.00')
     const store = new FinancialStore()
     store.rows = [
       rawDay('2026-09-21', { rawGrossCOGS: '0.0049' }),
@@ -293,6 +350,45 @@ describe('financial range calculation', () => {
       (error) => expectFinancialError(error, 'FINANCIAL_INVARIANT_VIOLATION'),
     )
   })
+
+  test('accepts exact Decimal/Int maxima and rejects rounded or derived overflow without clamping', async () => {
+    const exact = new FinancialStore()
+    exact.rows = [rawDay('2026-09-24', {
+      salesCount: 2_147_483_647n,
+      totalUnitsSold: 2_147_483_647n,
+      grossRevenue: '9999999999999999.99',
+      rawGrossCOGS: '9999999999999999.9949',
+    })]
+    const day = await computeDailyFinancialsInTransaction(exact.transaction(), accountId, '2026-09-24')
+    assert.equal(day.salesCount, 2_147_483_647)
+    assert.equal(day.totalUnitsSold, 2_147_483_647)
+    assert.equal(day.grossRevenue, '9999999999999999.99')
+    assert.equal(day.grossCOGS, '9999999999999999.99')
+
+    const roundedOverflow = new FinancialStore()
+    roundedOverflow.rows = [rawDay('2026-09-24', { rawGrossCOGS: '9999999999999999.9950' })]
+    await assert.rejects(
+      computeDailyFinancialsInTransaction(roundedOverflow.transaction(), accountId, '2026-09-24'),
+      (error) => expectFinancialError(error, 'FINANCIAL_VALUE_OVERFLOW'),
+    )
+
+    const derivedOverflow = new FinancialStore()
+    derivedOverflow.rows = [rawDay('2026-09-24', {
+      returnedRevenue: '9999999999999999.99',
+      voidedRevenue: '9999999999999999.99',
+    })]
+    await assert.rejects(
+      computeDailyFinancialsInTransaction(derivedOverflow.transaction(), accountId, '2026-09-24'),
+      (error) => expectFinancialError(error, 'FINANCIAL_VALUE_OVERFLOW'),
+    )
+
+    const unitsOverflow = new FinancialStore()
+    unitsOverflow.rows = [rawDay('2026-09-24', { totalUnitsSold: 2_147_483_648n })]
+    await assert.rejects(
+      computeDailyFinancialsInTransaction(unitsOverflow.transaction(), accountId, '2026-09-24'),
+      (error) => expectFinancialError(error, 'FINANCIAL_VALUE_OVERFLOW'),
+    )
+  })
 })
 
 describe('DailyReport rebuild', () => {
@@ -324,6 +420,37 @@ describe('DailyReport rebuild', () => {
     assert.equal(changed.operatingExpenses, '20.00')
     assert.equal(changed.netProfit, '-20.00')
     assert.equal(store.report?.operatingExpenses, '20.00')
+  })
+
+  test('keeps rebuilt cache fields identical to live authoritative output after each event class', async () => {
+    const scenarios = [
+      rawDay('2026-09-24', {
+        salesCount: 2n, totalUnitsSold: 5n, grossRevenue: '120.00', rawGrossCOGS: '70.0050',
+      }),
+      rawDay('2026-09-24', {
+        returnedRevenue: '25.00', rawReturnedCOGS: '12.3450',
+      }),
+      rawDay('2026-09-24', {
+        voidedRevenue: '80.00', rawVoidedCOGS: '44.4450',
+      }),
+      rawDay('2026-09-24', { operatingExpenses: '19.99' }),
+      rawDay('2026-09-24', {
+        salesCount: 1n, totalUnitsSold: 1n, grossRevenue: '40.00', returnedRevenue: '30.00',
+        rawGrossCOGS: '18.0000', rawReturnedCOGS: '13.5000',
+      }),
+    ]
+
+    for (const authoritativeRow of scenarios) {
+      const store = new FinancialStore()
+      store.rows = [authoritativeRow]
+      const live = await computeDailyFinancialsInTransaction(store.transaction(), accountId, '2026-09-24')
+      const rebuilt = await createDailyReportService(store.client()).rebuildDailyReport(accountId, '2026-09-24')
+      const { computedAt: _computedAt, ...rebuiltFinancials } = rebuilt
+      assert.deepEqual(rebuiltFinancials, live)
+      for (const [field, value] of Object.entries(live)) {
+        if (field !== 'reportDate') assert.deepEqual(store.report?.[field], value)
+      }
+    }
   })
 
   test('rolls back cache state and returns a safe error when persistence fails', async () => {

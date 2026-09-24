@@ -266,6 +266,28 @@ describe('Expense service', () => {
     assert.deepEqual(to.expenses.map((row) => row.expenseDate), ['2026-09-24', '2026-09-23'])
   })
 
+  test('uses explicit expenseDate rather than createdAt as the history occurrence date', async () => {
+    const store = new ExpenseStore()
+    store.add({
+      id: randomUUID(),
+      accountId: accountA,
+      expenseDate: date('2026-09-23'),
+      createdAt: new Date('2026-09-24T23:59:59.999Z'),
+    })
+    const service = createExpenseDependencies(store.asClient())
+    const expenseDay = await service.listExpenses(
+      accountA,
+      parseExpenseHistoryQuery({ from: '2026-09-23', to: '2026-09-23' }),
+    )
+    const creationDay = await service.listExpenses(
+      accountA,
+      parseExpenseHistoryQuery({ from: '2026-09-24', to: '2026-09-24' }),
+    )
+    assert.equal(expenseDay.expenses.length, 1)
+    assert.equal(expenseDay.expenses[0]?.expenseDate, '2026-09-23')
+    assert.deepEqual(creationDay.expenses, [])
+  })
+
   test('applies the default page of 25 without duplicates or skips', async () => {
     const store = new ExpenseStore()
     for (let index = 1; index <= 26; index += 1) {

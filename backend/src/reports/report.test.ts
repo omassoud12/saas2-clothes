@@ -126,6 +126,8 @@ describe('report query validation', () => {
       { from: '2024-01-01', to: '2025-01-01' },
       { from: '2027-02-29', to: '2027-03-01' },
       { from: '2026-09-01T00:00:00Z', to: '2026-09-02' },
+      { from: ['2026-09-01', '2026-09-02'], to: '2026-09-02' },
+      { from: '2026-09-01', to: ['2026-09-02', '2026-09-03'] },
       { from: '2026-09-01', to: '2026-09-02', preset: 'month' },
     ]) {
       assert.throws(() => parseSummaryReportQuery(query), (error) => {
@@ -147,13 +149,21 @@ describe('authoritative report service', () => {
       rawGrossCOGS: '60.0000',
     })])
     const result = await createReportDependencies(store.client()).getDailyReport(accountA, { date: '2026-09-24' })
+    const summary = await createReportDependencies(store.client()).getSummaryReport(
+      accountA,
+      { from: '2026-09-24', to: '2026-09-24' },
+    )
     assert.equal(result.report.grossRevenue, '100.00')
+    assert.equal(summary.report.grossRevenue, '100.00')
     assert.equal(result.report.grossCOGS, '60.00')
     assert.equal(result.report.netProfit, '40.00')
     assert.notEqual(result.report.grossRevenue, store.staleDailyReport.grossRevenue)
-    assert.deepEqual(store.isolationLevels, [Prisma.TransactionIsolationLevel.RepeatableRead])
-    assert.equal(store.accountReads, 1)
-    assert.equal(store.aggregateQueries, 1)
+    assert.deepEqual(store.isolationLevels, [
+      Prisma.TransactionIsolationLevel.RepeatableRead,
+      Prisma.TransactionIsolationLevel.RepeatableRead,
+    ])
+    assert.equal(store.accountReads, 2)
+    assert.equal(store.aggregateQueries, 2)
     assert.equal(store.dailyReportReads, 0)
     assert.equal(store.mutations, 0)
     assert.deepEqual(store.staleDailyReport, {
@@ -227,16 +237,26 @@ describe('authoritative report service', () => {
   test('keeps tenant history isolated and preserves daily-before-range COGS rounding', async () => {
     const store = new ReportStore()
     store.rows.set(accountA, [
-      rawDay('2026-09-21', { grossRevenue: '10.00', rawGrossCOGS: '0.0049' }),
-      rawDay('2026-09-22', { grossRevenue: '10.00', rawGrossCOGS: '0.0049' }),
+      rawDay('2026-09-21', { salesCount: 1n, totalUnitsSold: 2n, grossRevenue: '10.00', rawGrossCOGS: '0.0049', operatingExpenses: '1.00' }),
+      rawDay('2026-09-22', { salesCount: 1n, totalUnitsSold: 2n, grossRevenue: '10.00', rawGrossCOGS: '0.0049', operatingExpenses: '1.00' }),
     ])
-    store.rows.set(accountB, [rawDay('2026-09-21', { grossRevenue: '999.00', rawGrossCOGS: '500.0000' })])
+    store.rows.set(accountB, [rawDay('2026-09-21', {
+      salesCount: 4n, totalUnitsSold: 8n, grossRevenue: '999.00', rawGrossCOGS: '500.0000', operatingExpenses: '50.00',
+    })])
     const reports = createReportDependencies(store.client())
     const tenantA = await reports.getSummaryReport(accountA, { from: '2026-09-21', to: '2026-09-22' })
     const tenantB = await reports.getSummaryReport(accountB, { from: '2026-09-21', to: '2026-09-22' })
     assert.equal(tenantA.report.grossRevenue, '20.00')
     assert.equal(tenantA.report.grossCOGS, '0.00')
+    assert.equal(tenantA.report.salesCount, 2)
+    assert.equal(tenantA.report.totalUnitsSold, 4)
+    assert.equal(tenantA.report.operatingExpenses, '2.00')
+    assert.equal(tenantA.report.netProfit, '18.00')
     assert.equal(tenantB.report.grossRevenue, '999.00')
+    assert.equal(tenantB.report.salesCount, 4)
+    assert.equal(tenantB.report.totalUnitsSold, 8)
+    assert.equal(tenantB.report.operatingExpenses, '50.00')
+    assert.equal(tenantB.report.netProfit, '449.00')
     assert.equal(tenantB.report.currency, 'LBP')
   })
 
