@@ -49,7 +49,7 @@ function formatReportDate(value: Date | string): string {
   return parseReportDate(value).toISOString().slice(0, 10)
 }
 
-function enumerateReportDates(fromDate: string, toDate: string): readonly string[] {
+export function enumerateReportDates(fromDate: string, toDate: string): readonly string[] {
   const from = parseReportDate(fromDate)
   const to = parseReportDate(toDate)
   const dayCount = Math.floor((to.getTime() - from.getTime()) / millisecondsPerDay) + 1

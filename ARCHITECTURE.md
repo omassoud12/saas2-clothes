@@ -910,11 +910,32 @@ while the rebuild is waiting. `computedAt` records computation time only and
 does not prove ongoing freshness. Sale, Return, Void, Exchange, and Expense
 write paths do not synchronously rebuild DailyReport.
 
-Future public financial reads are OWNER-only and will reuse the calculation
-core under a consistent read snapshot rather than trust possibly stale cache
-rows. WAREHOUSE receives no Expense, COGS, profit, operating-expense, or
-stock-valuation data, and SUPER_ADMIN gains no tenant financial authority.
-No public Report API or public rebuild endpoint exists yet.
+Authoritative financial reads are implemented as OWNER-only
+`GET /api/reports/daily?date=YYYY-MM-DD` and
+`GET /api/reports/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`. WAREHOUSE receives no
+Expense, COGS, profit, operating-expense, or stock-valuation data, and
+SUPER_ADMIN has no tenant financial-report authority. Both endpoints derive
+the Account from authenticated tenant context, accept strict UTC calendar
+dates, and are read-only. Summary ranges contain 1 to 366 inclusive days and
+return aggregate totals without embedding the daily rows.
+
+Each public report calculation runs inside one `REPEATABLE READ` transaction
+and reuses the authoritative transaction-scoped financial core. It takes no
+Account write lock, does not rebuild or read DailyReport, and does not block
+participating financial writers merely to calculate a live report. The result
+represents one consistent committed snapshot; a concurrent write may fall
+before or after that snapshot, so this is not a serializable real-time
+freshness guarantee. Live PostgreSQL report snapshot-concurrency verification
+remains deferred; unit tests verify transaction configuration and service
+composition, not live concurrent database behavior.
+
+Daily responses retain the UTC Sale/Return/Void occurrence semantics and
+Expense DATE semantics defined above. Summary responses use
+`summarizeFinancialDays` over the already-rounded daily rows, preserving daily
+COGS rounding before range summation. Money is returned as canonical
+two-decimal strings, negative net/profit values remain signed, the validated
+Account currency is not converted, and `stockValue` remains null. No public
+DailyReport rebuild or other Report mutation endpoint exists.
 
 ---
 

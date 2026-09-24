@@ -13,6 +13,7 @@ import { createReturnDependencies } from './returns/return.service.js'
 import { createExchangeDependencies } from './exchanges/exchange.service.js'
 import { createExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
 import { createExpenseDependencies } from './expenses/expense.service.js'
+import { createReportDependencies } from './reports/report.service.js'
 import { createSupabaseClients } from './supabase.js'
 
 const environment = loadEnvironment()
@@ -32,7 +33,8 @@ const returns = createReturnDependencies(prisma)
 const exchanges = createExchangeDependencies(prisma)
 const exchangeHistory = createExchangeHistoryDependencies(prisma)
 const expenses = createExpenseDependencies(prisma)
-const app = createApp({ auth, adminAccounts, categories, products, inventory, sales, returns, exchanges, exchangeHistory, expenses })
+const reports = createReportDependencies(prisma)
+const app = createApp({ auth, adminAccounts, categories, products, inventory, sales, returns, exchanges, exchangeHistory, expenses, reports })
 
 app.listen(environment.port, () => {
   console.log(`API listening on http://localhost:${environment.port}`)
