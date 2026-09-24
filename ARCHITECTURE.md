@@ -978,6 +978,33 @@ requires a separate security design and explicit approval. The FBH1 migration
 that establishes this boundary is deployed and verified against the Supabase
 development database.
 
+### PostgreSQL transport security
+
+Every remote PostgreSQL connection must use certificate-verified TLS equivalent
+to `sslmode=verify-full`. The CA certificate is supplied through the backend's
+`SUPABASE_DB_CA_PATH` environment setting and remains outside the repository.
+The backend gives `pg` an explicit trusted CA with peer and hostname
+verification enabled; it never uses `rejectUnauthorized: false`.
+
+Runtime `DATABASE_URL` remains the Supabase Session Pooler on port 5432. Local
+migration tooling may also use the Session Pooler because the current Windows
+development environment cannot reach Supabase's IPv6-only Direct endpoint.
+In production, Railway must enable outbound IPv6 before `DIRECT_URL` is set to
+the true Supabase Direct endpoint for migration tooling. Both paths use the
+same external CA and verified-TLS requirement.
+
+Production configuration fails closed unless remote database URLs explicitly
+declare `sslmode=verify-full`; missing, downgrade-capable, unverified, unknown,
+or conflicting TLS modes are rejected with a credential-safe startup/config
+error. Plaintext is permitted only for a genuine loopback PostgreSQL endpoint
+outside production.
+
+For pooled runtime connections, `pg_stat_ssl` describes the Supavisor-to-
+PostgreSQL hop and is not authoritative evidence for the application's TLS
+socket. FBH2 live verification instead confirmed the Node client socket is
+encrypted and certificate-authorized using TLS 1.3. An invalid trusted CA was
+also rejected without an insecure fallback.
+
 ---
 
 ## 14. Deployment

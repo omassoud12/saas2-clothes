@@ -1,3 +1,5 @@
+import { validateDatabaseTlsConfiguration } from './database-tls.js'
+
 export interface BackendEnvironment {
   readonly port: number
   readonly supabaseUrl: string
@@ -5,6 +7,8 @@ export interface BackendEnvironment {
   readonly supabaseServiceRoleKey: string
   readonly databaseUrl: string
   readonly directUrl: string
+  readonly databaseCaPath: string
+  readonly nodeEnvironment: string | undefined
 }
 
 function requireValue(environment: NodeJS.ProcessEnv, name: string): string {
@@ -42,6 +46,13 @@ export function loadEnvironment(
     )
   }
 
+  const databaseUrl = requireValue(environment, 'DATABASE_URL')
+  const directUrl = requireValue(environment, 'DIRECT_URL')
+  const databaseCaPath = requireValue(environment, 'SUPABASE_DB_CA_PATH')
+
+  validateDatabaseTlsConfiguration(databaseUrl, environment.NODE_ENV)
+  validateDatabaseTlsConfiguration(directUrl, environment.NODE_ENV)
+
   return Object.freeze({
     port: parsePort(environment.PORT),
     supabaseUrl: requireValue(environment, 'SUPABASE_URL'),
@@ -50,7 +61,9 @@ export function loadEnvironment(
       environment,
       'SUPABASE_SERVICE_ROLE_KEY',
     ),
-    databaseUrl: requireValue(environment, 'DATABASE_URL'),
-    directUrl: requireValue(environment, 'DIRECT_URL'),
+    databaseUrl,
+    directUrl,
+    databaseCaPath,
+    nodeEnvironment: environment.NODE_ENV,
   })
 }

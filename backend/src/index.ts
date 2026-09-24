@@ -17,7 +17,10 @@ import { createReportDependencies } from './reports/report.service.js'
 import { createSupabaseClients } from './supabase.js'
 
 const environment = loadEnvironment()
-const prisma = createPrismaClient(environment.databaseUrl)
+const prisma = createPrismaClient(environment.databaseUrl, {
+  caPath: environment.databaseCaPath,
+  nodeEnvironment: environment.nodeEnvironment,
+})
 const supabase = createSupabaseClients(environment)
 const auth = createAuthDependencies(prisma, supabase.verifier)
 const adminAccounts = createAdminAccountDependencies(prisma)

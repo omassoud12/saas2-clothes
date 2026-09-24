@@ -16,7 +16,10 @@ async function run(): Promise<number> {
   try {
     const input = parseSuperAdminBootstrapInput(process.argv.slice(2))
     const environment = loadEnvironment()
-    prisma = createPrismaClient(environment.databaseUrl)
+    prisma = createPrismaClient(environment.databaseUrl, {
+      caPath: environment.databaseCaPath,
+      nodeEnvironment: environment.nodeEnvironment,
+    })
     const { admin } = createSupabaseClients(environment)
     const dependencies = createSuperAdminBootstrapDependencies(prisma, admin)
     const result = await bootstrapSuperAdmin(dependencies, input)
