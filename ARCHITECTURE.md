@@ -501,15 +501,14 @@ to one distinct new Sale. Exchange contains no stock or money fields; its
 monetary difference is derived from the new Sale total minus the ReturnItems'
 refund total.
 
-No Exchange endpoint is implemented yet. The future transactional Exchange
-operation is expected to allow active OWNER and WAREHOUSE users and to compose
-one Return plus one replacement Sale inside one outer transaction. It reuses
-the existing Return rules unchanged for the historical items, even when their
-current Products or Variants are inactive, and reuses the existing Sale rules
-unchanged for replacement items, whose current Products and Variants must be
-active. The authenticated actor must be both the Return processor and the
-replacement Sale seller; this actor consistency is a future runtime guarantee,
-not a separate Exchange actor column.
+The transactional `POST /api/sales/:saleId/exchanges` endpoint allows active
+OWNER and WAREHOUSE users to compose one Return plus one replacement Sale in
+one outer READ COMMITTED transaction. It reuses the transaction-scoped Return
+and Sale primitives without nested transactions. Existing Return rules apply
+unchanged to historical original items, including items whose current Product
+or Variant is inactive. Normal Sale rules apply unchanged to replacement
+items, whose current Product and Variant must be active. The authenticated
+actor is both `SaleReturn.processedById` and replacement `Sale.soldById`.
 
 The original Sale is derived only through `Exchange -> SaleReturn -> Sale`.
 The replacement Sale must belong to the same Account, differ from the original
@@ -518,7 +517,7 @@ currency as the original Sale. It may later follow the normal Return or Void
 lifecycle. Exchange remains append-only, with at most one Exchange per Return
 and at most one Exchange per replacement Sale.
 
-The future public Exchange request requires one client-generated UUID in the
+The public Exchange request requires one client-generated UUID in the
 `Idempotency-Key` header. `Exchange.idempotencyKey` is unique within the
 authenticated Account, and the backend stores its own lowercase SHA-256
 `requestFingerprint`; the frontend cannot supply the authoritative fingerprint.
@@ -540,11 +539,43 @@ timestamps, stock, current catalog snapshots, and current purchase costs are
 excluded. The stored fingerprint is exactly 64 lowercase hexadecimal
 characters.
 
-The public Exchange owns this single external idempotency key. Its internal
-Return and replacement Sale operations must be composed deterministically by
-future transaction-scoped creation primitives; they must not depend on random
-child keys or require three client keys. Standalone Return and Sale
-idempotency behavior remains independent and unchanged.
+The public Exchange owns this single external idempotency key. A deterministic
+transaction-scoped PostgreSQL advisory lock over Account plus Exchange key
+serializes same-key attempts, after which the Exchange is reread before any
+child creation. The deployed tenant/key unique index remains the final race
+backstop. Internal Return and replacement Sale UUIDv5 keys are derived from the
+Exchange key with distinct fixed child discriminators and are never accepted
+from or exposed to the client. Their request fingerprints retain the canonical
+standalone Return and Sale semantics rather than reusing the Exchange
+fingerprint. Standalone Return and Sale idempotency behavior remains unchanged.
+
+Before invoking either child primitive, the Exchange transaction acquires its
+complete lock set in this order: Exchange advisory lock, Account, authenticated
+actor User, original Sale, requested original SaleItems sorted by ID,
+replacement Products sorted by ID, then the union of returned and replacement
+Variants sorted by ID. Advisory relationship reads only discover that lock set;
+all tenant and relationship authority is revalidated after locking. This avoids
+Return/Sale lock inversion while retaining every validation performed by each
+child primitive. The Return runs before the replacement Sale, so returned stock
+is transaction-visible to the replacement Sale. Returning and reselling the
+same Variant therefore creates separate RETURN and SALE records and may have a
+net stock effect of zero; neither event is optimized away.
+
+The original and replacement Sales must use the same currency; no conversion
+is performed. Exchange responses derive `totalRefund` from persisted
+SaleReturnItem refund amounts, use the persisted replacement Sale total, and
+report `differenceAmount = replacementTotal - totalRefund` to two decimal
+places. Positive, zero, and negative results are mathematical differences only,
+not evidence of payment, collection, or refund settlement. Responses use
+stored processor, seller, and SaleItem snapshots and omit costs, profit, stock,
+movements, and all Exchange or child idempotency metadata.
+
+Failure during Return creation, replacement Sale creation, stock mutation,
+movement creation, or Exchange-link insertion rolls back the entire graph. The
+operation never changes the original Sale status, creates no EXCHANGE movement,
+and does not synchronously update DailyReport. Exchange-specific read/history
+references remain deferred to Step 9G4; the child Return and replacement Sale
+naturally appear in their existing history endpoints.
 
 Exchange has no payment or settlement semantics: a derived replacement total
 minus Return refund total does not prove that money was paid or refunded.
@@ -579,13 +610,11 @@ replay lookup or unique-race recovery; it locks authoritative state and creates
 the Sale, SaleItems, stock decrements, and SALE movements, returning persisted
 Sale data to its caller. Existing standalone Sale behavior is unchanged.
 
-A future Exchange transaction can compose the existing Return primitive and
-this Sale primitive before inserting its Exchange link, so failure of any step
-can roll back every child effect. Exchange runtime is not implemented yet. The
-Sale primitive retains the standalone Account, seller, sorted Product, and
-sorted Variant lock sequence. Future Exchange work must define one unified
-outer locking strategy when Return and Sale touch the same Variants; this step
-does not introduce a lock-skipping flag or change standalone ordering.
+The Exchange transaction composes the existing Return primitive and this Sale
+primitive before inserting its Exchange link, so failure of any step rolls back
+every child effect. The child primitives keep their standalone validation and
+locking behavior; the Exchange's unified outer locks establish the compatible
+global ordering first without a lock-skipping flag.
 
 The Sale request contains only a nonempty cart of at most 100 unique Variants,
 with a positive integer quantity of at most 1,000,000 and a positive decimal
