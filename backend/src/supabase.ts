@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import type { BackendEnvironment } from './config/env.js'
 
 const serverAuthOptions = {
   persistSession: false,
@@ -7,18 +6,30 @@ const serverAuthOptions = {
   detectSessionInUrl: false,
 } as const
 
-export function createSupabaseClients(environment: BackendEnvironment) {
-  const verifier = createClient(
-    environment.supabaseUrl,
-    environment.supabasePublicKey,
-    { auth: serverAuthOptions },
-  )
+interface SupabaseVerifierConfiguration {
+  readonly supabaseUrl: string
+  readonly supabasePublicKey: string
+}
 
-  const admin = createClient(
+interface SupabaseAdminConfiguration {
+  readonly supabaseUrl: string
+  readonly supabaseServiceRoleKey: string
+}
+
+export function createSupabaseVerifier(
+  environment: SupabaseVerifierConfiguration,
+) {
+  return createClient(environment.supabaseUrl, environment.supabasePublicKey, {
+    auth: serverAuthOptions,
+  })
+}
+
+export function createSupabaseAdminClient(
+  environment: SupabaseAdminConfiguration,
+) {
+  return createClient(
     environment.supabaseUrl,
     environment.supabaseServiceRoleKey,
     { auth: serverAuthOptions },
   )
-
-  return Object.freeze({ verifier, admin })
 }

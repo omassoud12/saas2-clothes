@@ -950,6 +950,63 @@ DailyReport rebuild or other Report mutation endpoint exists.
 - Do not store user passwords in the application database when using Supabase Auth.
 - Secrets must never be committed to Git.
 
+### HTTP runtime security boundary
+
+The Express API uses a startup-validated, comma-separated
+`CORS_ALLOWED_ORIGINS` allowlist. Entries must be absolute HTTP(S) origins with
+only a scheme, hostname, and optional port; credentials, paths, queries,
+fragments, malformed values, and wildcards are rejected. Production fails
+closed when the allowlist is missing or empty. Development does not implicitly
+trust localhost or arbitrary local ports: every browser origin must still be
+listed explicitly. Requests without an `Origin` header remain valid for
+same-origin, server-to-server, CLI, and health-probe use and continue through
+normal route authentication.
+
+CORS permits only `GET`, `POST`, `PATCH`, `DELETE`, and `OPTIONS`, with
+`Authorization`, `Content-Type`, and `Idempotency-Key` request headers.
+Credentials are disabled because authentication uses Bearer tokens rather than
+cross-origin cookies. CORS is only a browser enforcement mechanism; Bearer
+authentication, role authorization, tenant scoping, database boundaries, and
+all other server-side protections remain authoritative.
+
+Express proxy trust is an explicit bounded numeric `TRUST_PROXY_HOPS` setting,
+never trust-all. Production requires a positive configured value and fails
+startup when it is absent or invalid; non-production defaults to zero trusted
+hops. Railway's actual forwarding topology and protection from direct backend
+ingress must be verified during deployment before selecting the production hop
+count. This verification is required for `req.ip` and the existing OWNER
+bootstrap IP limiter to represent the intended client. It is not a claim that
+the local forwarded-header tests prove Railway's live topology.
+
+The API disables `X-Powered-By` and emits `X-Content-Type-Options: nosniff` and
+`Referrer-Policy: no-referrer`. HSTS remains a Railway TLS-termination
+deployment check and is not emitted on local plaintext development. JSON
+request bodies have an explicit 100 KiB limit; malformed JSON and oversized
+JSON receive controlled JSON 400 and 413 responses. Unknown routes receive a
+controlled JSON 404 after registered routes. Multipart image parsing remains
+route-specific and is not governed by the JSON limit.
+
+Unexpected HTTP failures return only the generic error envelope and runtime
+logging records bounded category/status metadata rather than raw error objects,
+request bodies, provider details, SQL, credentials, or production stack traces.
+The health endpoint is a liveness response (`status: ok`) only and makes no
+hardcoded dependency-readiness claims.
+
+Ordinary HTTP startup loads only the Supabase URL and publishable/legacy anon
+key needed by the non-privileged Bearer-token verifier. It neither reads the
+service-role key nor constructs an admin client. The SUPER_ADMIN administrative
+CLI has a separate environment loader and is the only current path that
+requires `SUPABASE_SERVICE_ROLE_KEY`. `DIRECT_URL` remains migration-tooling
+configuration and is not required by ordinary API or SUPER_ADMIN runtime.
+Runtime configuration accepts only `development`, `test`, or `production`,
+validates the TCP port, requires HTTPS for remote Supabase URLs (with explicit
+loopback HTTP allowed outside production), bounds Supabase key strings, and
+preserves the verified database-TLS contract below.
+
+General/distributed rate limiting, structured request IDs/logging, dependency
+readiness, graceful shutdown, and application timeout policy remain FBH4 work;
+none is claimed by this HTTP-hardening layer.
+
 ### Supabase database access boundary
 
 The frontend uses Supabase directly for authentication only. All tenant

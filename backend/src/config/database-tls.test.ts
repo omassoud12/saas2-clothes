@@ -105,19 +105,26 @@ describe('database TLS configuration', () => {
     )
   })
 
-  it('fails startup when either production database URL is not verified', () => {
+  it('validates the production runtime URL without requiring migration-only configuration', () => {
     const environment = {
       NODE_ENV: 'production',
       SUPABASE_URL: 'https://project.invalid',
       SUPABASE_PUBLISHABLE_KEY: 'public-placeholder',
-      SUPABASE_SERVICE_ROLE_KEY: 'service-placeholder',
       SUPABASE_DB_CA_PATH: 'C:/secure/ca.crt',
       DATABASE_URL: `${REMOTE_BASE}?sslmode=verify-full`,
       DIRECT_URL: `${REMOTE_BASE}?sslmode=require`,
+      CORS_ALLOWED_ORIGINS: 'https://app.example.invalid',
+      TRUST_PROXY_HOPS: '1',
     }
 
+    assert.doesNotThrow(() => loadEnvironment(environment))
+
     assert.throws(
-      () => loadEnvironment(environment),
+      () =>
+        loadEnvironment({
+          ...environment,
+          DATABASE_URL: `${REMOTE_BASE}?sslmode=require`,
+        }),
       (error: unknown) =>
         error instanceof Error && error.message === SAFE_ERROR,
     )

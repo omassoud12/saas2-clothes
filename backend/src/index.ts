@@ -14,15 +14,15 @@ import { createExchangeDependencies } from './exchanges/exchange.service.js'
 import { createExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
 import { createExpenseDependencies } from './expenses/expense.service.js'
 import { createReportDependencies } from './reports/report.service.js'
-import { createSupabaseClients } from './supabase.js'
+import { createSupabaseVerifier } from './supabase.js'
 
 const environment = loadEnvironment()
 const prisma = createPrismaClient(environment.databaseUrl, {
   caPath: environment.databaseCaPath,
   nodeEnvironment: environment.nodeEnvironment,
 })
-const supabase = createSupabaseClients(environment)
-const auth = createAuthDependencies(prisma, supabase.verifier)
+const supabaseVerifier = createSupabaseVerifier(environment)
+const auth = createAuthDependencies(prisma, supabaseVerifier)
 const adminAccounts = createAdminAccountDependencies(prisma)
 const categories = createCategoryDependencies(prisma)
 let imageStore: ReturnType<typeof createR2ProductImageStore> | undefined
@@ -37,7 +37,10 @@ const exchanges = createExchangeDependencies(prisma)
 const exchangeHistory = createExchangeHistoryDependencies(prisma)
 const expenses = createExpenseDependencies(prisma)
 const reports = createReportDependencies(prisma)
-const app = createApp({ auth, adminAccounts, categories, products, inventory, sales, returns, exchanges, exchangeHistory, expenses, reports })
+const app = createApp(
+  { auth, adminAccounts, categories, products, inventory, sales, returns, exchanges, exchangeHistory, expenses, reports },
+  environment,
+)
 
 app.listen(environment.port, () => {
   console.log(`API listening on http://localhost:${environment.port}`)

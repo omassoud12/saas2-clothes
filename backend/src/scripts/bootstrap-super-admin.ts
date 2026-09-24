@@ -1,8 +1,8 @@
 import 'dotenv/config'
-import { loadEnvironment } from '../config/env.js'
+import { loadAdminEnvironment } from '../config/env.js'
 import type { PrismaClient } from '../generated/prisma/client.js'
 import { createPrismaClient } from '../lib/prisma.js'
-import { createSupabaseClients } from '../supabase.js'
+import { createSupabaseAdminClient } from '../supabase.js'
 import {
   bootstrapSuperAdmin,
   createSuperAdminBootstrapDependencies,
@@ -15,12 +15,12 @@ async function run(): Promise<number> {
 
   try {
     const input = parseSuperAdminBootstrapInput(process.argv.slice(2))
-    const environment = loadEnvironment()
+    const environment = loadAdminEnvironment()
     prisma = createPrismaClient(environment.databaseUrl, {
       caPath: environment.databaseCaPath,
       nodeEnvironment: environment.nodeEnvironment,
     })
-    const { admin } = createSupabaseClients(environment)
+    const admin = createSupabaseAdminClient(environment)
     const dependencies = createSuperAdminBootstrapDependencies(prisma, admin)
     const result = await bootstrapSuperAdmin(dependencies, input)
 
