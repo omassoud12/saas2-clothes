@@ -127,6 +127,8 @@ interface RateLimitEntry {
   expiresAt: number
 }
 
+const MAX_BOOTSTRAP_RATE_LIMIT_ENTRIES = 10_000
+
 function consumeRateLimit(
   entries: Map<string, RateLimitEntry>,
   key: string,
@@ -137,6 +139,10 @@ function consumeRateLimit(
   const current = entries.get(key)
 
   if (!current || current.expiresAt <= now) {
+    if (!current && entries.size >= MAX_BOOTSTRAP_RATE_LIMIT_ENTRIES) {
+      const oldestKey = entries.keys().next().value as string | undefined
+      if (oldestKey) entries.delete(oldestKey)
+    }
     entries.set(key, { count: 1, expiresAt: now + windowMs })
     return true
   }

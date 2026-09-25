@@ -19,6 +19,7 @@ const productionEnvironment: NodeJS.ProcessEnv = {
   ...developmentEnvironment, NODE_ENV: 'production',
   DATABASE_URL: 'postgresql://user:secret@db.example.invalid:5432/app?sslmode=verify-full',
   CORS_ALLOWED_ORIGINS: 'https://app.example.invalid', TRUST_PROXY_HOPS: '1',
+  APP_REPLICA_COUNT: '1',
 }
 
 describe('HTTP runtime environment', () => {
@@ -83,6 +84,24 @@ describe('HTTP runtime environment', () => {
   test('requires an explicit positive proxy hop count in production', () => {
     assert.throws(() => loadEnvironment({ ...productionEnvironment, TRUST_PROXY_HOPS: undefined }), /TRUST_PROXY_HOPS configuration is invalid/)
     assert.throws(() => loadEnvironment({ ...productionEnvironment, TRUST_PROXY_HOPS: '0' }), /TRUST_PROXY_HOPS configuration is invalid/)
+  })
+
+  test('requires an explicit single-replica contract in production', () => {
+    assert.throws(() => loadEnvironment({ ...productionEnvironment, APP_REPLICA_COUNT: undefined }), /APP_REPLICA_COUNT configuration is invalid/)
+    assert.throws(() => loadEnvironment({ ...productionEnvironment, APP_REPLICA_COUNT: '2' }), /APP_REPLICA_COUNT configuration is invalid/)
+    assert.equal(loadEnvironment(productionEnvironment).appReplicaCount, 1)
+  })
+
+  test('validates bounded rate limits and Supabase timeout', () => {
+    assert.throws(() => loadEnvironment({ ...developmentEnvironment, API_RATE_LIMIT_MAX: '0' }), /API rate-limit configuration is invalid/)
+    assert.throws(() => loadEnvironment({ ...developmentEnvironment, API_WRITE_RATE_LIMIT_MAX: '301' }), /API rate-limit configuration is invalid/)
+    assert.throws(() => loadEnvironment({ ...developmentEnvironment, SUPABASE_AUTH_TIMEOUT_MS: '999' }), /SUPABASE_AUTH_TIMEOUT_MS configuration is invalid/)
+    const loaded = loadEnvironment(developmentEnvironment)
+    assert.equal(loaded.generalRateLimitMax, 300)
+    assert.equal(loaded.writeRateLimitMax, 120)
+    assert.equal(loaded.expensiveRateLimitMax, 30)
+    assert.equal(loaded.imageRateLimitMax, 10)
+    assert.equal(loaded.supabaseAuthTimeoutMs, 5_000)
   })
 })
 

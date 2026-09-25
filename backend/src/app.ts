@@ -6,7 +6,6 @@ import { createAuthRouter } from './auth/auth.routes.js'
 import type { AuthDependencies } from './auth/auth.types.js'
 import { createCategoryRouter } from './categories/category.routes.js'
 import type { CategoryDependencies } from './categories/category.types.js'
-import { errorHandler } from './middleware/error-handler.js'
 import { createInventoryRouter } from './inventory/inventory.routes.js'
 import type { InventoryAuditDependencies } from './inventory/inventory.types.js'
 import { createProductRouter } from './products/product.routes.js'
@@ -21,15 +20,94 @@ import { createExpenseRouter } from './expenses/expense.routes.js'
 import type { ExpenseDependencies } from './expenses/expense.types.js'
 import { createReportRouter } from './reports/report.routes.js'
 import type { ReportDependencies } from './reports/report.types.js'
-import type { HttpRuntimeConfiguration } from './config/env.js'
+import type {
+  HttpRuntimeConfiguration,
+  RateLimitConfiguration,
+} from './config/env.js'
 import { HttpError } from './errors/http-error.js'
+import { createErrorHandler } from './middleware/error-handler.js'
+import { createRateLimit } from './middleware/rate-limit.js'
+import { createRequestContext } from './middleware/request-context.js'
+import {
+  createReadinessHandler,
+  ReadinessState,
+  type ReadinessDependencies,
+} from './runtime/readiness.js'
+import type { RuntimeLogger } from './runtime/logger.js'
 
 export const JSON_BODY_LIMIT = '100kb'
 
-const DEFAULT_HTTP_CONFIGURATION: HttpRuntimeConfiguration = Object.freeze({
+export interface AppRuntimeConfiguration
+  extends HttpRuntimeConfiguration,
+    RateLimitConfiguration {}
+
+const DEFAULT_HTTP_CONFIGURATION: AppRuntimeConfiguration = Object.freeze({
   corsAllowedOrigins: Object.freeze([]),
   trustProxyHops: 0,
+  generalRateLimitMax: 300,
+  writeRateLimitMax: 120,
+  expensiveRateLimitMax: 30,
+  imageRateLimitMax: 10,
 })
+
+const silentLogger: RuntimeLogger = Object.freeze({
+  info() {},
+  warn() {},
+  error() {},
+})
+
+const defaultReadinessState = new ReadinessState()
+defaultReadinessState.markStarted()
+
+const DEFAULT_RUNTIME_DEPENDENCIES: AppRuntimeDependencies = Object.freeze({
+  logger: silentLogger,
+  readiness: {
+    state: defaultReadinessState,
+    async probeDatabase() {},
+  },
+})
+
+const FIVE_MINUTES_MS = 5 * 60 * 1_000
+const TEN_MINUTES_MS = 10 * 60 * 1_000
+
+export interface AppRuntimeDependencies {
+  readonly logger: RuntimeLogger
+  readonly readiness: ReadinessDependencies
+  readonly requestIdFactory?: () => string
+  readonly now?: () => number
+}
+
+function requestPath(request: express.Request): string {
+  return request.originalUrl.split('?', 1)[0]
+}
+
+export function isWriteRequest(request: express.Request): boolean {
+  return (
+    request.method === 'POST' ||
+    request.method === 'PATCH' ||
+    request.method === 'DELETE'
+  )
+}
+
+export function isExpensiveRead(request: express.Request): boolean {
+  if (request.method !== 'GET') return false
+  const path = requestPath(request)
+  return (
+    path.startsWith('/api/reports/') ||
+    path.startsWith('/api/inventory/') ||
+    path === '/api/sales' ||
+    path.includes('/returns') ||
+    path.startsWith('/api/exchanges') ||
+    path.startsWith('/api/expenses')
+  )
+}
+
+export function isImageUpload(request: express.Request): boolean {
+  return (
+    request.method === 'POST' &&
+    /^\/api\/products\/[^/]+\/image$/u.test(requestPath(request))
+  )
+}
 
 export function configureHttpSecurity(
   app: Express,
@@ -88,16 +166,56 @@ export interface AppDependencies {
 
 export function createApp(
   dependencies: AppDependencies,
-  httpConfiguration: HttpRuntimeConfiguration = DEFAULT_HTTP_CONFIGURATION,
+  httpConfiguration: AppRuntimeConfiguration = DEFAULT_HTTP_CONFIGURATION,
+  runtime: AppRuntimeDependencies = DEFAULT_RUNTIME_DEPENDENCIES,
 ) {
   const app = express()
 
+  app.use(
+    createRequestContext(runtime.logger, {
+      idFactory: runtime.requestIdFactory,
+      now: runtime.now,
+    }),
+  )
   configureHttpSecurity(app, httpConfiguration)
-  app.use(express.json({ limit: JSON_BODY_LIMIT }))
 
   app.get('/api/health', (_request, response) => {
     response.json({ status: 'ok' })
   })
+  app.get('/api/ready', createReadinessHandler(runtime.readiness))
+
+  app.use(
+    '/api',
+    createRateLimit(
+      {
+        limit: httpConfiguration.generalRateLimitMax,
+        windowMs: FIVE_MINUTES_MS,
+      },
+      { now: runtime.now },
+    ),
+    createRateLimit(
+      {
+        limit: httpConfiguration.writeRateLimitMax,
+        windowMs: FIVE_MINUTES_MS,
+      },
+      { now: runtime.now, shouldLimit: isWriteRequest },
+    ),
+    createRateLimit(
+      {
+        limit: httpConfiguration.expensiveRateLimitMax,
+        windowMs: FIVE_MINUTES_MS,
+      },
+      { now: runtime.now, shouldLimit: isExpensiveRead },
+    ),
+    createRateLimit(
+      {
+        limit: httpConfiguration.imageRateLimitMax,
+        windowMs: TEN_MINUTES_MS,
+      },
+      { now: runtime.now, shouldLimit: isImageUpload },
+    ),
+  )
+  app.use(express.json({ limit: JSON_BODY_LIMIT }))
 
   app.use('/api/auth', createAuthRouter(dependencies.auth))
   app.use(
@@ -126,7 +244,7 @@ export function createApp(
     createAdminAccountRouter(dependencies.auth, dependencies.adminAccounts),
   )
   app.use(jsonNotFoundHandler)
-  app.use(errorHandler)
+  app.use(createErrorHandler(runtime.logger))
 
   return app
 }

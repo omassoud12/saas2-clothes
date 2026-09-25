@@ -11,6 +11,6 @@ export function createPrismaClient(
   tlsContext: DatabaseTlsContext,
 ): PrismaClient {
   const pool = new Pool(createVerifiedPgPoolConfig(databaseUrl, tlsContext))
-  const adapter = new PrismaPg(pool)
+  const adapter = new PrismaPg(pool, { disposeExternalPool: true })
   return new PrismaClient({ adapter })
 }

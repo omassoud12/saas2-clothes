@@ -1,58 +1,60 @@
 import type { ErrorRequestHandler } from 'express'
 import { HttpError } from '../errors/http-error.js'
+import { runtimeLogger, type RuntimeLogger } from '../runtime/logger.js'
 
-export const errorHandler: ErrorRequestHandler = (
-  error: unknown,
-  _request,
-  response,
-  next,
-) => {
-  if (response.headersSent) {
-    next(error)
-    return
-  }
+export function createErrorHandler(logger: RuntimeLogger): ErrorRequestHandler {
+  return (error: unknown, request, response, next) => {
+    if (response.headersSent) {
+      next(error)
+      return
+    }
 
-  if (isBodyParserError(error, 'entity.parse.failed', 400)) {
-    response.status(400).json({
-      error: {
-        code: 'INVALID_JSON_BODY',
-        message: 'Request body must contain valid JSON',
-      },
-    })
-    return
-  }
+    if (isBodyParserError(error, 'entity.parse.failed', 400)) {
+      response.status(400).json({
+        error: {
+          code: 'INVALID_JSON_BODY',
+          message: 'Request body must contain valid JSON',
+        },
+      })
+      return
+    }
 
-  if (isBodyParserError(error, 'entity.too.large', 413)) {
-    response.status(413).json({
-      error: {
-        code: 'JSON_BODY_TOO_LARGE',
-        message: 'Request body exceeds the allowed size',
-      },
-    })
-    return
-  }
+    if (isBodyParserError(error, 'entity.too.large', 413)) {
+      response.status(413).json({
+        error: {
+          code: 'JSON_BODY_TOO_LARGE',
+          message: 'Request body exceeds the allowed size',
+        },
+      })
+      return
+    }
 
-  if (error instanceof HttpError) {
-    response.status(error.status).json({
-      error: {
-        code: error.code,
-        message: error.message,
-      },
-    })
-    return
-  }
+    if (error instanceof HttpError) {
+      response.status(error.status).json({
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      })
+      return
+    }
 
-  console.error('Unhandled request error', {
-    category: 'UNEXPECTED_ERROR',
-    status: 500,
-  })
-  response.status(500).json({
-    error: {
+    logger.error('http_request_failed', {
+      requestId: request.requestId,
+      status: 500,
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred',
-    },
-  })
+      reason: 'UNEXPECTED_ERROR',
+    })
+    response.status(500).json({
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred',
+      },
+    })
+  }
 }
+
+export const errorHandler = createErrorHandler(runtimeLogger)
 
 function isBodyParserError(
   error: unknown,

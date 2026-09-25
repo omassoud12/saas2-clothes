@@ -14,6 +14,9 @@ const TLS_QUERY_PARAMETERS = [
   'uselibpqcompat',
 ] as const
 
+export const DATABASE_CONNECTION_TIMEOUT_MS = 5_000
+export const DATABASE_IDLE_TIMEOUT_MS = 30_000
+
 export interface DatabaseTlsContext {
   readonly nodeEnvironment: string | undefined
   readonly caPath: string
@@ -110,7 +113,11 @@ export function createVerifiedPgPoolConfig(
   )
 
   if (loopback && context.nodeEnvironment !== 'production') {
-    return { connectionString: databaseUrl }
+    return {
+      connectionString: databaseUrl,
+      connectionTimeoutMillis: DATABASE_CONNECTION_TIMEOUT_MS,
+      idleTimeoutMillis: DATABASE_IDLE_TIMEOUT_MS,
+    }
   }
 
   const certificateAuthority = loadCertificateAuthority(context.caPath)
@@ -118,6 +125,8 @@ export function createVerifiedPgPoolConfig(
 
   return {
     connectionString: url.toString(),
+    connectionTimeoutMillis: DATABASE_CONNECTION_TIMEOUT_MS,
+    idleTimeoutMillis: DATABASE_IDLE_TIMEOUT_MS,
     ssl: {
       ca: certificateAuthority,
       rejectUnauthorized: true,

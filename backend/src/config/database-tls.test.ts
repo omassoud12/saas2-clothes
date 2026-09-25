@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import {
+  DATABASE_CONNECTION_TIMEOUT_MS,
+  DATABASE_IDLE_TIMEOUT_MS,
   createVerifiedMigrationUrl,
   createVerifiedPgPoolConfig,
   validateDatabaseTlsConfiguration,
@@ -83,6 +85,11 @@ describe('database TLS configuration', () => {
         rejectUnauthorized: true,
       })
       assert.equal(
+        pool.connectionTimeoutMillis,
+        DATABASE_CONNECTION_TIMEOUT_MS,
+      )
+      assert.equal(pool.idleTimeoutMillis, DATABASE_IDLE_TIMEOUT_MS)
+      assert.equal(
         new URL(String(pool.connectionString)).searchParams.has('sslmode'),
         false,
       )
@@ -115,6 +122,7 @@ describe('database TLS configuration', () => {
       DIRECT_URL: `${REMOTE_BASE}?sslmode=require`,
       CORS_ALLOWED_ORIGINS: 'https://app.example.invalid',
       TRUST_PROXY_HOPS: '1',
+      APP_REPLICA_COUNT: '1',
     }
 
     assert.doesNotThrow(() => loadEnvironment(environment))

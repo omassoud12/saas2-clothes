@@ -142,17 +142,29 @@ describe('private R2 product image store', () => {
       R2_BUCKET_NAME: 'saas2-clothes-products',
     })
     assert.equal(config.bucketName, 'saas2-clothes-products')
+    assert.equal(config.networkTimeoutMs, 10_000)
     assert.throws(() => loadR2Environment({ R2_ENDPOINT: 'http://example.com' }), /HTTPS/)
+    assert.throws(() => loadR2Environment({
+      R2_ENDPOINT: 'https://example.r2.cloudflarestorage.com',
+      R2_ACCESS_KEY_ID: 'access',
+      R2_SECRET_ACCESS_KEY: 'secret',
+      R2_BUCKET_NAME: 'bucket',
+      R2_NETWORK_TIMEOUT_MS: '0',
+    }), /R2_NETWORK_TIMEOUT_MS configuration is invalid/)
   })
 
   test('uploads WebP with the canonical key, signs bounded reads, and deletes only that key', async () => {
     const commands: Array<PutObjectCommand | DeleteObjectCommand> = []
     const signed: Array<{ command: GetObjectCommand; expiresIn: number }> = []
+    const networkTimeouts: number[] = []
+    let clearedDeadlines = 0
+    let destroyed = 0
     const fakeClient = {
       async send(command: PutObjectCommand | DeleteObjectCommand) {
         commands.push(command)
         return {}
       },
+      destroy() { destroyed += 1 },
     } as unknown as S3Client
     const config = {
       endpoint: 'https://example.r2.cloudflarestorage.com',
@@ -166,6 +178,13 @@ describe('private R2 product image store', () => {
         assert.ok(command instanceof GetObjectCommand)
         signed.push({ command, expiresIn: options?.expiresIn ?? 0 })
         return 'https://signed.example/image'
+      },
+      abortDeadlineFactory(timeoutMs) {
+        networkTimeouts.push(timeoutMs)
+        return {
+          signal: new AbortController().signal,
+          clear() { clearedDeadlines += 1 },
+        }
       },
     })
     const result = await uploadProductImage(store, accountId, productId, await fixture('png'))
@@ -186,9 +205,14 @@ describe('private R2 product image store', () => {
     assert.ok(commands[1] instanceof DeleteObjectCommand)
     assert.equal(commands[1].input.Key, key)
     await assert.rejects(store.delete(otherAccountId, productId, key), (error) => expectHttpError(error, 'PRODUCT_IMAGE_KEY_FORBIDDEN'))
+    assert.deepEqual(networkTimeouts, [10_000, 10_000])
+    assert.equal(clearedDeadlines, 2)
+    store.destroy?.()
+    assert.equal(destroyed, 1)
   })
 
   test('maps R2 failures to safe application errors', async () => {
+    let clearedDeadlines = 0
     const store = createR2ProductImageStore({
       endpoint: 'https://example.r2.cloudflarestorage.com',
       accessKeyId: 'access',
@@ -197,9 +221,14 @@ describe('private R2 product image store', () => {
     }, {
       client: { async send() { throw new Error('secret transport detail') } } as unknown as S3Client,
       signUrl: async () => { throw new Error('secret signing detail') },
+      abortDeadlineFactory: () => ({
+        signal: new AbortController().signal,
+        clear() { clearedDeadlines += 1 },
+      }),
     })
     await assert.rejects(store.upload(accountId, productId, key, Buffer.from('webp')), (error) => expectHttpError(error, 'PRODUCT_IMAGE_UPLOAD_FAILED'))
     await assert.rejects(store.signedReadUrl(accountId, productId, key), (error) => expectHttpError(error, 'PRODUCT_IMAGE_URL_FAILED'))
     await assert.rejects(store.delete(accountId, productId, key), (error) => expectHttpError(error, 'PRODUCT_IMAGE_DELETE_FAILED'))
+    assert.equal(clearedDeadlines, 2)
   })
 })

@@ -1003,9 +1003,83 @@ validates the TCP port, requires HTTPS for remote Supabase URLs (with explicit
 loopback HTTP allowed outside production), bounds Supabase key strings, and
 preserves the verified database-TLS contract below.
 
-General/distributed rate limiting, structured request IDs/logging, dependency
-readiness, graceful shutdown, and application timeout policy remain FBH4 work;
-none is claimed by this HTTP-hardening layer.
+Runtime rate limiting, structured request IDs/logging, dependency readiness,
+graceful shutdown, and timeout policy are defined by the runtime-resilience
+contract below.
+
+### Runtime resilience
+
+The initial Railway API uses bounded process-local in-memory rate limits keyed
+by Express `req.ip` after the validated `TRUST_PROXY_HOPS` policy. Production
+must explicitly set `APP_REPLICA_COUNT=1`; any other configured value fails
+startup. FBH5 must verify the actual Railway replica count is one. Before the
+API is horizontally scaled, the process-local stores must be replaced with a
+shared/distributed rate-limit backend so limits cannot be multiplied across
+replicas.
+
+Normal `/api` traffic is limited to 300 requests per IP per five minutes by
+default. POST, PATCH, and DELETE traffic has an additional 120-per-five-minute
+write tier. Costly read paths (financial reports, inventory audit,
+Sales/Return history, Exchange history, and Expense history) have an additional
+30-per-five-minute tier. Product image upload/replacement has an additional
+10-per-ten-minute tier. These positive maxima may be adjusted within validated
+bounds through the documented environment settings, and tier relationships are
+validated.
+Every rejection is a controlled JSON 429 with `RATE_LIMIT_EXCEEDED` and a
+bounded `Retry-After` value. Liveness and readiness bypass these ordinary API
+limits. The existing OWNER bootstrap limits remain 5 attempts per verified
+user and 20 per IP per ten minutes. The in-memory maps clean expired entries
+and cap key cardinality; they are launch protection, not a distributed DDoS
+service.
+
+Every Express request receives a new server-generated UUID in
+`X-Request-Id`. Client-provided request IDs are not authoritative and are not
+reflected into logs. Completed requests emit one-line JSON logs containing a
+timestamp, level, event, request ID, method, coarse route group, status, and
+duration. Health and readiness successes are suppressed to avoid probe noise.
+Logs never include query strings, dynamic resource IDs, request/response
+bodies, authorization/cookie/idempotency headers, credentials, SQL, or raw
+provider errors. Unexpected failures add only the request ID and generic safe
+status/code/category metadata; client error envelopes remain unchanged.
+
+The Node HTTP server uses a 30-second request timeout, 10-second header timeout,
+and 5-second keep-alive timeout. Supabase token-verification fetches abort after
+5 seconds by default (bounded configurable range 1–30 seconds) and are not
+blindly retried by application code. R2 upload and delete commands receive a
+10-second abort signal by default (bounded configurable range 1–60 seconds);
+signed URL creation uses configured static credentials and is local. Storage
+timeout failures continue through the existing safe image error contract.
+
+The verified-TLS pg Pool uses a 5-second connection timeout and 30-second idle
+timeout. Pool size remains pg's default maximum of 10 rather than being
+arbitrarily reduced. The development Supabase database reports a server-side
+`statement_timeout` of 2 minutes, so FBH4 does not add a competing global query
+timeout. Readiness separately bounds its response wait to 2 seconds. Installed
+Prisma 7.10 interactive transactions retain their bounded defaults of 2
+seconds max-wait and 5 seconds execution timeout; existing isolation and lock
+behavior is unchanged. The PrismaPg adapter is configured to dispose its
+externally supplied Pool, so `prisma.$disconnect()` closes that Pool exactly
+once.
+
+`GET /api/health` remains dependency-free process liveness and returns
+`{"status":"ok"}`. Public `GET /api/ready` returns ready only after startup,
+while the instance is not shutting down, and after a bounded read-only
+PostgreSQL `SELECT 1` succeeds. It returns a minimal 503
+`{"status":"not_ready"}` otherwise. Readiness deliberately does not call
+Supabase Auth, create identities, or contact/mutate R2; Auth is a request-time
+dependency protected by its timeout, and R2 configuration remains lazy and
+validated when image functionality is first used.
+
+SIGTERM and SIGINT immediately mark the instance unready, stop new HTTP
+connections, allow current requests to drain, disconnect Prisma/the owned pg
+Pool, destroy a lazily created R2 client, and exit cleanly. Shutdown is
+idempotent. A 10-second hard deadline destroys remaining HTTP connections,
+starts best-effort resource cleanup, and exits nonzero. Unhandled rejections and
+uncaught exceptions log only a generic fatal reason and use the same bounded
+shutdown with nonzero exit. Startup failures similarly log no raw error,
+release any resources already created, and set a nonzero process exit status.
+No live Railway topology, replica-count, or contention behavior is claimed
+until deployment verification.
 
 ### Supabase database access boundary
 

@@ -8,6 +8,7 @@ declare global {
     interface Request {
       auth?: Readonly<AuthContext>
       verifiedIdentity?: Readonly<VerifiedIdentityContext>
+      requestId?: string
     }
   }
 }
