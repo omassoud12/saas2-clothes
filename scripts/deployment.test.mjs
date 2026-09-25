@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import {
   chmodSync,
   existsSync,
@@ -8,8 +9,38 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, test } from 'node:test'
 import { materializeDatabaseCa } from './database-ca.mjs'
+
+const repositoryRoot = fileURLToPath(new URL('..', import.meta.url))
+const backendRoot = join(repositoryRoot, 'backend')
+const prismaCliPath = join(
+  repositoryRoot,
+  'node_modules',
+  'prisma',
+  'build',
+  'index.js',
+)
+
+function runPrisma(arguments_, environmentOverrides = {}) {
+  const environment = { ...process.env, ...environmentOverrides }
+
+  for (const name of [
+    'DATABASE_URL',
+    'DIRECT_URL',
+    'SUPABASE_DB_CA_PATH',
+    'SUPABASE_DB_CA_BASE64',
+  ]) {
+    if (environmentOverrides[name] === undefined) delete environment[name]
+  }
+
+  return spawnSync(process.execPath, [prismaCliPath, ...arguments_], {
+    cwd: backendRoot,
+    encoding: 'utf8',
+    env: environment,
+  })
+}
 
 const syntheticCertificate = [
   '-----BEGIN CERTIFICATE-----',
@@ -119,9 +150,65 @@ describe('Railway deployment command contract', () => {
       'npm run prisma:generate && tsc -p tsconfig.json',
     )
     assert.equal(
+      backendPackage.scripts['prisma:generate'],
+      'prisma generate --config prisma.generate.config.ts',
+    )
+    assert.equal(
       backendPackage.scripts['prisma:migrate:deploy'],
       'prisma migrate deploy',
     )
+    assert.equal(
+      backendPackage.scripts['prisma:migrate:status'],
+      'prisma migrate status',
+    )
+  })
+
+  test('generates Prisma Client without database or CA environment', () => {
+    const result = runPrisma([
+      'generate',
+      '--config',
+      'prisma.generate.config.ts',
+    ])
+
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.match(result.stdout, /Generated Prisma Client/u)
+  })
+
+  for (const [name, directUrl] of [
+    [
+      'sslmode=require',
+      'postgresql://user:secret@example.invalid:5432/app?sslmode=require',
+    ],
+    [
+      'conflicting TLS query parameters',
+      'postgresql://user:secret@example.invalid:5432/app?sslmode=verify-full&uselibpqcompat=true',
+    ],
+  ]) {
+    test(`keeps production migrations fail-closed for ${name}`, () => {
+      const result = runPrisma(['migrate', 'status'], {
+        DIRECT_URL: directUrl,
+        NODE_ENV: 'production',
+      })
+      const output = `${result.stdout}\n${result.stderr}`
+
+      assert.notEqual(result.status, 0)
+      assert.match(output, /database TLS configuration is invalid/u)
+      assert.doesNotMatch(output, /secret|example\.invalid/u)
+    })
+  }
+
+  test('keeps production migrations fail-closed without a valid CA path', () => {
+    const result = runPrisma(['migrate', 'status'], {
+      DIRECT_URL:
+        'postgresql://user:secret@example.invalid:5432/app?sslmode=verify-full',
+      NODE_ENV: 'production',
+      SUPABASE_DB_CA_PATH: 'relative/ca.crt',
+    })
+    const output = `${result.stdout}\n${result.stderr}`
+
+    assert.notEqual(result.status, 0)
+    assert.match(output, /database TLS configuration is invalid/u)
+    assert.doesNotMatch(output, /secret|example\.invalid/u)
   })
 
   test('keeps deployment scripts present and starts in the same Node process', () => {
