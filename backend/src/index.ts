@@ -27,6 +27,10 @@ import {
   createShutdownCoordinator,
   installProcessHandlers,
 } from './runtime/server-lifecycle.js'
+import {
+  classifyStartupError,
+  type StartupStage,
+} from './runtime/startup-diagnostics.js'
 import { createSaleDependencies } from './sales/sale.service.js'
 import { createSupabaseVerifier } from './supabase.js'
 
@@ -36,14 +40,18 @@ async function start(): Promise<void> {
   let prisma: ReturnType<typeof createPrismaClient> | undefined
   let imageStore: ReturnType<typeof createR2ProductImageStore> | undefined
   const readiness = new ReadinessState()
+  let startupStage: StartupStage = 'environment'
 
   try {
     const environment = loadEnvironment()
+    startupStage = 'database_client'
     prisma = createPrismaClient(environment.databaseUrl, {
       caPath: environment.databaseCaPath,
       nodeEnvironment: environment.nodeEnvironment,
     })
+    startupStage = 'supabase_client'
     const supabaseVerifier = createSupabaseVerifier(environment)
+    startupStage = 'dependencies'
     const auth = createAuthDependencies(prisma, supabaseVerifier, (failure) => {
       logger.warn('supabase_auth_verification_failed', {
         status: failure.status ?? 502,
@@ -63,6 +71,7 @@ async function start(): Promise<void> {
     const exchangeHistory = createExchangeHistoryDependencies(prisma)
     const expenses = createExpenseDependencies(prisma)
     const reports = createReportDependencies(prisma)
+    startupStage = 'app'
     const app = createApp(
       {
         auth,
@@ -87,10 +96,12 @@ async function start(): Promise<void> {
       },
     )
 
+    startupStage = 'listen'
     const server = app.listen(environment.port)
     configureHttpServer(server)
     await once(server, 'listening')
 
+    startupStage = 'runtime_handlers'
     const shutdown = createShutdownCoordinator({
       server,
       readiness,
@@ -101,9 +112,13 @@ async function start(): Promise<void> {
     installProcessHandlers(shutdown)
     readiness.markStarted()
     logger.info('server_started')
-  } catch {
+  } catch (error: unknown) {
     readiness.beginShutdown()
-    logger.error('server_startup_failed', { reason: 'startup' })
+    logger.error('server_startup_failed', {
+      reason: 'startup',
+      stage: startupStage,
+      code: classifyStartupError(error, startupStage),
+    })
 
     try {
       await prisma?.$disconnect()

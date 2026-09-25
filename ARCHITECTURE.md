@@ -14,8 +14,8 @@ Business data from one Account must never be accessible by another Account.
 ### Frontend
 - React
 - Vite
-- TypeScript
-- Tailwind CSS
+- JavaScript/JSX (the current client has no TypeScript configuration)
+- CSS custom properties and reusable component styles
 
 ### Backend
 - Node.js
@@ -72,6 +72,30 @@ Backend verifies authenticated user
     |
     v
 Resolve role + accountId
+
+Frontend foundation:
+
+- Route constants live in one application routing module. The current client
+  uses the History API directly and does not add a routing dependency merely
+  for placeholder routes.
+- Authenticated business routes load the authoritative `/api/auth/me` profile
+  before rendering the reusable sidebar/header/content shell. Loading,
+  unauthenticated, active tenant, inactive tenant, and failure states remain
+  distinct.
+- The browser has one Supabase client, configured only with the public project
+  URL and publishable/anon key, and one centralized API transport configured by
+  `VITE_API_URL`. Browser environment variables are public configuration and
+  must never contain database, service-role, R2 secret, or admin credentials.
+- Navigation is derived from the server-returned role. OWNER and WAREHOUSE may
+  receive different navigation conveniences; SUPER_ADMIN uses the separate
+  platform area. UI visibility is never authorization, and the backend remains
+  authoritative for every operation.
+- Shared UI primitives and semantic CSS tokens define buttons, fields, cards,
+  badges, page headings, empty/error/loading states, modal foundations, and
+  responsive table containment. Business pages are lazy-loaded at route level
+  to keep catalog and inventory code out of the initial bundle.
+- An application error boundary presents a safe recovery screen without raw
+  production stack traces.
 
 ---
 
