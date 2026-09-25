@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadBusinessAppProfile } from './app-flow.js'
 import { AppLayout } from './AppLayout.jsx'
+import { Button, Card, ErrorState, LoadingState } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
 
 export function AppRouteGuard({ pathname, navigate }) {
@@ -32,27 +33,27 @@ export function AppRouteGuard({ pathname, navigate }) {
 
   if (state.kind === 'loading') {
     return (
-      <main>
-        <section className="card auth-card" aria-live="polite">
+      <main className="foundation-page">
+        <Card className="auth-card">
           <span className="eyebrow">Store workspace</span>
           <h1>Opening your workspace...</h1>
-          <div className="spinner" aria-label="Loading" />
-        </section>
+          <LoadingState label="Loading your account and store" />
+        </Card>
       </main>
     )
   }
 
   if (state.kind === 'error') {
     return (
-      <main>
-        <section className="card auth-card">
+      <main className="foundation-page">
+        <Card className="auth-card">
           <span className="eyebrow">Store workspace</span>
-          <h1>Workspace unavailable</h1>
-          <p className="error-message" role="alert">{state.message}</p>
-          <button type="button" onClick={() => window.location.reload()}>
-            Try again
-          </button>
-        </section>
+          <ErrorState
+            title="Workspace unavailable"
+            description={state.message}
+            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
+          />
+        </Card>
       </main>
     )
   }

@@ -10,6 +10,8 @@ function NavigationIcon({ name }) {
     categories: <><path d="M4 7h7v5H4zM13 7h7v5h-7zM4 14h7v5H4zM13 14h7v5h-7z" /></>,
     inventory: <><path d="m4 8 8-4 8 4-8 4-8-4Z" /><path d="m4 8 8 4 8-4v8l-8 4-8-4V8Z" /></>,
     sales: <><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5M8 16h3" /></>,
+    returns: <><path d="M9 7 5 11l4 4" /><path d="M5 11h9a5 5 0 0 1 5 5" /></>,
+    exchanges: <><path d="m7 7-3 3 3 3" /><path d="M4 10h13" /><path d="m17 17 3-3-3-3" /><path d="M20 14H7" /></>,
     expenses: <><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-3.5-1.2-4.5.2-1 1.5.5 2.3 2 2.6 1.5.3 3 1.1 2 2.6-1 1.4-4 1.2-4.5.1M12 7v10" /></>,
     reports: <><path d="M5 20V10M12 20V4M19 20v-7" /></>,
   }

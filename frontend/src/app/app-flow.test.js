@@ -11,6 +11,7 @@ import {
   isNavigationItemActive,
   resolveAppRoute,
 } from './app-navigation.js'
+import { isBusinessPath, normalizePathname, ROUTES } from './routes.js'
 
 const userId = '11111111-1111-4111-8111-111111111111'
 const accountId = '22222222-2222-4222-8222-222222222222'
@@ -101,11 +102,15 @@ describe('business app guard', () => {
     })
   })
 
-  for (const status of ['PENDING', 'REJECTED', 'SUSPENDED']) {
-    test(`redirects an OWNER with a ${status} Account to pending approval`, () => {
+  for (const [status, redirectTo] of [
+    ['PENDING', '/pending-approval'],
+    ['REJECTED', '/account-inactive'],
+    ['SUSPENDED', '/account-inactive'],
+  ]) {
+    test(`redirects an OWNER with a ${status} Account to its status page`, () => {
       assert.deepEqual(authorizeBusinessProfile(createProfile('OWNER', status)), {
         ok: false,
-        redirectTo: '/pending-approval',
+        redirectTo,
       })
     })
   }
@@ -145,6 +150,8 @@ describe('business app navigation', () => {
         'categories',
         'inventory',
         'sales',
+        'returns',
+        'exchanges',
         'expenses',
         'reports',
       ],
@@ -154,7 +161,7 @@ describe('business app navigation', () => {
   test('hides Expenses and Reports from WAREHOUSE', () => {
     assert.deepEqual(
       getAppNavigation('WAREHOUSE').map(({ key }) => key),
-      ['dashboard', 'products', 'categories', 'inventory', 'sales'],
+      ['dashboard', 'products', 'categories', 'inventory', 'sales', 'returns', 'exchanges'],
     )
   })
 
@@ -179,6 +186,16 @@ describe('business app navigation', () => {
     const result = resolveAppRoute('/app/expenses', 'WAREHOUSE')
     assert.equal(result.route.key, 'dashboard')
     assert.equal(result.redirectTo, '/app/dashboard')
+  })
+
+  test('keeps public and business paths centralized and normalized', () => {
+    assert.equal(normalizePathname('/app/products///'), ROUTES.products)
+    assert.equal(isBusinessPath(ROUTES.exchanges), true)
+    assert.equal(isBusinessPath(ROUTES.login), false)
+  })
+
+  test('does not expose tenant navigation to SUPER_ADMIN', () => {
+    assert.deepEqual(getAppNavigation('SUPER_ADMIN'), [])
   })
 })
 

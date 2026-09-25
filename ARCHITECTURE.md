@@ -30,7 +30,7 @@ Business data from one Account must never be accessible by another Account.
 - Supabase Auth
 
 ### Hosting
-- Frontend: Vercel
+- Frontend: Netlify
 - Backend: Railway
 - Database: Supabase
 
@@ -96,6 +96,24 @@ Frontend foundation:
   to keep catalog and inventory code out of the initial bundle.
 - An application error boundary presents a safe recovery screen without raw
   production stack traces.
+- Supabase's browser client exclusively owns browser-session persistence and
+  token refresh. Public auth routes restore that session before rendering an
+  unauthenticated form, then `/api/auth/me` authoritatively resolves the
+  application role and Account status. Confirmed but unprovisioned identities
+  continue to OWNER onboarding; pending Accounts use the approval screen;
+  rejected or suspended Accounts use a separate inactive screen; active OWNER
+  and WAREHOUSE users enter the tenant app; and SUPER_ADMIN remains in the
+  separate platform area.
+- Authentication redirects are fixed internal routes rather than user-provided
+  return URLs. Callback URLs are derived from the current frontend origin and
+  sensitive callback fragments are cleared before routing. Only
+  `VITE_API_URL`, `VITE_SUPABASE_URL`, and
+  `VITE_SUPABASE_PUBLISHABLE_KEY` are valid browser configuration values.
+- The production frontend target is Netlify. Its later deployment phase must
+  configure the deployed frontend origin, `VITE_API_URL`, Railway CORS origin,
+  Supabase authentication callback allowlisting, and the Netlify SPA fallback
+  to `index.html` so callback, status, and protected-route refreshes reach the
+  client application. These deployment settings are not completed by F2.
 
 ---
 
@@ -1164,7 +1182,7 @@ also rejected without an insecure fallback.
 
 ## 14. Deployment
 
-The frontend deploys separately to Vercel. The backend deploys as one Railway
+The frontend deploys separately to Netlify. The backend deploys as one Railway
 service from the repository root because the root `package-lock.json` is the
 authoritative npm-workspace lockfile for both `backend` and `frontend`.
 Selecting `/backend` as the Railway service root would omit that lockfile and
@@ -1303,7 +1321,7 @@ Do not introduce infrastructure complexity before it is required.
 
 Initial architecture:
 
-Vercel
+Netlify
     |
 Railway API
     |

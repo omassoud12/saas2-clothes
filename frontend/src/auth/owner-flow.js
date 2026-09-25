@@ -1,4 +1,5 @@
 import { buildFrontendUrl, PASSWORD_MIN_LENGTH } from './auth-flow.js'
+import { apiRequest } from '../lib/api-client.js'
 
 export const OWNER_SIGNUP_MESSAGE =
   'Check your email to confirm your address and continue setting up your store.'
@@ -11,6 +12,15 @@ const accountStatuses = new Set([
   'REJECTED',
   'SUSPENDED',
 ])
+
+export const APPLICATION_AUTH_STATE = Object.freeze({
+  UNPROVISIONED: 'AUTHENTICATED_UNPROVISIONED',
+  PENDING: 'PENDING_APPROVAL',
+  ACTIVE_OWNER: 'ACTIVE_OWNER',
+  ACTIVE_WAREHOUSE: 'ACTIVE_WAREHOUSE',
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  INACTIVE: 'INACTIVE_ACCOUNT',
+})
 
 function resultError(code, message, status) {
   return Object.freeze({
@@ -180,6 +190,7 @@ export async function completeSignupCallback({
   callback,
   clearUrl,
   navigate,
+  fetchImpl = globalThis.fetch,
 }) {
   if (!supabase) {
     clearUrl()
@@ -210,8 +221,11 @@ export async function completeSignupCallback({
     )
   }
 
-  navigate('/owner/onboarding')
-  return Object.freeze({ ok: true, redirectTo: '/owner/onboarding' })
+  const destination = await resolvePostLoginDestination({ supabase, fetchImpl })
+  if (!destination.ok) return destination
+
+  navigate(destination.redirectTo)
+  return destination
 }
 
 export async function verifyAuthenticatedSession({ supabase }) {
@@ -288,39 +302,6 @@ export function createOwnerBootstrapPayload(input) {
   return Object.freeze({ ok: true, payload: Object.freeze(payload) })
 }
 
-async function parseResponseJson(response) {
-  try {
-    return await response.json()
-  } catch {
-    return null
-  }
-}
-
-function safeApiError(response, body, fallbackMessage) {
-  const code =
-    typeof body?.error?.code === 'string' && body.error.code.length <= 100
-      ? body.error.code
-      : 'API_REQUEST_FAILED'
-
-  if (response.status === 401) {
-    return resultError(
-      code,
-      'Your session has expired. Sign in again.',
-      response.status,
-    )
-  }
-
-  if (response.status === 429) {
-    return resultError(
-      code,
-      'Too many attempts. Please wait and try again.',
-      response.status,
-    )
-  }
-
-  return resultError(code, fallbackMessage, response.status)
-}
-
 export async function authenticatedApiRequest({
   supabase,
   fetchImpl,
@@ -334,25 +315,16 @@ export async function authenticatedApiRequest({
   const sessionResult = await readAuthenticatedSession(supabase)
   if (!sessionResult.ok) return sessionResult
 
-  let response
-  try {
-    response = await fetchImpl(path, {
-      method,
-      headers: {
-        ...headers,
-        Authorization: `Bearer ${sessionResult.session.access_token}`,
-        ...(payload ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(payload ? { body: JSON.stringify(payload) } : requestBody ? { body: requestBody } : {}),
-    })
-  } catch {
-    return resultError('API_UNAVAILABLE', fallbackMessage)
-  }
-
-  const body = await parseResponseJson(response)
-  if (!response.ok) return safeApiError(response, body, fallbackMessage)
-
-  return Object.freeze({ ok: true, status: response.status, data: body })
+  return apiRequest({
+    accessToken: sessionResult.session.access_token,
+    fallbackMessage,
+    fetchImpl,
+    headers,
+    method,
+    path,
+    payload,
+    requestBody,
+  })
 }
 
 export async function bootstrapOwnerAccount({
@@ -407,12 +379,27 @@ export async function fetchCurrentApplicationUser({
 }
 
 export function getApplicationDestination(profile) {
+  const state = getApplicationAuthState(profile)
+  if (!state.ok) return state
+
+  const destinations = {
+    [APPLICATION_AUTH_STATE.SUPER_ADMIN]: '/admin',
+    [APPLICATION_AUTH_STATE.ACTIVE_OWNER]: '/app',
+    [APPLICATION_AUTH_STATE.ACTIVE_WAREHOUSE]: '/app',
+    [APPLICATION_AUTH_STATE.PENDING]: '/pending-approval',
+    [APPLICATION_AUTH_STATE.INACTIVE]: '/account-inactive',
+  }
+
+  return Object.freeze({ ok: true, redirectTo: destinations[state.state] })
+}
+
+export function getApplicationAuthState(profile) {
   const role = profile?.user?.role
   const account = profile?.account
 
   if (role === 'SUPER_ADMIN') {
     return account === null
-      ? Object.freeze({ ok: true, redirectTo: '/admin' })
+      ? Object.freeze({ ok: true, state: APPLICATION_AUTH_STATE.SUPER_ADMIN })
       : resultError(
           'INVALID_APPLICATION_PROFILE',
           'Your application profile is inconsistent.',
@@ -433,18 +420,25 @@ export function getApplicationDestination(profile) {
     )
   }
 
+  if (account.status === 'PENDING') {
+    return Object.freeze({ ok: true, state: APPLICATION_AUTH_STATE.PENDING })
+  }
+  if (account.status === 'REJECTED' || account.status === 'SUSPENDED') {
+    return Object.freeze({ ok: true, state: APPLICATION_AUTH_STATE.INACTIVE })
+  }
+
   return Object.freeze({
     ok: true,
-    redirectTo:
-      account.status === 'ACTIVE' ? '/app' : '/pending-approval',
+    state:
+      role === 'OWNER'
+        ? APPLICATION_AUTH_STATE.ACTIVE_OWNER
+        : APPLICATION_AUTH_STATE.ACTIVE_WAREHOUSE,
   })
 }
 
 export function getPendingAccountView(profile) {
-  const destination = getApplicationDestination(profile)
-  if (!destination.ok || destination.redirectTo !== '/pending-approval') {
-    return destination
-  }
+  const state = getApplicationAuthState(profile)
+  if (!state.ok) return state
 
   const status = profile.account.status
   if (status === 'PENDING') {
@@ -469,12 +463,72 @@ export function getPendingAccountView(profile) {
     })
   }
 
+  if (status !== 'SUSPENDED') {
+    return Object.freeze({ ok: true, redirectTo: getApplicationDestination(profile).redirectTo })
+  }
+
   return Object.freeze({
     ok: true,
     status,
     heading: 'Account suspended',
     message: 'Access to this store is currently suspended.',
   })
+}
+
+export async function signInApplicationUser({
+  supabase,
+  email,
+  password,
+  fetchImpl = globalThis.fetch,
+}) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  if (!normalizedEmail || !password) {
+    return resultError('LOGIN_REQUIRED', 'Enter your email and password.')
+  }
+  if (!supabase) {
+    return resultError(
+      'SUPABASE_NOT_CONFIGURED',
+      'Authentication is not configured for this application.',
+    )
+  }
+
+  let result
+  try {
+    result = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    })
+  } catch {
+    return resultError(
+      'AUTH_SERVICE_UNAVAILABLE',
+      'Sign in is temporarily unavailable. Check your connection and try again.',
+    )
+  }
+
+  if (result.error) {
+    return resultError(
+      'LOGIN_REJECTED',
+      'Email or password was not accepted. Check your details and try again.',
+    )
+  }
+
+  return resolvePostLoginDestination({ supabase, fetchImpl })
+}
+
+export async function resolveExistingSessionDestination({
+  supabase,
+  fetchImpl = globalThis.fetch,
+}) {
+  const session = await readAuthenticatedSession(supabase)
+  if (!session.ok && session.code === 'SESSION_REQUIRED') {
+    return Object.freeze({ ok: true, authenticated: false })
+  }
+  if (!session.ok) return session
+
+  const destination = await resolvePostLoginDestination({ supabase, fetchImpl })
+  return destination.ok
+    ? Object.freeze({ ...destination, authenticated: true })
+    : destination
 }
 
 export async function resolvePostLoginDestination({

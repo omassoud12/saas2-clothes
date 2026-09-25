@@ -9,6 +9,7 @@ function MenuIcon() {
 export function AppHeader({
   identity,
   loggingOut,
+  mobileMenuOpen,
   onLogout,
   onOpenMenu,
 }) {
@@ -20,6 +21,7 @@ export function AppHeader({
           type="button"
           aria-label="Open navigation"
           aria-controls="business-sidebar"
+          aria-expanded={mobileMenuOpen}
           onClick={onOpenMenu}
         >
           <MenuIcon />

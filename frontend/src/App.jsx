@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AppRouteGuard } from './app/AppRouteGuard.jsx'
+import { isBusinessPath, normalizePathname, ROUTES } from './app/routes.js'
+import { apiRequest } from './lib/api-client.js'
 import { isSupabaseConfigured } from './lib/supabase.js'
 import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
 import { AdminPage } from './pages/AdminPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
 import { PendingApprovalPage } from './pages/PendingApprovalPage.jsx'
+import { InactiveAccountPage } from './pages/InactiveAccountPage.jsx'
 import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
 import { SignupCallbackPage } from './pages/SignupCallbackPage.jsx'
 import { SignupPage } from './pages/SignupPage.jsx'
 
 function readPathname() {
-  return window.location.pathname.replace(/\/+$/, '') || '/'
+  return normalizePathname(window.location.pathname)
 }
 
 function App() {
@@ -35,15 +38,16 @@ function App() {
     setPathname(readPathname())
   }, [])
 
-  if (pathname === '/auth/callback') return <AuthCallbackPage />
-  if (pathname === '/auth/signup-callback') return <SignupCallbackPage />
-  if (pathname === '/set-password') return <SetPasswordPage />
-  if (pathname === '/login') return <LoginPage />
-  if (pathname === '/signup') return <SignupPage />
-  if (pathname === '/owner/onboarding') return <OwnerOnboardingPage />
-  if (pathname === '/pending-approval') return <PendingApprovalPage />
-  if (pathname === '/admin') return <AdminPage />
-  if (pathname === '/app' || pathname.startsWith('/app/')) {
+  if (pathname === ROUTES.authCallback) return <AuthCallbackPage />
+  if (pathname === ROUTES.signupCallback) return <SignupCallbackPage />
+  if (pathname === ROUTES.setPassword) return <SetPasswordPage />
+  if (pathname === ROUTES.login) return <LoginPage />
+  if (pathname === ROUTES.signup) return <SignupPage />
+  if (pathname === ROUTES.ownerOnboarding) return <OwnerOnboardingPage />
+  if (pathname === ROUTES.pendingApproval) return <PendingApprovalPage />
+  if (pathname === ROUTES.inactiveAccount) return <InactiveAccountPage />
+  if (pathname === ROUTES.admin) return <AdminPage />
+  if (isBusinessPath(pathname)) {
     return <AppRouteGuard pathname={pathname} navigate={navigate} />
   }
 
@@ -54,13 +58,11 @@ function HomePage() {
   const [apiStatus, setApiStatus] = useState('Checking…')
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((response) => {
-        if (!response.ok) throw new Error('API unavailable')
-        return response.json()
-      })
-      .then(() => setApiStatus('Connected'))
-      .catch(() => setApiStatus('Unavailable'))
+    let active = true
+    void apiRequest({ path: '/api/health' }).then((result) => {
+      if (active) setApiStatus(result.ok ? 'Connected' : 'Unavailable')
+    })
+    return () => { active = false }
   }, [])
 
   return (

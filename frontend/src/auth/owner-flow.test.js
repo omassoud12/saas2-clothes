@@ -10,7 +10,9 @@ import {
   inspectSignupCallbackUrl,
   OWNER_SIGNUP_MESSAGE,
   requestOwnerSignup,
+  resolveExistingSessionDestination,
   resolvePostLoginDestination,
+  signInApplicationUser,
   verifyAuthenticatedSession,
 } from './owner-flow.js'
 
@@ -20,9 +22,17 @@ const confirmedUser = {
 }
 
 function createSupabase(options = {}) {
-  const calls = { signUp: [], getSession: 0 }
+  const calls = { signUp: [], signIn: [], getSession: 0 }
   const client = {
     auth: {
+      async signInWithPassword(input) {
+        calls.signIn.push(input)
+        if (options.signInThrows) throw new Error('private network detail')
+        return {
+          data: {},
+          error: options.signInError ? new Error('private provider detail') : null,
+        }
+      },
       async signUp(input) {
         calls.signUp.push(input)
         if (options.signupThrows) throw new Error('private signup detail')
@@ -185,6 +195,8 @@ describe('signup confirmation callback', () => {
       navigate(path) {
         destination = path
       },
+      fetchImpl: async () =>
+        jsonResponse(403, { error: { code: 'APPLICATION_USER_NOT_FOUND' } }),
     })
 
     assert.deepEqual(result, { ok: true, redirectTo: '/owner/onboarding' })
@@ -229,6 +241,8 @@ describe('signup confirmation callback', () => {
         callback,
         clearUrl() {},
         navigate() {},
+        fetchImpl: async () =>
+          jsonResponse(403, { error: { code: 'APPLICATION_USER_NOT_FOUND' } }),
       })
     } finally {
       console.log = originalLog
@@ -370,6 +384,60 @@ describe('pending approval state', () => {
   })
 })
 
+describe('login submission and session restore', () => {
+  test('normalizes credentials and resolves an active OWNER destination', async () => {
+    const { client, calls } = createSupabase()
+    const result = await signInApplicationUser({
+      supabase: client,
+      email: ' OWNER@Example.COM ',
+      password: 'secure-password',
+      fetchImpl: async () => jsonResponse(200, ownerProfile('ACTIVE')),
+    })
+
+    assert.deepEqual(calls.signIn, [{ email: 'owner@example.com', password: 'secure-password' }])
+    assert.deepEqual(result, { ok: true, redirectTo: '/app' })
+  })
+
+  test('keeps provider and network failures distinct and safe', async () => {
+    const rejected = await signInApplicationUser({
+      supabase: createSupabase({ signInError: true }).client,
+      email: 'owner@example.com',
+      password: 'incorrect',
+    })
+    const unavailable = await signInApplicationUser({
+      supabase: createSupabase({ signInThrows: true }).client,
+      email: 'owner@example.com',
+      password: 'secret',
+    })
+
+    assert.equal(rejected.code, 'LOGIN_REJECTED')
+    assert.match(rejected.message, /not accepted/i)
+    assert.equal(unavailable.code, 'AUTH_SERVICE_UNAVAILABLE')
+    assert.match(unavailable.message, /connection/i)
+    assert.doesNotMatch(`${rejected.message} ${unavailable.message}`, /private|provider/i)
+  })
+
+  test('returns an unauthenticated state without requesting a profile', async () => {
+    let requested = false
+    const result = await resolveExistingSessionDestination({
+      supabase: createSupabase({ missingSession: true }).client,
+      fetchImpl: async () => { requested = true },
+    })
+
+    assert.deepEqual(result, { ok: true, authenticated: false })
+    assert.equal(requested, false)
+  })
+
+  test('restores an active session through the authoritative profile', async () => {
+    const result = await resolveExistingSessionDestination({
+      supabase: createSupabase().client,
+      fetchImpl: async () => jsonResponse(200, ownerProfile('ACTIVE')),
+    })
+
+    assert.deepEqual(result, { ok: true, redirectTo: '/app', authenticated: true })
+  })
+})
+
 describe('login routing', () => {
   const expectedRoutes = [
     [
@@ -378,8 +446,8 @@ describe('login routing', () => {
     ],
     [ownerProfile('PENDING'), '/pending-approval'],
     [ownerProfile('ACTIVE'), '/app'],
-    [ownerProfile('REJECTED'), '/pending-approval'],
-    [ownerProfile('SUSPENDED'), '/pending-approval'],
+    [ownerProfile('REJECTED'), '/account-inactive'],
+    [ownerProfile('SUSPENDED'), '/account-inactive'],
   ]
 
   for (const [profile, expectedRoute] of expectedRoutes) {

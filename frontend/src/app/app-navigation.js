@@ -1,3 +1,5 @@
+import { ROUTES } from './routes.js'
+
 const ownerRoles = Object.freeze(['OWNER'])
 const tenantRoles = Object.freeze(['OWNER', 'WAREHOUSE'])
 
@@ -5,49 +7,63 @@ export const APP_NAVIGATION = Object.freeze([
   Object.freeze({
     key: 'dashboard',
     label: 'Dashboard',
-    path: '/app/dashboard',
+    path: ROUTES.dashboard,
     icon: 'dashboard',
     roles: tenantRoles,
   }),
   Object.freeze({
     key: 'products',
     label: 'Products',
-    path: '/app/products',
+    path: ROUTES.products,
     icon: 'products',
     roles: tenantRoles,
   }),
   Object.freeze({
     key: 'categories',
     label: 'Categories',
-    path: '/app/categories',
+    path: ROUTES.categories,
     icon: 'categories',
     roles: tenantRoles,
   }),
   Object.freeze({
     key: 'inventory',
     label: 'Inventory',
-    path: '/app/inventory',
+    path: ROUTES.inventory,
     icon: 'inventory',
     roles: tenantRoles,
   }),
   Object.freeze({
     key: 'sales',
     label: 'Sales / POS',
-    path: '/app/sales',
+    path: ROUTES.sales,
     icon: 'sales',
+    roles: tenantRoles,
+  }),
+  Object.freeze({
+    key: 'returns',
+    label: 'Returns',
+    path: ROUTES.returns,
+    icon: 'returns',
+    roles: tenantRoles,
+  }),
+  Object.freeze({
+    key: 'exchanges',
+    label: 'Exchanges',
+    path: ROUTES.exchanges,
+    icon: 'exchanges',
     roles: tenantRoles,
   }),
   Object.freeze({
     key: 'expenses',
     label: 'Expenses',
-    path: '/app/expenses',
+    path: ROUTES.expenses,
     icon: 'expenses',
     roles: ownerRoles,
   }),
   Object.freeze({
     key: 'reports',
     label: 'Reports',
-    path: '/app/reports',
+    path: ROUTES.reports,
     icon: 'reports',
     roles: ownerRoles,
   }),

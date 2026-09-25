@@ -1,7 +1,7 @@
 import { fetchCurrentApplicationUser } from '../auth/owner-flow.js'
 
 const tenantRoles = new Set(['OWNER', 'WAREHOUSE'])
-const nonActiveStatuses = new Set(['PENDING', 'REJECTED', 'SUSPENDED'])
+const inactiveStatuses = new Set(['REJECTED', 'SUSPENDED'])
 
 function resultError(code, message, extra = {}) {
   return Object.freeze({ ok: false, code, message, ...extra })
@@ -27,8 +27,12 @@ export function authorizeBusinessProfile(profile) {
     )
   }
 
-  if (nonActiveStatuses.has(account.status)) {
+  if (account.status === 'PENDING') {
     return Object.freeze({ ok: false, redirectTo: '/pending-approval' })
+  }
+
+  if (inactiveStatuses.has(account.status)) {
+    return Object.freeze({ ok: false, redirectTo: '/account-inactive' })
   }
 
   if (account.status !== 'ACTIVE') {

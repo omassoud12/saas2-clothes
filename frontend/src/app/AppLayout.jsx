@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   getBusinessShellIdentity,
   logoutBusinessApp,
@@ -6,23 +6,23 @@ import {
 import { resolveAppRoute } from './app-navigation.js'
 import { AppHeader } from './AppHeader.jsx'
 import { AppSidebar } from './AppSidebar.jsx'
-import { CategoriesPage } from '../pages/app/CategoriesPage.jsx'
-import { DashboardPage } from '../pages/app/DashboardPage.jsx'
-import { ExpensesPage } from '../pages/app/ExpensesPage.jsx'
-import { InventoryPage } from '../pages/app/InventoryPage.jsx'
-import { ProductsPage } from '../pages/app/ProductsPage.jsx'
-import { ReportsPage } from '../pages/app/ReportsPage.jsx'
-import { SalesPage } from '../pages/app/SalesPage.jsx'
+import { LoadingState } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
 
+function lazyNamed(loader, exportName) {
+  return lazy(() => loader().then((module) => ({ default: module[exportName] })))
+}
+
 const pageComponents = Object.freeze({
-  dashboard: DashboardPage,
-  products: ProductsPage,
-  categories: CategoriesPage,
-  inventory: InventoryPage,
-  sales: SalesPage,
-  expenses: ExpensesPage,
-  reports: ReportsPage,
+  dashboard: lazyNamed(() => import('../pages/app/DashboardPage.jsx'), 'DashboardPage'),
+  products: lazyNamed(() => import('../pages/app/ProductsPage.jsx'), 'ProductsPage'),
+  categories: lazyNamed(() => import('../pages/app/CategoriesPage.jsx'), 'CategoriesPage'),
+  inventory: lazyNamed(() => import('../pages/app/InventoryPage.jsx'), 'InventoryPage'),
+  sales: lazyNamed(() => import('../pages/app/SalesPage.jsx'), 'SalesPage'),
+  returns: lazyNamed(() => import('../pages/app/ReturnsPage.jsx'), 'ReturnsPage'),
+  exchanges: lazyNamed(() => import('../pages/app/ExchangesPage.jsx'), 'ExchangesPage'),
+  expenses: lazyNamed(() => import('../pages/app/ExpensesPage.jsx'), 'ExpensesPage'),
+  reports: lazyNamed(() => import('../pages/app/ReportsPage.jsx'), 'ReportsPage'),
 })
 
 export function AppLayout({ pathname, navigate, profile }) {
@@ -89,6 +89,7 @@ export function AppLayout({ pathname, navigate, profile }) {
         <AppHeader
           identity={identity}
           loggingOut={loggingOut}
+          mobileMenuOpen={mobileMenuOpen}
           onLogout={handleLogout}
           onOpenMenu={() => setMobileMenuOpen(true)}
         />
@@ -98,7 +99,9 @@ export function AppLayout({ pathname, navigate, profile }) {
               {logoutError}
             </p>
           )}
-          <Page profile={profile} />
+          <Suspense fallback={<LoadingState label="Loading page" />}>
+            <Page profile={profile} />
+          </Suspense>
         </main>
       </div>
     </div>

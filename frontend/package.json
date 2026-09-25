@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/auth/auth-flow.test.js src/auth/owner-flow.test.js src/auth/admin-flow.test.js src/app/app-flow.test.js src/app/category-flow.test.js src/app/product-flow.test.js src/app/restock-flow.test.js src/app/inventory-audit-flow.test.js",
+    "test": "node --test src/auth/auth-flow.test.js src/auth/owner-flow.test.js src/auth/admin-flow.test.js src/app/app-flow.test.js src/app/category-flow.test.js src/app/product-flow.test.js src/app/restock-flow.test.js src/app/inventory-audit-flow.test.js src/lib/api-client.test.js",
     "preview": "vite preview",
     "lint": "eslint ."
   },
