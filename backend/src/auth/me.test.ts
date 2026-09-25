@@ -12,19 +12,24 @@ import type {
 const userId = '11111111-1111-4111-8111-111111111111'
 const accountId = '22222222-2222-4222-8222-222222222222'
 
-function createProfile(status: AccountStatus): CurrentUserProfile {
+function createProfile(
+  status: AccountStatus,
+  role: UserRole = UserRole.OWNER,
+  baseCurrency = 'USD',
+): CurrentUserProfile {
   return {
     id: userId,
     email: 'owner@example.com',
     firstName: 'Store',
     lastName: 'Owner',
-    role: UserRole.OWNER,
+    role,
     employeeCode: null,
     isActive: true,
     account: {
       id: accountId,
       name: 'Example Store',
       status,
+      baseCurrency,
       rejectionReason:
         status === AccountStatus.REJECTED ? 'Information is incomplete' : null,
     },
@@ -132,6 +137,7 @@ describe('GET /api/auth/me response', () => {
     )) as Record<string, Record<string, unknown>>
 
     assert.equal(body.account.status, AccountStatus.PENDING)
+    assert.equal(body.account.baseCurrency, 'USD')
     assert.equal('rejectionReason' in body.account, false)
   })
 
@@ -145,6 +151,7 @@ describe('GET /api/auth/me response', () => {
       id: accountId,
       name: 'Example Store',
       status: AccountStatus.REJECTED,
+      baseCurrency: 'USD',
       rejectionReason: 'Information is incomplete',
     })
     assert.equal('reviewedById' in body.account, false)
@@ -164,6 +171,34 @@ describe('GET /api/auth/me response', () => {
     assert.equal(body.account, null)
   })
 
+  for (const [role, baseCurrency] of [
+    [UserRole.OWNER, 'LBP'],
+    [UserRole.WAREHOUSE, 'EUR'],
+  ] as const) {
+    test(`returns the authenticated Account baseCurrency for ${role}`, async () => {
+      const body = (await invokeMe(
+        createDependencies(
+          createProfile(AccountStatus.ACTIVE, role, baseCurrency),
+        ),
+        createRequest(),
+      )) as Record<string, Record<string, unknown>>
+
+      assert.equal(body.account.id, accountId)
+      assert.equal(body.account.baseCurrency, baseCurrency)
+      assert.equal(body.user.role, role)
+      for (const sensitiveField of [
+        'purchaseCost',
+        'lastPurchaseCost',
+        'cogs',
+        'profit',
+        'expenses',
+        'financialReport',
+      ]) {
+        assert.equal(sensitiveField in body.account, false)
+      }
+    })
+  }
+
   test('ignores frontend accountId and resolves identity by verified Auth UUID', async () => {
     let lookedUpUserId: string | undefined
     const request = createRequest()
@@ -171,14 +206,18 @@ describe('GET /api/auth/me response', () => {
     request.query = { accountId: 'attacker-account' }
 
     const body = (await invokeMe(
-      createDependencies(createProfile(AccountStatus.ACTIVE), (resolvedId) => {
-        lookedUpUserId = resolvedId
-      }),
+      createDependencies(
+        createProfile(AccountStatus.ACTIVE, UserRole.OWNER, 'LBP'),
+        (resolvedId) => {
+          lookedUpUserId = resolvedId
+        },
+      ),
       request,
     )) as Record<string, Record<string, unknown>>
 
     assert.equal(lookedUpUserId, userId)
     assert.equal(request.auth?.accountId, accountId)
     assert.equal(body.account.id, accountId)
+    assert.equal(body.account.baseCurrency, 'LBP')
   })
 })

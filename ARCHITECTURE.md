@@ -81,7 +81,9 @@ Frontend foundation:
 - Authenticated business routes load the authoritative `/api/auth/me` profile
   before rendering the reusable sidebar/header/content shell. Loading,
   unauthenticated, active tenant, inactive tenant, and failure states remain
-  distinct.
+  distinct. For tenant users, its Account object includes the authoritative
+  `baseCurrency` used for display-only monetary formatting; SUPER_ADMIN keeps
+  the existing `account: null` contract.
 - The browser has one Supabase client, configured only with the public project
   URL and publishable/anon key, and one centralized API transport configured by
   `VITE_API_URL`. Browser environment variables are public configuration and

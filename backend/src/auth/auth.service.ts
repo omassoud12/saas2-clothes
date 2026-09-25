@@ -279,6 +279,7 @@ export function createAuthDependencies(
               id: true,
               name: true,
               status: true,
+              baseCurrency: true,
               rejectionReason: true,
             },
           },

@@ -78,6 +78,7 @@ export interface CurrentUserProfile {
     readonly id: string
     readonly name: string
     readonly status: AccountStatus
+    readonly baseCurrency: string
     readonly rejectionReason: string | null
   } | null
 }

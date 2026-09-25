@@ -58,6 +58,7 @@ export function createGetCurrentUser(
             id: profile.account.id,
             name: profile.account.name,
             status: profile.account.status,
+            baseCurrency: profile.account.baseCurrency,
             ...(profile.account.status === AccountStatus.REJECTED
               ? { rejectionReason: profile.account.rejectionReason }
               : {}),
