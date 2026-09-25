@@ -5,14 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run prisma:generate && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "tsc -p tsconfig.test.json && node --test .test-dist/config/database-tls.test.js .test-dist/config/env.test.js .test-dist/http-security.test.js .test-dist/runtime/runtime.test.js .test-dist/auth/auth.middleware.test.js .test-dist/auth/bootstrap-owner.test.js .test-dist/auth/me.test.js .test-dist/admin/admin-account.test.js .test-dist/categories/category.test.js .test-dist/exchanges/exchange.history.test.js .test-dist/exchanges/exchange.test.js .test-dist/expenses/expense.test.js .test-dist/inventory/inventory.test.js .test-dist/product-images/product-image.test.js .test-dist/products/product.test.js .test-dist/reports/financial.test.js .test-dist/reports/report.test.js .test-dist/restocks/restock.test.js .test-dist/returns/return.test.js .test-dist/sales/sale-void.test.js .test-dist/sales/sale.test.js .test-dist/scripts/bootstrap-super-admin.test.js",
     "bootstrap:super-admin": "tsx src/scripts/bootstrap-super-admin.ts",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "prisma:format": "prisma format"
+    "prisma:format": "prisma format",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1133.0",

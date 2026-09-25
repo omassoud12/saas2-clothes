@@ -2,12 +2,27 @@
   "name": "clothes-app",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "npm@10.9.4",
+  "engines": {
+    "node": ">=22.12.0 <23",
+    "npm": ">=10 <11"
+  },
   "workspaces": ["frontend", "backend"],
   "scripts": {
     "dev": "concurrently -n client,server -c cyan,green \"npm run dev --workspace client\" \"npm run dev --workspace server\"",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
-    "lint": "npm run lint --workspace client"
+    "lint": "npm run lint --workspace client",
+    "build:backend": "npm run build --workspace server",
+    "start:backend": "npm run start --workspace server",
+    "verify:backend": "npm run test:deployment && npm test --workspace server && npm run typecheck --workspace server && npm run build:backend && npm run smoke:backend",
+    "test:deployment": "node --test scripts/deployment.test.mjs",
+    "smoke:backend": "node scripts/smoke-built-start.mjs",
+    "prepare:database-ca": "node scripts/prepare-database-ca.mjs",
+    "railway:build": "npm run prepare:database-ca && npm run build:backend",
+    "railway:release": "npm run prepare:database-ca && npm run prisma:migrate:deploy --workspace server",
+    "railway:migrate:status": "npm run prepare:database-ca && npm run prisma:migrate:status --workspace server",
+    "railway:start": "node scripts/railway-start.mjs"
   },
   "devDependencies": {
     "concurrently": "latest"

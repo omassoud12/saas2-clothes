@@ -1140,27 +1140,136 @@ also rejected without an insecure fallback.
 
 ## 14. Deployment
 
-Frontend:
-Vercel
+The frontend deploys separately to Vercel. The backend deploys as one Railway
+service from the repository root because the root `package-lock.json` is the
+authoritative npm-workspace lockfile for both `backend` and `frontend`.
+Selecting `/backend` as the Railway service root would omit that lockfile and
+make `npm ci` non-reproducible. Railway must use only the explicit backend
+commands below; the root `build` command remains frontend-oriented and is not a
+backend deployment command.
 
-Backend:
-Railway
+Before FBH5 Phase 1, the repository contained no `railway.json`,
+`railway.toml`, Dockerfile, Procfile, Nixpacks/Railpack configuration file, or
+backend-specific root deployment script. Deployment relied on auto-detection
+and could therefore select the frontend-oriented root build. FBH5 adds explicit
+root scripts without adding a competing container/deployment system.
 
-Database:
-Supabase PostgreSQL
+Production uses Node 22 LTS (`>=22.12.0 <23`) and npm 10 as declared in the
+root package manifest. The locked install is `npm ci`. Build tooling remains
+installed during the build and pre-deploy phases because Prisma generation,
+Prisma migration deployment, and TypeScript compilation require development
+dependencies. No server startup runs tests or migrations.
 
-Authentication:
-Supabase Auth
+The reproducible backend commands, all run from the repository root, are:
 
-Development migrations:
+- install: `npm ci`
+- build: `npm run railway:build`
+- release migration: `npm run railway:release`
+- migration verification: `npm run railway:migrate:status`
+- start: `npm run railway:start`
+- CI/release validation: `npm run verify:backend`
 
-npx prisma migrate dev
+`railway:build` materializes the external database CA when Railway supplies it,
+runs `prisma generate` into the ignored `backend/src/generated/prisma` path,
+and compiles the backend to `backend/dist`. `railway:start` runs the compiled
+ESM entry point in the same Node process, preserving FBH4 SIGTERM/SIGINT
+handling. The app honors Railway's `PORT`; omitting a host from `listen` binds
+Node's wildcard interface rather than localhost. Source maps may be present in
+the private deployment artifact, but Express exposes no static file service.
 
-Production migrations:
+Production migrations are a single Railway pre-deploy/release command using
+`prisma migrate deploy`; they are never part of application startup and never
+use `migrate dev` or `db push`. Railway does not continue a deployment after a
+failed pre-deploy command. A failure therefore stops the release for manual
+investigation; there is no automatic repair, reset, or fallback. After a
+successful release, `railway:migrate:status` must report every migration
+applied and the database up to date.
 
-npx prisma migrate deploy
+Runtime `DATABASE_URL` uses the Supabase Session Pooler with
+`sslmode=verify-full`. Release-only `DIRECT_URL` uses the true Supabase Direct
+endpoint with the same verified-TLS policy. Railway outbound IPv6 must be
+enabled before the production Direct migration is attempted. The local Windows
+development exception may continue using the Session Pooler for `DIRECT_URL`;
+it is not the production contract. Ordinary HTTP startup does not read
+`DIRECT_URL`.
 
-Never run migrate dev against production.
+Railway does not document a secret-file mount that is available to its separate
+pre-deploy container, and Railway volumes are explicitly unavailable there.
+The production CA delivery contract therefore stores the CA PEM as the secret
+`SUPABASE_DB_CA_BASE64` and sets `SUPABASE_DB_CA_PATH` to an absolute ephemeral
+path such as `/tmp/saas2-clothes/supabase-db-ca.crt`. The repository deployment
+scripts decode the secret without logging it, validate certificate framing,
+restrict environment-decoded output to the operating system temporary directory,
+and write the file with mode `0600` separately in build, pre-deploy, and runtime
+containers. A pre-existing externally managed absolute CA path remains valid;
+the CA file is outside the repository and is not baked into the
+application source. An existing externally mounted CA file remains supported
+if Railway adds an appropriate pre-deploy-compatible secret-file mechanism.
+
+Railway runtime variable names are:
+
+- `NODE_ENV`, `PORT`, `APP_REPLICA_COUNT`, `TRUST_PROXY_HOPS`
+- `CORS_ALLOWED_ORIGINS`
+- `DATABASE_URL`, `SUPABASE_DB_CA_PATH`, `SUPABASE_DB_CA_BASE64`
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (or legacy `SUPABASE_ANON_KEY`)
+- `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
+- optional bounded overrides: `API_RATE_LIMIT_MAX`,
+  `API_WRITE_RATE_LIMIT_MAX`, `API_EXPENSIVE_RATE_LIMIT_MAX`,
+  `API_IMAGE_RATE_LIMIT_MAX`, `SUPABASE_AUTH_TIMEOUT_MS`, and
+  `R2_NETWORK_TIMEOUT_MS`
+
+The release-only database variable is `DIRECT_URL`. Railway may expose a
+service variable to all container phases, but ordinary application code does
+not consume this value. Administrative CLI variables remain separate:
+`SUPABASE_SERVICE_ROLE_KEY`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_FIRST_NAME`,
+`SUPER_ADMIN_LAST_NAME`, and `SUPER_ADMIN_INVITE_REDIRECT_URL`; they are not
+requirements for normal API startup.
+
+Production must set `APP_REPLICA_COUNT=1`. Railway must also be configured for
+exactly one actual replica before launch; more than one replica is prohibited
+until the process-local rate-limit store is replaced with a shared store.
+`TRUST_PROXY_HOPS` remains an explicit positive value, but Phase 1 does not
+guess it. Phase 2 must establish the hop count through controlled requests via
+the public Railway edge and the existing per-IP limiter behavior, without
+adding an IP-echo endpoint or storing client addresses.
+
+Railway rollout health uses public `GET /api/ready`, not liveness-only
+`/api/health`, so traffic is not routed before the bounded database `SELECT 1`
+succeeds. Readiness does not probe Supabase Auth or R2. Railway's termination
+drain window must be at least 15 seconds, leaving margin beyond the
+application's 10-second hard shutdown deadline. Phase 2 must verify the actual
+SIGTERM/draining behavior, single replica, proxy hops, edge HTTPS redirect and
+HSTS ownership, preservation of security/request-ID headers, structured JSON
+stdout/stderr, and public readiness behavior.
+
+No `railway.json` or `railway.toml` is added: Railway Config as Code is
+deprecated, unavailable to new services, and reaches its hard cutoff on
+2026-12-01. Phase 2 configures the supported Railway service settings directly:
+repository root, `RAILPACK_NODE_NPM_INSTALL=npm ci`, backend build/start commands,
+pre-deploy migration command, readiness path, single replica, outbound IPv6,
+and draining window. Production deployment is not considered complete until
+those live settings and behaviors are verified.
+
+FBH5 Phase 1 rehearsed the workflow in a detached clean worktree with no copied
+`node_modules`, generated Prisma client, `dist`, `.env`, CA, or other local
+artifacts. The final rehearsal ran under isolated Node 22.22.0 with npm 10.9.4.
+Root `npm ci` succeeded from the lockfile; Prisma Client 7.10.0 was generated
+into the declared backend path; the production TypeScript build succeeded;
+`backend/dist/index.js` existed; and the compiled ESM server passed a synthetic
+production-config startup, liveness request, and termination smoke without
+connecting to PostgreSQL, Supabase Auth, R2, Railway, or production data. Phase
+2 must still confirm that the live Railpack build selects the declared Node 22
+policy.
+
+The existing npm audit result remains four high-severity findings in Prisma
+CLI/configuration dependency paths (`prisma`, `@prisma/config`,
+`deepmerge-ts`, and Prisma's unused MySQL driver dependency). FBH5 does not run
+automatic remediation or change Prisma versions; this remains a separately
+reviewed dependency follow-up rather than a deployment-time mutation.
+
+Development migrations remain `npx prisma migrate dev`. Production migrations
+remain `prisma migrate deploy`. Never run `migrate dev`, `db push`, reset, or
+automatic migration repair against production.
 
 ---
 

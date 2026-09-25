@@ -6,6 +6,9 @@ backend/src/generated/prisma/
 .env.local
 .env.*.local
 .tools/
+.railway/
 node-v*-win-x64.zip
 *.log
+*.crt
+*.pem
 .DS_Store
