@@ -96,6 +96,12 @@ Frontend foundation:
   badges, page headings, empty/error/loading states, modal foundations, and
   responsive table containment. Business pages are lazy-loaded at route level
   to keep catalog and inventory code out of the initial bundle.
+- The Products UI reuses the authenticated profile Account currency for
+  decimal-string presentation only. It never guesses a missing currency or
+  performs financial arithmetic in JavaScript. OWNER variant mutations may
+  include catalog selling price; WAREHOUSE mutations omit that OWNER-only field
+  while retaining its permitted read-only display. Catalog rows adapt to
+  touch-oriented cards and a compact filter sheet on mobile.
 - An application error boundary presents a safe recovery screen without raw
   production stack traces.
 - Supabase's browser client exclusively owns browser-session persistence and

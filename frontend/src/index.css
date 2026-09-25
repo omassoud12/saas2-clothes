@@ -338,6 +338,12 @@ button:disabled { cursor: wait; opacity: .65; }
 .product-filter-panel, .product-panel, .product-state, .product-confirmation { min-width: 0; border: 1px solid #d4ddd1; border-radius: 18px; padding: 1.2rem; background: #fff; box-shadow: 0 12px 34px rgba(31, 51, 37, .05); }
 .product-filter-panel { margin: 0; gap: .55rem; }
 .product-filter-panel label, .product-form label, .product-image-form label { display: block; margin: .3rem 0 .4rem; }
+.product-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .6rem; }
+.product-search-row > div { min-width: 0; }
+.product-search-row input { width: 100%; }
+.product-search-row > button { min-height: 42px; margin: 0; }
+.product-filter-toggle, .product-filter-sheet-heading, .product-filter-backdrop { display: none; }
+.product-filter-options { display: grid; gap: .7rem; }
 .product-filter-fields, .product-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
 .product-filter-fields > div, .product-form-grid > div { min-width: 0; }
 .product-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
@@ -440,6 +446,14 @@ button:disabled { cursor: wait; opacity: .65; }
 @media (max-width: 600px) {
   .product-page-heading { align-items: stretch; flex-direction: column; }
   .product-page-heading button { width: 100%; }
+  .product-search-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .product-search-row > button[type="submit"] { grid-column: 1 / -1; }
+  .product-filter-toggle { display: inline-flex; }
+  .product-filter-backdrop { display: block; position: fixed; z-index: 89; inset: 0; border: 0; border-radius: 0; margin: 0; background: rgba(22, 38, 26, .55); }
+  .product-filter-options { display: none; position: fixed; z-index: 90; right: 0; bottom: 0; left: 0; max-height: min(82vh, 620px); overflow-y: auto; border-radius: 20px 20px 0 0; padding: 1rem; background: #fff; box-shadow: 0 -18px 54px rgba(22, 38, 26, .2); }
+  .product-filter-options.is-open { display: grid; }
+  .product-filter-sheet-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .product-filter-sheet-heading .text-button { min-height: 44px; margin: 0; }
   .product-filter-fields, .product-form-grid, .product-variant dl { grid-template-columns: 1fr; }
   .product-card { grid-template-columns: 68px minmax(0, 1fr); }
   .product-card .product-status { grid-column: 2; justify-self: start; }

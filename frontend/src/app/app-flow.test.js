@@ -32,6 +32,7 @@ function createProfile(role, status = 'ACTIVE') {
             id: accountId,
             name: 'Cedar Clothes',
             status,
+            baseCurrency: 'LBP',
             rejectionReason: null,
           },
   }

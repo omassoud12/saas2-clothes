@@ -42,6 +42,7 @@ function mapFailure(result) {
     return error(result.code, 'Your store is not currently active.', { requiresAccountReview: true })
   }
   if (result.status === 403) return error(result.code, 'You are not authorized for this action.')
+  if (result.status === 429) return error(result.code, 'Too many attempts. Please wait a moment and try again.')
   return error(result.code, messages[result.code] || 'Something went wrong. Please try again.')
 }
 
@@ -58,6 +59,10 @@ export function canShowProductMargin(role, product) {
 
 export function canShowVariantCost(role, variant) {
   return role === 'OWNER' && Object.hasOwn(variant, 'lastPurchaseCost')
+}
+
+export function canEditVariantPrice(role) {
+  return role === 'OWNER'
 }
 
 function productResponse(result, status) {
@@ -110,7 +115,7 @@ export function buildProductUpdatePayload(draft, role, current) {
   return Object.keys(payload).length ? { ok: true, payload } : { ok: true, unchanged: true }
 }
 
-export function buildVariantPayload(draft) {
+export function buildVariantPayload(draft, role) {
   const sku = typeof draft?.sku === 'string' ? draft.sku.trim() : ''
   if (!sku || [...sku].length > 100) return error('INVALID_VARIANT_SKU', 'Enter a SKU of 1–100 characters.')
   const payload = { sku }
@@ -119,12 +124,30 @@ export function buildVariantPayload(draft) {
     if ([...value].length > 100) return error('INVALID_VARIANT_FIELD', `${field} must be 100 characters or fewer.`)
     payload[field] = value || null
   }
-  const price = String(draft.sellingPrice ?? '').trim()
-  if (price && !/^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/.test(price)) {
-    return error('INVALID_VARIANT_PRICE', 'Enter a nonnegative price with at most two decimals.')
+  if (role === 'OWNER') {
+    const price = String(draft.sellingPrice ?? '').trim()
+    if (price && !/^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/.test(price)) {
+      return error('INVALID_VARIANT_PRICE', 'Enter a nonnegative price with at most two decimals.')
+    }
+    payload.sellingPrice = price || null
   }
-  payload.sellingPrice = price || null
   return { ok: true, payload }
+}
+
+export function findVariantDuplicate(draft, variants, editingId = null) {
+  const sku = String(draft?.sku ?? '').trim().toLowerCase()
+  const barcode = String(draft?.barcode ?? '').trim().toLowerCase()
+  const candidates = Array.isArray(variants) ? variants : []
+  for (const variant of candidates) {
+    if (variant.id === editingId) continue
+    if (sku && String(variant.sku ?? '').trim().toLowerCase() === sku) {
+      return error('VARIANT_SKU_ALREADY_EXISTS', messages.VARIANT_SKU_ALREADY_EXISTS)
+    }
+    if (barcode && String(variant.barcode ?? '').trim().toLowerCase() === barcode) {
+      return error('VARIANT_BARCODE_ALREADY_EXISTS', messages.VARIANT_BARCODE_ALREADY_EXISTS)
+    }
+  }
+  return { ok: true }
 }
 
 export function validateImage(file) {
@@ -172,14 +195,14 @@ export async function setProductActive({ supabase, fetchImpl, productId, isActiv
   return productResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}`, method: 'PATCH', payload: { isActive } }), 200)
 }
 
-export async function createVariant({ supabase, fetchImpl, productId, draft }) {
-  const built = buildVariantPayload(draft)
+export async function createVariant({ supabase, fetchImpl, productId, draft, role }) {
+  const built = buildVariantPayload(draft, role)
   if (!built.ok) return built
   return variantResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants`, method: 'POST', payload: built.payload }), 201)
 }
 
-export async function updateVariant({ supabase, fetchImpl, productId, variantId, draft }) {
-  const built = buildVariantPayload(draft)
+export async function updateVariant({ supabase, fetchImpl, productId, variantId, draft, role }) {
+  const built = buildVariantPayload(draft, role)
   if (!built.ok) return built
   return variantResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`, method: 'PATCH', payload: built.payload }), 200)
 }

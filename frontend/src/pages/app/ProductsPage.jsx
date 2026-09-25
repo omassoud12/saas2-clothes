@@ -3,10 +3,11 @@ import { loadCategories } from '../../app/category-flow.js'
 import { RestockDialog } from '../../app/RestockDialog.jsx'
 import { canRestock } from '../../app/restock-flow.js'
 import {
-  canShowProductMargin, canShowVariantCost, createProduct, createVariant, getProduct, listProducts, removeProductImage,
+  canEditVariantPrice, canShowProductMargin, canShowVariantCost, createProduct, createVariant, findVariantDuplicate, getProduct, listProducts, removeProductImage,
   setProductActive, setVariantActive, updateProduct, updateVariant,
   uploadProductImage, validateImage,
 } from '../../app/product-flow.js'
+import { formatMoney, summarizeProductCatalog } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
 
 const blankProduct = { name: '', categoryId: '', profitMarginOverride: '' }
@@ -43,23 +44,37 @@ function ProductForm({ draft, change, categories, categoriesLoading = false, rol
   </form>
 }
 
-function VariantForm({ draft, change, editing, busy, submit, cancel }) {
+function VariantForm({ draft, change, editing, busy, submit, cancel, role, currency }) {
+  const fields = [
+    ['sku', 'SKU', true], ['barcode', 'Barcode'], ['color', 'Color'], ['size', 'Size'],
+    ...(canEditVariantPrice(role) ? [['sellingPrice', `Default selling price${currency ? ` (${currency})` : ''}`]] : []),
+  ]
   return <form className="product-form" onSubmit={submit}>
-    <div className="product-form-grid">{[
-      ['sku', 'SKU', true], ['barcode', 'Barcode'], ['color', 'Color'], ['size', 'Size'], ['sellingPrice', 'Default selling price'],
-    ].map(([field, label, required]) => <div key={field}><label htmlFor={`catalog-variant-${field}`}>{label}</label><input id={`catalog-variant-${field}`} value={draft[field]} required={Boolean(required)} maxLength={field === 'sellingPrice' ? undefined : 100} inputMode={field === 'sellingPrice' ? 'decimal' : undefined} disabled={busy} onChange={(event) => change({ ...draft, [field]: event.target.value })} /></div>)}</div>
-    <p className="product-muted">Stock and purchase cost are read-only here. Owners use Restock to add inventory.</p>
+    <div className="product-form-grid">{fields.map(([field, label, required]) => <div key={field}><label htmlFor={`catalog-variant-${field}`}>{label}</label><input id={`catalog-variant-${field}`} value={draft[field]} required={Boolean(required)} maxLength={field === 'sellingPrice' ? undefined : 100} inputMode={field === 'sellingPrice' ? 'decimal' : undefined} disabled={busy} onChange={(event) => change({ ...draft, [field]: event.target.value })} /></div>)}</div>
+    <p className="product-muted">Stock and purchase cost are read-only here.{role === 'OWNER' ? ' Use Restock to add inventory.' : ' Selling price is managed by an owner.'}</p>
     <div className="product-actions"><button type="submit" disabled={busy}>{busy ? 'Saving...' : editing ? 'Save variant' : 'Add variant'}</button><button type="button" className="secondary-action" disabled={busy} onClick={cancel}>Cancel</button></div>
   </form>
 }
 
+function ProductCatalogCard({ product, currency, selected, select, listVersion, imageRevision }) {
+  const summary = summarizeProductCatalog(product, currency)
+  return <button type="button" className={`product-card ${selected ? 'is-selected' : ''}`} onClick={select}>
+    <ProductImage key={`${product.imageUrl || product.id}-${listVersion}`} url={product.imageUrl} name={product.name} revision={imageRevision} />
+    <span className="product-card-copy"><strong>{product.name}</strong><span>{product.category.name}</span><span>{product.variants.length} variant{product.variants.length === 1 ? '' : 's'} · {summary.stock} in stock</span><small>{summary.price}</small></span>
+    <span className={`product-status ${product.isActive ? '' : 'is-inactive'}`}>{product.isActive ? 'Active' : 'Inactive'}</span>
+  </button>
+}
+
 export function ProductsPage({ profile }) {
   const role = profile.user.role
+  const currency = profile.account?.baseCurrency
   const [categories, setCategories] = useState([])
   const [categoryState, setCategoryState] = useState({ kind: 'loading' })
   const [categoryAttempt, setCategoryAttempt] = useState(0)
   const [filters, setFilters] = useState({ search: '', categoryId: '', isActive: 'true', page: 1 })
   const [searchDraft, setSearchDraft] = useState('')
+  const [filterDraft, setFilterDraft] = useState({ categoryId: '', isActive: 'true' })
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [listState, setListState] = useState({ kind: 'loading' })
   const [listVersion, setListVersion] = useState(0)
   const [selectedId, setSelectedId] = useState(null)
@@ -79,6 +94,8 @@ export function ProductsPage({ profile }) {
   const mutationPending = useRef(false)
   const listRequestId = useRef(0)
   const detailRequestId = useRef(0)
+  const filterToggle = useRef(null)
+  const filterPanel = useRef(null)
 
   useEffect(() => {
     let active = true
@@ -114,6 +131,27 @@ export function ProductsPage({ profile }) {
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
   }, [previewUrl])
+
+  useEffect(() => {
+    if (!filtersOpen) return undefined
+    const panel = filterPanel.current
+    const toggle = filterToggle.current
+    const focusable = panel ? [...panel.querySelectorAll('button, select, input')] : []
+    focusable[0]?.focus()
+    function closeFilters(event) {
+      if (event.key === 'Escape') setFiltersOpen(false)
+      if (event.key !== 'Tab' || focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    window.addEventListener('keydown', closeFilters)
+    return () => {
+      window.removeEventListener('keydown', closeFilters)
+      toggle?.focus()
+    }
+  }, [filtersOpen])
 
   function chooseFile(selected) {
     setFile(selected)
@@ -164,9 +202,11 @@ export function ProductsPage({ profile }) {
   async function submitVariant(event) {
     event.preventDefault()
     const editing = variantEdit.id
+    const duplicate = findVariantDuplicate(variantEdit.draft, detailState.product.variants, editing)
+    if (!duplicate.ok) { setFeedback({ kind: 'error', message: duplicate.message }); return }
     const result = await run('variant', () => editing
-      ? updateVariant({ supabase, productId: selectedId, variantId: editing, draft: variantEdit.draft })
-      : createVariant({ supabase, productId: selectedId, draft: variantEdit.draft }))
+      ? updateVariant({ supabase, productId: selectedId, variantId: editing, draft: variantEdit.draft, role })
+      : createVariant({ supabase, productId: selectedId, draft: variantEdit.draft, role }))
     if (!result?.ok) return
     setVariantEdit(null); refreshDetail(); refreshList()
     setFeedback({ kind: 'success', message: editing ? 'Variant updated.' : 'Variant added with zero stock.' })
@@ -209,25 +249,25 @@ export function ProductsPage({ profile }) {
   return <section className="business-page products-page">
     <header className="business-page-heading product-page-heading"><div><span className="eyebrow">Catalog</span><h1>Products</h1><p>Manage clothing styles, variants, and their primary image.</p></div>
       <button type="button" disabled={Boolean(busy)} onClick={() => { detailRequestId.current += 1; setCreating(true); setSelectedId(null); setDetailState({ kind: 'idle' }); chooseFile(null); setFeedback(null) }}>Add product</button></header>
+    {!currency && <p className="product-feedback error-message" role="alert">Account currency is unavailable. Monetary values cannot be displayed safely.</p>}
     {feedback && <p className={`product-feedback ${feedback.kind}-message`} role={feedback.kind === 'error' ? 'alert' : 'status'}>{feedback.message}</p>}
     {creating && <section className="product-panel" aria-label="Create product"><span className="eyebrow">New catalog item</span><h2>Add product</h2><p className="product-muted">Create the product first. Its image and variants are optional.</p>
       <ProductForm draft={createDraft} change={setCreateDraft} categories={categories} categoriesLoading={categoryState.kind === 'loading'} role={role} busy={Boolean(busy)} submit={submitCreate} cancel={() => setCreating(false)} /></section>}
 
     <div className="product-catalog-layout"><div className="product-list-column">
-      <form className="product-filter-panel" onSubmit={(event) => { event.preventDefault(); applyFilters({ ...filters, search: searchDraft.trim(), page: 1 }) }}>
-        <label htmlFor="product-search">Search products, SKU, or barcode</label><input id="product-search" type="search" maxLength={100} value={searchDraft} placeholder="Search catalog" onChange={(event) => setSearchDraft(event.target.value)} />
-        <div className="product-filter-fields"><div><label htmlFor="product-category-filter">Category</label><select id="product-category-filter" value={filters.categoryId} onChange={(event) => applyFilters({ ...filters, categoryId: event.target.value, page: 1 })}><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
-          <div><label htmlFor="product-status-filter">Status</label><select id="product-status-filter" value={filters.isActive} onChange={(event) => applyFilters({ ...filters, isActive: event.target.value, page: 1 })}><option value="true">Active products</option><option value="false">Inactive products</option><option value="all">All products</option></select></div></div>
-        <div className="product-actions"><button type="submit">Search</button><button type="button" className="secondary-action" onClick={() => { setSearchDraft(''); applyFilters({ search: '', categoryId: '', isActive: 'true', page: 1 }) }}>Reset</button></div>
+      <form className="product-filter-panel" onSubmit={(event) => { event.preventDefault(); applyFilters({ search: searchDraft.trim(), ...filterDraft, page: 1 }); setFiltersOpen(false) }}>
+        <div className="product-search-row"><div><label htmlFor="product-search">Search products, SKU, or barcode</label><input id="product-search" type="search" maxLength={100} value={searchDraft} placeholder="Search catalog" onChange={(event) => setSearchDraft(event.target.value)} /></div><button ref={filterToggle} type="button" className="secondary-action product-filter-toggle" aria-expanded={filtersOpen} aria-controls="product-filter-options" onClick={() => setFiltersOpen((open) => !open)}>Filters</button><button type="submit">Search</button></div>
+        {filtersOpen && <button className="product-filter-backdrop" type="button" aria-label="Close filters" onClick={() => setFiltersOpen(false)} />}
+        <div ref={filterPanel} id="product-filter-options" className={`product-filter-options ${filtersOpen ? 'is-open' : ''}`} role={filtersOpen ? 'dialog' : undefined} aria-modal={filtersOpen ? 'true' : undefined} aria-label="Product filters"><div className="product-filter-sheet-heading"><strong>Filter products</strong><button type="button" className="text-button" onClick={() => setFiltersOpen(false)}>Close</button></div><div className="product-filter-fields"><div><label htmlFor="product-category-filter">Category</label><select id="product-category-filter" value={filterDraft.categoryId} onChange={(event) => setFilterDraft({ ...filterDraft, categoryId: event.target.value })}><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+          <div><label htmlFor="product-status-filter">Status</label><select id="product-status-filter" value={filterDraft.isActive} onChange={(event) => setFilterDraft({ ...filterDraft, isActive: event.target.value })}><option value="true">Active products</option><option value="false">Inactive products</option><option value="all">All products</option></select></div></div>
+        <div className="product-actions"><button type="submit">Apply</button><button type="button" className="secondary-action" onClick={() => { setSearchDraft(''); setFilterDraft({ categoryId: '', isActive: 'true' }); setFiltersOpen(false); applyFilters({ search: '', categoryId: '', isActive: 'true', page: 1 }) }}>Clear</button></div></div>
       </form>
       {categoryState.kind === 'error' && <p className="product-inline-error" role="alert">Categories unavailable. {categoryState.message} <button className="text-button" type="button" onClick={() => setCategoryAttempt((n) => n + 1)}>Retry</button></p>}
       {listState.kind === 'loading' && <div className="product-state"><div className="spinner" aria-label="Loading products" /><p>Loading products...</p></div>}
       {listState.kind === 'error' && <div className="product-state"><h2>Products unavailable</h2><p className="error-message" role="alert">{listState.message}</p><button type="button" onClick={refreshList}>Try again</button></div>}
       {listState.kind === 'ready' && listState.products.length === 0 && <div className="product-state"><h2>No products found</h2><p>{filters.search || filters.categoryId || filters.isActive !== 'true' ? 'Try changing your search or filters.' : 'Add your first product to start your catalog.'}</p>{!filters.search && !filters.categoryId && filters.isActive === 'true' && <button type="button" onClick={() => setCreating(true)}>Add product</button>}</div>}
       {listState.kind === 'ready' && listState.products.length > 0 && <><div className="product-list-summary"><span>{listState.total} product{listState.total === 1 ? '' : 's'}</span><button className="text-button" type="button" onClick={() => { refreshList(); if (selectedId) refreshDetail() }}>Refresh images</button></div>
-        <div className="product-card-list">{listState.products.map((product) => <button type="button" key={product.id} className={`product-card ${selectedId === product.id ? 'is-selected' : ''}`} onClick={() => selectProduct(product.id)}>
-          <ProductImage key={`${product.imageUrl || product.id}-${listVersion}`} url={product.imageUrl} name={product.name} revision={imageRevision} /><span className="product-card-copy"><strong>{product.name}</strong><span>{product.category.name}</span><span>{product.variants.length} variant{product.variants.length === 1 ? '' : 's'}</span>{product.variants.length > 0 && <small>{product.variants.slice(0, 2).map((variant) => variant.sku).join(' · ')}</small>}{canShowProductMargin(role, product) && product.profitMarginOverride != null && <small>Margin override: {product.profitMarginOverride}</small>}</span><span className={`product-status ${product.isActive ? '' : 'is-inactive'}`}>{product.isActive ? 'Active' : 'Inactive'}</span>
-        </button>)}</div><nav className="product-pagination" aria-label="Product pages"><button type="button" className="secondary-action" disabled={filters.page <= 1} onClick={() => applyFilters({ ...filters, page: filters.page - 1 })}>Previous</button><span>Page {listState.page} of {pageCount}</span><button type="button" className="secondary-action" disabled={filters.page >= pageCount} onClick={() => applyFilters({ ...filters, page: filters.page + 1 })}>Next</button></nav></>}
+        <div className="product-card-list">{listState.products.map((product) => <ProductCatalogCard key={product.id} product={product} currency={currency} selected={selectedId === product.id} select={() => selectProduct(product.id)} listVersion={listVersion} imageRevision={imageRevision} />)}</div><nav className="product-pagination" aria-label="Product pages"><button type="button" className="secondary-action" disabled={filters.page <= 1} onClick={() => applyFilters({ ...filters, page: filters.page - 1 })}>Previous</button><span>Page {listState.page} of {pageCount}</span><button type="button" className="secondary-action" disabled={filters.page >= pageCount} onClick={() => applyFilters({ ...filters, page: filters.page + 1 })}>Next</button></nav></>}
     </div><div className="product-detail-column">
       {!selectedId && !creating && <div className="product-state"><h2>Select a product</h2><p>Choose a product to manage its image, details, and variants.</p></div>}
       {detailState.kind === 'loading' && selectedId && <div className="product-state"><div className="spinner" aria-label="Loading product details" /><p>Loading product details...</p></div>}
@@ -243,9 +283,9 @@ export function ProductsPage({ profile }) {
         </section>
         <section className="product-panel"><div className="product-section-heading"><div><span className="eyebrow">Sellable units</span><h2>Variants</h2></div><button type="button" className="secondary-action" disabled={Boolean(busy) || !detail.isActive} onClick={() => setVariantEdit({ id: null, draft: { ...blankVariant } })}>Add variant</button></div>
           {!detail.isActive && <p className="product-muted">Reactivate this product before adding variants.</p>}
-          {variantEdit && <VariantForm draft={variantEdit.draft} change={(draft) => setVariantEdit({ ...variantEdit, draft })} editing={Boolean(variantEdit.id)} busy={Boolean(busy)} submit={submitVariant} cancel={() => setVariantEdit(null)} />}
+          {variantEdit && <VariantForm draft={variantEdit.draft} change={(draft) => setVariantEdit({ ...variantEdit, draft })} editing={Boolean(variantEdit.id)} busy={Boolean(busy)} submit={submitVariant} cancel={() => setVariantEdit(null)} role={role} currency={currency} />}
           {detail.variants.length === 0 ? <div className="product-variants-empty"><p>No variants yet. Add a SKU to define a sellable unit; stock starts at zero.</p></div> : <div className="product-variant-list">{detail.variants.map((variant) => <article className="product-variant" key={variant.id}><div className="product-variant-heading"><strong>{variant.sku}</strong><span className={`product-status ${variant.isActive ? '' : 'is-inactive'}`}>{variant.isActive ? 'Active' : 'Inactive'}</span></div>
-            <dl><div><dt>Color / size</dt><dd>{[variant.color, variant.size].filter(Boolean).join(' / ') || 'Not available'}</dd></div><div><dt>Barcode</dt><dd>{valueOrUnavailable(variant.barcode)}</dd></div><div><dt>Selling price</dt><dd>{valueOrUnavailable(variant.sellingPrice)}</dd></div><div><dt>Current stock</dt><dd>{variant.currentStock} <small>read-only</small></dd></div>{canShowVariantCost(role, variant) && <div><dt>Last purchase cost</dt><dd>{valueOrUnavailable(variant.lastPurchaseCost)} <small>read-only</small></dd></div>}</dl>
+            <dl><div><dt>Color / size</dt><dd>{[variant.color, variant.size].filter(Boolean).join(' / ') || 'Not available'}</dd></div><div><dt>Barcode</dt><dd>{valueOrUnavailable(variant.barcode)}</dd></div><div><dt>Selling price</dt><dd>{variant.sellingPrice == null ? 'Not available' : formatMoney(variant.sellingPrice, currency)}</dd></div><div><dt>Current stock</dt><dd>{variant.currentStock} <small>read-only</small></dd></div>{canShowVariantCost(role, variant) && <div><dt>Last purchase cost</dt><dd>{variant.lastPurchaseCost == null ? 'Not available' : formatMoney(variant.lastPurchaseCost, currency, 4)} <small>read-only</small></dd></div>}</dl>
             <div className="product-actions">{canRestock(role, detail, variant) && <button type="button" disabled={Boolean(busy)} onClick={() => setRestockTarget(variant)}>Restock</button>}<button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { setVariantEdit({ id: variant.id, draft: { sku: variant.sku, barcode: variant.barcode ?? '', color: variant.color ?? '', size: variant.size ?? '', sellingPrice: variant.sellingPrice ?? '' } }); setConfirmation(null) }}>Edit variant</button><button type="button" className={variant.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy)} onClick={() => { setConfirmation({ kind: 'variant', id: variant.id, next: !variant.isActive, label: variant.sku }); setVariantEdit(null) }}>{variant.isActive ? 'Deactivate variant' : 'Reactivate variant'}</button></div>
           </article>)}</div>}
         </section>
@@ -256,7 +296,7 @@ export function ProductsPage({ profile }) {
       setRestockTarget(null); refreshDetail(); refreshList()
       setFeedback({ kind: 'success', message: result.idempotentReplay
         ? `This Restock was already processed. Current stock is ${result.variant.currentStock}.`
-        : `Restock completed: +${result.restock.quantity} units. Updated stock: ${result.variant.currentStock}. Purchase cost: ${result.restock.unitCost}.` })
+        : `Restock completed: +${result.restock.quantity} units. Updated stock: ${result.variant.currentStock}. Purchase cost: ${formatMoney(result.restock.unitCost, currency, 4)}.` })
     }} />}
   </section>
 }
