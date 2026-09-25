@@ -17,6 +17,21 @@ export function formatMoney(amount, currency, fractionDigits = 2) {
   return `${normalized} ${currency}`
 }
 
+export function decimalToMinorUnits(amount, fractionDigits = 2) {
+  if (typeof amount !== 'string' || !Number.isInteger(fractionDigits) || fractionDigits < 0 || fractionDigits > 4) return null
+  const match = decimalPattern.exec(amount)
+  if (!match || (match[1]?.length ?? 0) > fractionDigits) return null
+  const [integer, fraction = ''] = amount.split('.')
+  return BigInt(integer) * (10n ** BigInt(fractionDigits)) + BigInt(fraction.padEnd(fractionDigits, '0'))
+}
+
+export function minorUnitsToDecimal(amount, fractionDigits = 2) {
+  if (typeof amount !== 'bigint' || amount < 0n || !Number.isInteger(fractionDigits) || fractionDigits < 0 || fractionDigits > 4) return null
+  if (fractionDigits === 0) return amount.toString()
+  const scale = 10n ** BigInt(fractionDigits)
+  return `${amount / scale}.${(amount % scale).toString().padStart(fractionDigits, '0')}`
+}
+
 export function summarizeProductCatalog(product, currency) {
   const variants = Array.isArray(product?.variants) ? product.variants : []
   let stock = 0n

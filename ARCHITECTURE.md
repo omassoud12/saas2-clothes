@@ -102,6 +102,13 @@ Frontend foundation:
   include catalog selling price; WAREHOUSE mutations omit that OWNER-only field
   while retaining its permitted read-only display. Catalog rows adapt to
   touch-oriented cards and a compact filter sheet on mobile.
+- The Sales frontend uses the authenticated Account currency and exact
+  decimal-string/BigInt preview totals. Its cart remains local until the
+  transactional Sale endpoint confirms checkout; one frozen payload and UUID
+  are reused for retries of that logical checkout. OWNER may submit an explicit
+  price supported by the API, while WAREHOUSE sends the current catalog price.
+  Desktop uses a catalog/cart workspace and smaller screens use a focus-managed
+  cart sheet. Recent Sales history remains read-only and operational.
 - An application error boundary presents a safe recovery screen without raw
   production stack traces.
 - Supabase's browser client exclusively owns browser-session persistence and

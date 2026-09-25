@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { formatMoney, summarizeProductCatalog } from './money.js'
+import { decimalToMinorUnits, formatMoney, minorUnitsToDecimal, summarizeProductCatalog } from './money.js'
 
 describe('decimal-safe money presentation', () => {
   test('uses the authoritative currency for OWNER and WAREHOUSE display', () => {
@@ -27,5 +27,12 @@ describe('decimal-safe money presentation', () => {
       { sellingPrice: null, currentStock: 0 },
     ] }, 'EUR')
     assert.deepEqual(summary, { stock: '7', price: '12.00 EUR – 25.50 EUR' })
+  })
+
+  test('converts exact decimal strings to and from minor units without Number', () => {
+    assert.equal(decimalToMinorUnits('9007199254740993.25'), 900719925474099325n)
+    assert.equal(minorUnitsToDecimal(900719925474099325n), '9007199254740993.25')
+    assert.equal(decimalToMinorUnits('1.234'), null)
+    assert.equal(decimalToMinorUnits(12), null)
   })
 })
