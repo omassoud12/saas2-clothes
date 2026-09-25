@@ -534,7 +534,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .pos-success button { flex: 0 0 auto; margin: 0; }
 .pos-history { margin-top: 1rem; }
 .pos-history-list { display: grid; margin-top: .7rem; }
-.pos-history-row { display: grid; grid-template-columns: minmax(170px, 1.1fr) minmax(150px, 1fr) minmax(130px, .7fr); align-items: center; gap: .8rem; padding: .7rem .15rem; }
+.pos-history-row { display: grid; grid-template-columns: minmax(170px, 1.1fr) minmax(150px, 1fr) minmax(130px, .7fr) auto; align-items: center; gap: .8rem; padding: .7rem .15rem; }
 .pos-history-row + .pos-history-row { border-top: 1px solid #e0e8dc; }
 .pos-history-row > div { min-width: 0; }
 .pos-history-row strong, .pos-history-row span, .pos-history-row small { display: block; overflow-wrap: anywhere; }
@@ -543,10 +543,74 @@ button:disabled { cursor: wait; opacity: .65; }
 .pos-history-row > div:last-child span { margin: 0; }
 .pos-load-more { display: block; margin: .8rem auto 0; }
 
+/* Sale lifecycle */
+.lifecycle-backdrop { position: fixed; z-index: 120; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; margin: 0; background: rgba(17, 29, 20, .64); }
+.lifecycle-panel { position: fixed; z-index: 121; top: 3vh; right: 3vw; bottom: 3vh; width: min(1040px, 94vw); overflow: hidden; border: 1px solid #dce5d9; border-radius: 18px; background: #fff; box-shadow: 0 24px 80px rgba(15, 28, 18, .28); }
+.lifecycle-header { display: flex; min-height: 88px; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #dce5d9; padding: 1rem 1.25rem; background: #f8faf7; }
+.lifecycle-header h2, .lifecycle-flow-heading h3, .lifecycle-body h3 { margin: .18rem 0 0; color: #263b2c; font-family: Georgia, serif; font-weight: 500; }
+.lifecycle-header p { margin: .3rem 0 0; color: #657068; }
+.lifecycle-header > button { flex: 0 0 auto; margin: 0; }
+.lifecycle-body { height: calc(100% - 88px); overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem; }
+.lifecycle-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin-bottom: 1.2rem; }
+.lifecycle-summary-grid > div { display: grid; gap: .25rem; border: 1px solid #e0e8dc; border-radius: 12px; padding: .85rem; background: #f9fbf8; }
+.lifecycle-summary-grid span, .lifecycle-item span, .lifecycle-item small, .lifecycle-return-history span, .exchange-results span, .exchange-cart span, .exchange-review span { color: #657068; font-size: .75rem; }
+.lifecycle-summary-grid strong { overflow-wrap: anywhere; }
+.lifecycle-notice { display: grid; gap: .25rem; margin: .8rem 0; border-left: 4px solid #68876d; border-radius: 10px; padding: .8rem 1rem; background: #f1f6ef; }
+.lifecycle-notice.is-warning { border-color: #b06b32; background: #fff7ee; }
+.lifecycle-notice.is-voided { border-color: #9f4949; background: #fff2f2; }
+.lifecycle-notice p { margin: .2rem 0 0; }
+.lifecycle-items { display: grid; gap: .55rem; margin: .7rem 0 1.2rem; }
+.lifecycle-item { display: grid; grid-template-columns: minmax(180px, 1.5fr) minmax(135px, .8fr) minmax(130px, .7fr) auto; align-items: center; gap: .8rem; border: 1px solid #e0e8dc; border-radius: 12px; padding: .75rem; background: #fff; }
+.lifecycle-item-main, .lifecycle-item-numbers, .lifecycle-item-money { display: grid; gap: .18rem; min-width: 0; }
+.lifecycle-item-main strong, .lifecycle-item-main span { overflow-wrap: anywhere; }
+.lifecycle-item-numbers, .lifecycle-item-money { text-align: right; }
+.lifecycle-quantity { display: grid; grid-template-columns: 40px 38px 40px; align-items: center; text-align: center; }
+.lifecycle-quantity button { min-height: 40px; margin: 0; padding: .25rem; }
+.lifecycle-quantity span { color: #263b2c; font-size: .9rem; font-weight: 800; }
+.lifecycle-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0 1.4rem; }
+.lifecycle-actions button { margin: 0; }
+.lifecycle-return-history { display: grid; gap: .5rem; }
+.lifecycle-return-history article { display: grid; grid-template-columns: 1fr auto; gap: .4rem 1rem; border-bottom: 1px solid #e2e8df; padding: .7rem 0; }
+.lifecycle-return-history article > div { display: grid; gap: .15rem; }
+.lifecycle-return-history article > div:last-of-type { text-align: right; }
+.lifecycle-return-history p { grid-column: 1 / -1; margin: 0; color: #536158; }
+.lifecycle-flow { display: grid; gap: 1rem; }
+.lifecycle-flow-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.lifecycle-flow-heading button { margin: 0; }
+.lifecycle-reason { display: grid; gap: .35rem; }
+.lifecycle-reason textarea { min-height: 88px; resize: vertical; }
+.lifecycle-review { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-radius: 12px; padding: .9rem 1rem; background: #edf4ea; }
+.lifecycle-review strong { text-align: right; }
+.lifecycle-submit { position: sticky; bottom: -1.25rem; display: flex; justify-content: flex-end; border-top: 1px solid #dce5d9; margin: 0 -1.25rem -1.25rem; padding: .85rem 1.25rem; background: rgba(255, 255, 255, .97); }
+.lifecycle-submit button { min-width: 210px; margin: 0; }
+.lifecycle-void { max-width: 720px; margin: 0 auto; }
+.exchange-catalog { display: grid; gap: .65rem; border-top: 1px solid #dce5d9; padding-top: 1rem; }
+.exchange-catalog > label { display: grid; gap: .3rem; }
+.exchange-results { display: grid; max-height: 270px; overflow-y: auto; gap: .45rem; padding-right: .2rem; }
+.exchange-results article { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(135px, .7fr) auto; align-items: center; gap: .7rem; border: 1px solid #e0e8dc; border-radius: 10px; padding: .65rem; }
+.exchange-results article > div { display: grid; gap: .15rem; min-width: 0; }
+.exchange-results button { min-height: 40px; margin: 0; }
+.exchange-cart { display: grid; gap: .5rem; border-top: 1px solid #dce5d9; padding-top: 1rem; }
+.exchange-cart > article { display: grid; grid-template-columns: minmax(160px, 1fr) auto minmax(130px, .6fr) auto; align-items: center; gap: .7rem; border: 1px solid #e0e8dc; border-radius: 10px; padding: .65rem; background: #f9fbf8; }
+.exchange-cart > article > div:first-child, .exchange-cart > article label { display: grid; gap: .18rem; }
+.exchange-cart input { width: 100%; padding: .55rem; }
+.exchange-cart button { margin: 0; }
+.exchange-review { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.exchange-review > div { display: grid; gap: .25rem; border: 1px solid #dce5d9; border-radius: 10px; padding: .8rem; }
+.exchange-review > div:last-child { background: #edf4ea; }
+.lifecycle-discard { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(17, 29, 20, .56); }
+.lifecycle-discard > div { width: min(440px, 100%); border-radius: 14px; padding: 1.2rem; background: #fff; box-shadow: 0 18px 50px rgba(15, 28, 18, .25); }
+.lifecycle-discard h3 { margin-top: 0; }
+
 @media (max-width: 1000px) {
   .pos-layout { grid-template-columns: 1fr; }
   .pos-cart-column { position: static; }
   .pos-cart-lines { max-height: none; }
+  .lifecycle-panel { top: 2vh; right: 2vw; bottom: 2vh; width: 96vw; }
+  .lifecycle-item { grid-template-columns: minmax(160px, 1.2fr) minmax(125px, .8fr) minmax(120px, .7fr); }
+  .lifecycle-item .lifecycle-quantity { grid-column: 1 / -1; justify-self: end; }
+  .exchange-cart > article { grid-template-columns: minmax(160px, 1fr) auto minmax(130px, .7fr); }
+  .exchange-cart > article > button { grid-column: 1 / -1; justify-self: end; }
 }
 
 @media (max-width: 700px) {
@@ -569,6 +633,32 @@ button:disabled { cursor: wait; opacity: .65; }
   .pos-history-row + .pos-history-row { margin-top: .55rem; border-top: 1px solid #e0e8dc; }
   .pos-history-row > div:nth-child(2) { grid-column: 1; }
   .pos-history-row > div:last-child { grid-column: 2; grid-row: 1 / span 2; align-items: flex-end; flex-direction: column; }
+  .pos-history-row > button { grid-column: 1 / -1; width: 100%; }
+  .lifecycle-panel { inset: 0; width: 100%; border: 0; border-radius: 0; }
+  .lifecycle-header { min-height: 80px; padding: .8rem; }
+  .lifecycle-header h2 { font-size: 1.2rem; }
+  .lifecycle-body { height: calc(100% - 80px); padding: .85rem; }
+  .lifecycle-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lifecycle-item { grid-template-columns: 1fr auto; align-items: start; }
+  .lifecycle-item-main { grid-column: 1; }
+  .lifecycle-item-numbers { grid-column: 1; text-align: left; }
+  .lifecycle-item-money { grid-column: 2; grid-row: 1 / span 2; }
+  .lifecycle-item .lifecycle-quantity { grid-column: 1 / -1; justify-self: stretch; grid-template-columns: 48px 1fr 48px; }
+  .lifecycle-actions { display: grid; }
+  .lifecycle-actions button { width: 100%; }
+  .lifecycle-return-history article { grid-template-columns: 1fr; }
+  .lifecycle-return-history article > div:last-of-type { text-align: left; }
+  .lifecycle-flow-heading { align-items: flex-start; }
+  .lifecycle-review { align-items: flex-start; flex-direction: column; }
+  .lifecycle-review strong { text-align: left; }
+  .lifecycle-submit { bottom: -.85rem; margin: 0 -.85rem -.85rem; padding: .75rem .85rem; }
+  .lifecycle-submit button { width: 100%; min-width: 0; }
+  .exchange-results article { grid-template-columns: 1fr auto; }
+  .exchange-results article > div:nth-child(2) { grid-column: 1; }
+  .exchange-results article > button { grid-column: 2; grid-row: 1 / span 2; min-width: 64px; }
+  .exchange-cart > article { grid-template-columns: 1fr; }
+  .exchange-cart > article > button { grid-column: 1; justify-self: start; }
+  .exchange-review { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {
@@ -581,4 +671,11 @@ button:disabled { cursor: wait; opacity: .65; }
   .pos-line-total { text-align: left; }
   .pos-history-row { grid-template-columns: 1fr; }
   .pos-history-row > div:nth-child(2), .pos-history-row > div:last-child { grid-column: 1; grid-row: auto; align-items: flex-start; text-align: left; }
+  .lifecycle-header .eyebrow, .lifecycle-header p { display: none; }
+  .lifecycle-summary-grid { grid-template-columns: 1fr; }
+  .lifecycle-flow-heading { align-items: stretch; flex-direction: column; }
+  .lifecycle-flow-heading button { width: 100%; }
+  .exchange-results article { grid-template-columns: 1fr; }
+  .exchange-results article > div:nth-child(2), .exchange-results article > button { grid-column: 1; grid-row: auto; }
+  .exchange-results article > button { width: 100%; }
 }

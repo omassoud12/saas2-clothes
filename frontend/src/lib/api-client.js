@@ -29,16 +29,23 @@ export function buildApiUrl(path, baseUrl = apiBaseUrl) {
   return baseUrl ? new URL(path, baseUrl).toString() : path
 }
 
-function errorResult(code, message, status) {
+function errorResult(code, message, status, extra = {}) {
   return Object.freeze({
     ok: false,
     code,
     message,
     ...(typeof status === 'number' ? { status } : {}),
+    ...extra,
   })
 }
 
-export function normalizeApiError(status, body, fallbackMessage) {
+function retryAfterSeconds(value) {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return null
+  const seconds = Number(value)
+  return Number.isSafeInteger(seconds) && seconds > 0 && seconds <= 3_600 ? seconds : null
+}
+
+export function normalizeApiError(status, body, fallbackMessage, retryAfter = null) {
   const code =
     typeof body?.error?.code === 'string' && body.error.code.length <= 100
       ? body.error.code
@@ -48,7 +55,8 @@ export function normalizeApiError(status, body, fallbackMessage) {
     return errorResult(code, 'Your session has expired. Sign in again.', status)
   }
   if (status === 429) {
-    return errorResult(code, 'Too many attempts. Please wait a moment and try again.', status)
+    const seconds = retryAfterSeconds(retryAfter)
+    return errorResult(code, 'Too many attempts. Please wait a moment and try again.', status, seconds === null ? {} : { retryAfterSeconds: seconds })
   }
   return errorResult(code, fallbackMessage, status)
 }
@@ -98,7 +106,7 @@ export async function apiRequest({
   }
 
   if (!response.ok) {
-    return normalizeApiError(response.status, body, fallbackMessage)
+    return normalizeApiError(response.status, body, fallbackMessage, response.headers?.get?.('Retry-After') ?? null)
   }
 
   return Object.freeze({ ok: true, status: response.status, data: body })

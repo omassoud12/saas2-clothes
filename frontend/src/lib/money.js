@@ -32,6 +32,19 @@ export function minorUnitsToDecimal(amount, fractionDigits = 2) {
   return `${amount / scale}.${(amount % scale).toString().padStart(fractionDigits, '0')}`
 }
 
+export function signedMinorUnitsToDecimal(amount, fractionDigits = 2) {
+  if (typeof amount !== 'bigint') return null
+  const absolute = minorUnitsToDecimal(amount < 0n ? -amount : amount, fractionDigits)
+  return absolute === null ? null : `${amount < 0n ? '-' : ''}${absolute}`
+}
+
+export function formatSignedMoney(amount, currency, fractionDigits = 2) {
+  if (typeof amount !== 'string') return 'Unavailable'
+  const negative = amount.startsWith('-')
+  const formatted = formatMoney(negative ? amount.slice(1) : amount, currency, fractionDigits)
+  return formatted === 'Unavailable' ? formatted : `${negative ? '-' : ''}${formatted}`
+}
+
 export function summarizeProductCatalog(product, currency) {
   const variants = Array.isArray(product?.variants) ? product.variants : []
   let stock = 0n

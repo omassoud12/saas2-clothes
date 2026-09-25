@@ -108,7 +108,16 @@ Frontend foundation:
   are reused for retries of that logical checkout. OWNER may submit an explicit
   price supported by the API, while WAREHOUSE sends the current catalog price.
   Desktop uses a catalog/cart workspace and smaller screens use a focus-managed
-  cart sheet. Recent Sales history remains read-only and operational.
+  cart sheet. Recent Sales history remains operational and opens a responsive
+  Sale-detail workflow. Return and atomic Exchange forms derive previews only
+  from historical sold prices and current replacement catalog prices, preserve
+  selections on recoverable failure, and reuse one frozen payload/UUID for a
+  logical retry. Exchange submits one backend Exchange request, never separate
+  client Return and Sale calls. Void is exposed only to OWNER and uses the
+  backend's same-actor/same-reason replay behavior; Return and Exchange remain
+  available to OWNER and WAREHOUSE. WAREHOUSE lifecycle views and payloads omit
+  cost, COGS, profit, and margin data. All confirmed lifecycle operations
+  refresh authoritative Sale details, history, and affected catalog stock.
 - An application error boundary presents a safe recovery screen without raw
   production stack traces.
 - Supabase's browser client exclusively owns browser-session persistence and

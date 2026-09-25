@@ -66,4 +66,12 @@ describe('frontend API client', () => {
       'Safe fallback',
     )
   })
+
+  test('retains only a bounded numeric Retry-After hint for rate limits', () => {
+    assert.deepEqual(normalizeApiError(429, { error: { code: 'RATE_LIMITED' } }, 'fallback', '45'), {
+      ok: false, code: 'RATE_LIMITED', message: 'Too many attempts. Please wait a moment and try again.', status: 429, retryAfterSeconds: 45,
+    })
+    assert.equal(normalizeApiError(429, {}, 'fallback', 'private-date').retryAfterSeconds, undefined)
+    assert.equal(normalizeApiError(429, {}, 'fallback', '999999').retryAfterSeconds, undefined)
+  })
 })

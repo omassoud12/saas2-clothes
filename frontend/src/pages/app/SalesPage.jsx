@@ -7,6 +7,7 @@ import {
 } from '../../app/sale-flow.js'
 import { decimalToMinorUnits, formatMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
+import { SaleLifecyclePanel } from './SaleLifecyclePanel.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -43,12 +44,12 @@ function Cart({ cart, currency, role, busy, onQuantity, onPrice, onRemove, onCle
   </section>
 }
 
-function RecentSales({ state, loadMore }) {
+function RecentSales({ state, loadMore, onOpen }) {
   return <section className="pos-history" aria-labelledby="recent-sales-heading"><div className="pos-section-heading"><div><span className="eyebrow">Store activity</span><h2 id="recent-sales-heading">Recent sales</h2></div></div>
     {state.kind === 'loading' && <div className="pos-inline-state"><div className="spinner" aria-label="Loading recent sales" /><span>Loading...</span></div>}
     {state.kind === 'error' && <p className="error-message" role="alert">{state.message}</p>}
     {state.kind === 'ready' && state.sales.length === 0 && <p className="pos-muted">No sales have been recorded yet.</p>}
-    {state.kind === 'ready' && state.sales.length > 0 && <div className="pos-history-list">{state.sales.map((sale) => <article key={sale.id} className="pos-history-row"><div><strong>Sale {sale.id.slice(0, 8)}</strong><span>{new Date(sale.createdAt).toLocaleString()}</span></div><div><span>{sale.itemCount} line{sale.itemCount === 1 ? '' : 's'} · {sale.totalUnits} units</span><small>{sale.seller?.name || 'Unknown seller'}</small></div><div><strong>{formatMoney(sale.totalAmount, sale.currency)}</strong><span className={`product-status ${sale.status === 'VOIDED' ? 'is-inactive' : ''}`}>{sale.status === 'VOIDED' ? 'Voided' : 'Completed'}</span></div></article>)}</div>}
+    {state.kind === 'ready' && state.sales.length > 0 && <div className="pos-history-list">{state.sales.map((sale) => <article key={sale.id} className="pos-history-row"><div><strong>Sale {sale.id.slice(0, 8)}</strong><span>{new Date(sale.createdAt).toLocaleString()}</span></div><div><span>{sale.itemCount} line{sale.itemCount === 1 ? '' : 's'} · {sale.totalUnits} units</span><small>{sale.seller?.name || 'Unknown seller'}</small></div><div><strong>{formatMoney(sale.totalAmount, sale.currency)}</strong><span className={`product-status ${sale.status === 'VOIDED' ? 'is-inactive' : ''}`}>{sale.status === 'VOIDED' ? 'Voided' : 'Completed'}</span></div><button type="button" className="secondary-action" onClick={() => onOpen(sale.id)}>View details</button></article>)}</div>}
     {state.kind === 'ready' && state.nextCursor && <button type="button" className="secondary-action pos-load-more" onClick={loadMore}>Load older sales</button>}
   </section>
 }
@@ -69,6 +70,8 @@ export function SalesPage({ profile }) {
   const [success, setSuccess] = useState(null)
   const [checkingOut, setCheckingOut] = useState(false)
   const [history, setHistory] = useState({ kind: 'loading' })
+  const [historyVersion, setHistoryVersion] = useState(0)
+  const [selectedSaleId, setSelectedSaleId] = useState(null)
   const catalogRequest = useRef(0)
   const operation = useRef(null)
   const checkoutGuard = useRef(createCheckoutGuard())
@@ -111,7 +114,7 @@ export function SalesPage({ profile }) {
       setHistory(result.ok ? { kind: 'ready', ...result } : { kind: 'error', message: result.message })
     })
     return () => { active = false }
-  }, [])
+  }, [historyVersion])
 
   useEffect(() => {
     if (!cartOpen) return undefined
@@ -205,6 +208,7 @@ export function SalesPage({ profile }) {
     </section><aside className={`pos-cart-column ${cartOpen ? 'is-open' : ''}`} ref={cartSheet} role={cartOpen ? 'dialog' : undefined} aria-modal={cartOpen ? 'true' : undefined} aria-label="Sale cart"><button type="button" className="pos-cart-close text-button" onClick={() => setCartOpen(false)}>Close cart</button><Cart cart={cart} currency={currency} role={role} busy={checkingOut} onQuantity={(id, quantity) => replaceCart(setCartQuantity(cart, id, quantity))} onPrice={changePrice} onRemove={(id) => replaceCart({ ok: true, cart: removeCartLine(cart, id) })} onClear={() => setClearPending(true)} onCheckout={checkout} />{clearPending && <div className="pos-clear-confirm" role="group" aria-label="Confirm clear cart"><p>Remove every item from this cart?</p><div className="product-actions"><button type="button" className="danger-action" onClick={() => { replaceCart({ ok: true, cart: [] }); setClearPending(false) }}>Clear cart</button><button type="button" className="secondary-action" onClick={() => setClearPending(false)}>Keep cart</button></div></div>}</aside></div>
     {cartOpen && <button type="button" className="pos-cart-backdrop" aria-label="Close cart" onClick={() => setCartOpen(false)} />}
     <button ref={cartToggle} type="button" className="pos-mobile-cart" aria-expanded={cartOpen} onClick={() => setCartOpen(true)}><span>Cart · {summary.units} item{summary.units === 1 ? '' : 's'}</span><strong>{summary.total === null ? 'Unavailable' : formatMoney(summary.total, currency)}</strong></button>
-    <RecentSales state={history} loadMore={loadMoreHistory} />
+    <RecentSales state={history} loadMore={loadMoreHistory} onOpen={setSelectedSaleId} />
+    {selectedSaleId && <SaleLifecyclePanel saleId={selectedSaleId} role={role} currency={currency} onClose={() => setSelectedSaleId(null)} onChanged={() => { setHistoryVersion((value) => value + 1); setCatalogVersion((value) => value + 1) }} />}
   </section>
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { decimalToMinorUnits, formatMoney, minorUnitsToDecimal, summarizeProductCatalog } from './money.js'
+import { decimalToMinorUnits, formatMoney, formatSignedMoney, minorUnitsToDecimal, signedMinorUnitsToDecimal, summarizeProductCatalog } from './money.js'
 
 describe('decimal-safe money presentation', () => {
   test('uses the authoritative currency for OWNER and WAREHOUSE display', () => {
@@ -34,5 +34,12 @@ describe('decimal-safe money presentation', () => {
     assert.equal(minorUnitsToDecimal(900719925474099325n), '9007199254740993.25')
     assert.equal(decimalToMinorUnits('1.234'), null)
     assert.equal(decimalToMinorUnits(12), null)
+  })
+
+  test('formats signed Exchange differences exactly', () => {
+    assert.equal(signedMinorUnitsToDecimal(-350n), '-3.50')
+    assert.equal(signedMinorUnitsToDecimal(250n), '2.50')
+    assert.equal(formatSignedMoney('-3.50', 'USD'), '-3.50 USD')
+    assert.equal(formatSignedMoney('2.50', 'USD'), '2.50 USD')
   })
 })
