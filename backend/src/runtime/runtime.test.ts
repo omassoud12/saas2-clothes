@@ -30,6 +30,10 @@ import {
   HTTP_REQUEST_TIMEOUT_MS,
   type ShutdownCoordinator,
 } from './server-lifecycle.js'
+import {
+  classifyStartupError,
+  type StartupStage,
+} from './startup-diagnostics.js'
 
 async function withServer<T>(
   app: ReturnType<typeof express>,
@@ -54,6 +58,156 @@ const noOpLogger: RuntimeLogger = {
   warn() {},
   error() {},
 }
+
+describe('safe startup diagnostics', () => {
+  for (const [message, stage, code] of [
+    [
+      'DATABASE_URL environment variable is required',
+      'environment',
+      'DATABASE_TLS_INVALID',
+    ],
+    [
+      'database TLS configuration is invalid',
+      'environment',
+      'DATABASE_TLS_INVALID',
+    ],
+    [
+      'SUPABASE_DB_CA_PATH environment variable is required',
+      'environment',
+      'DATABASE_CA_INVALID',
+    ],
+    [
+      'database TLS configuration is invalid',
+      'database_client',
+      'DATABASE_CA_INVALID',
+    ],
+    [
+      'database CA configuration is invalid',
+      'database_client',
+      'DATABASE_CA_INVALID',
+    ],
+    [
+      'CORS allowlist configuration is invalid',
+      'environment',
+      'CORS_CONFIG_INVALID',
+    ],
+    [
+      'TRUST_PROXY_HOPS configuration is invalid',
+      'environment',
+      'TRUST_PROXY_INVALID',
+    ],
+    [
+      'APP_REPLICA_COUNT configuration is invalid',
+      'environment',
+      'REPLICA_COUNT_INVALID',
+    ],
+    [
+      'SUPABASE_URL environment variable is required',
+      'environment',
+      'SUPABASE_CONFIG_INVALID',
+    ],
+    [
+      'SUPABASE_URL configuration is invalid',
+      'environment',
+      'SUPABASE_CONFIG_INVALID',
+    ],
+    [
+      'SUPABASE_PUBLISHABLE_KEY or SUPABASE_ANON_KEY environment variable is required',
+      'environment',
+      'SUPABASE_CONFIG_INVALID',
+    ],
+    [
+      'SUPABASE_PUBLISHABLE_KEY or SUPABASE_ANON_KEY configuration is invalid',
+      'environment',
+      'SUPABASE_CONFIG_INVALID',
+    ],
+    [
+      'SUPABASE_AUTH_TIMEOUT_MS configuration is invalid',
+      'environment',
+      'SUPABASE_CONFIG_INVALID',
+    ],
+    [
+      'PORT must be an integer between 1 and 65535',
+      'environment',
+      'PORT_INVALID',
+    ],
+    [
+      'NODE_ENV configuration is invalid',
+      'environment',
+      'NODE_ENV_INVALID',
+    ],
+    [
+      'API rate-limit configuration is invalid',
+      'environment',
+      'RATE_LIMIT_CONFIG_INVALID',
+    ],
+  ] as const) {
+    test(`classifies ${code} during ${stage}`, () => {
+      assert.equal(
+        classifyStartupError(new Error(message), stage),
+        code,
+      )
+    })
+  }
+
+  for (const code of ['EADDRINUSE', 'EACCES'] as const) {
+    test(`allowlists listener code ${code}`, () => {
+      const error = Object.assign(new Error('private listener detail'), { code })
+      assert.equal(classifyStartupError(error, 'listen'), code)
+      assert.equal(
+        classifyStartupError(error, 'database_client'),
+        'STARTUP_UNKNOWN',
+      )
+    })
+  }
+
+  test('classifies unknown errors without exposing their contents', () => {
+    const privateValues = [
+      'postgresql://user:password@database.example.invalid/app',
+      'supabase-secret-key',
+      'private-ca-base64',
+      '-----BEGIN CERTIFICATE-----',
+      'raw third-party failure',
+      'private stack detail',
+    ]
+    const error = new Error(privateValues.slice(0, -1).join(' '))
+    error.stack = privateValues.at(-1)
+    const stage: StartupStage = 'database_client'
+    const code = classifyStartupError(error, stage)
+    const records: string[] = []
+    const logger = createJsonLogger({
+      log: (record) => records.push(record),
+      warn: (record) => records.push(record),
+      error: (record) => records.push(record),
+    })
+
+    logger.error('server_startup_failed', {
+      reason: 'startup',
+      stage,
+      code,
+    })
+
+    assert.equal(code, 'STARTUP_UNKNOWN')
+    assert.equal(records.length, 1)
+    assert.deepEqual(
+      Object.fromEntries(
+        Object.entries(JSON.parse(records[0])).filter(
+          ([key]) => key !== 'timestamp',
+        ),
+      ),
+      {
+        level: 'error',
+        event: 'server_startup_failed',
+        reason: 'startup',
+        stage: 'database_client',
+        code: 'STARTUP_UNKNOWN',
+      },
+    )
+    for (const privateValue of privateValues) {
+      assert.doesNotMatch(records[0], new RegExp(privateValue, 'u'))
+    }
+  })
+})
 
 describe('process-local API rate limiting', () => {
   test('allows the threshold, rejects threshold + 1, and isolates trusted IP buckets', async () => {

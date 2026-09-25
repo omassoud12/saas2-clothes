@@ -1,3 +1,5 @@
+import type { StartupStage } from './startup-diagnostics.js'
+
 export type RuntimeLogLevel = 'info' | 'warn' | 'error'
 
 export interface RuntimeLogFields {
@@ -8,6 +10,7 @@ export interface RuntimeLogFields {
   readonly durationMs?: number
   readonly code?: string
   readonly reason?: string
+  readonly stage?: StartupStage
 }
 
 export interface RuntimeLogger {
