@@ -168,8 +168,9 @@ export async function submitSale({ supabase, fetchImpl, operation }) {
   return Object.freeze({ ok: true, sale, idempotentReplay: result.data.idempotentReplay === true })
 }
 
-export async function loadSaleHistory({ supabase, fetchImpl, cursor = null }) {
-  const query = new URLSearchParams({ limit: '10' })
+export async function loadSaleHistory({ supabase, fetchImpl, cursor = null, limit = 10 }) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) return failure('INVALID_SALE_LIMIT', 'Recent Sales limit is invalid.')
+  const query = new URLSearchParams({ limit: String(limit) })
   if (cursor) query.set('cursor', cursor)
   const result = await request({ supabase, fetchImpl, path: `/api/sales?${query}` })
   if (!result.ok) return mapFailure(result)

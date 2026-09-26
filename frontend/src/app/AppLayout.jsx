@@ -100,7 +100,7 @@ export function AppLayout({ pathname, navigate, profile }) {
             </p>
           )}
           <Suspense fallback={<LoadingState label="Loading page" />}>
-            <Page profile={profile} />
+            <Page profile={profile} navigate={navigate} />
           </Suspense>
         </main>
       </div>

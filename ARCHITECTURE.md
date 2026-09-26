@@ -1022,6 +1022,24 @@ is shown as unavailable rather than guessed. WAREHOUSE navigation and direct
 route resolution omit these screens, with the backend OWNER check remaining
 authoritative.
 
+The tenant Dashboard is a bounded composition of existing authoritative APIs,
+not a separate analytics engine. OWNER alone requests the current exact-date
+financial report and displays its returned net profit, net revenue, operating
+expenses, Sale count, and unit count without recomputation. WAREHOUSE never
+requests that report and its Dashboard state contains no report, revenue,
+expense, COGS, profit, margin, or Sale-total values.
+
+Both tenant roles request at most six recent Sales and the newest 12 active
+Products. Recent Sales are operational history; the WAREHOUSE Dashboard strips
+their individual money fields before storing presentation state. The Product
+response's authoritative total supplies the active-Product count. Variant,
+unit, and out-of-stock signals are explicitly labelled as a bounded view of the
+newest Product page, so they are never presented as whole-catalog aggregates.
+There is no invented low-stock threshold, stock valuation, trend, margin, or
+client-side financial aggregation. Dashboard sections load independently,
+support manual refresh without polling, and reject stale request results so one
+failed source does not erase other useful sections.
+
 ---
 
 ## 13. Security Principles

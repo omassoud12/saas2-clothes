@@ -153,4 +153,11 @@ describe('Sales history frontend contract', () => {
     assert.equal(url.searchParams.get('cursor'), 'safe_cursor')
     assert.equal(JSON.stringify(result).includes('unitCostAtSale'), false)
   })
+
+  test('supports a smaller bounded history page for Dashboard reuse', async () => {
+    let url
+    await loadSaleHistory({ supabase, limit: 6, fetchImpl: async (input) => { url = new URL(input, 'https://local.test'); return json(200, { sales: [], nextCursor: null }) } })
+    assert.equal(url.searchParams.get('limit'), '6')
+    assert.equal((await loadSaleHistory({ supabase, limit: 101 })).code, 'INVALID_SALE_LIMIT')
+  })
 })
