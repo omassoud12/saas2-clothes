@@ -1,12 +1,15 @@
-import { ModulePlaceholder } from './ModulePlaceholder.jsx'
+import { Button, Card, PageHeader } from '../../components/ui/index.jsx'
 
-export function ExchangesPage() {
+export function ExchangesPage({ navigate }) {
   return (
-    <ModulePlaceholder
-      eyebrow="Customer service"
-      title="Exchanges"
-      description="Coordinate an original-item return with a replacement sale."
-      emptyMessage="The exchange workspace will appear here when the frontend exchange workflow is connected."
-    />
+    <section className="business-page">
+      <PageHeader eyebrow="Customer service" title="Exchanges" description="Create an exchange from the original completed sale." />
+      <Card className="lifecycle-route-card">
+        <span className="eyebrow">Sale-linked workflow</span>
+        <h2>Find the original sale</h2>
+        <p>Open Sales history, choose the completed sale, then select Exchange. The return and replacement sale are completed together.</p>
+        <div><Button onClick={() => navigate('/app/sales')}>Open Sales history</Button></div>
+      </Card>
+    </section>
   )
 }

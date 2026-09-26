@@ -4,6 +4,7 @@ import {
   getInventoryReconciliation, listInventoryMovements, reconciliationSummary, signedQuantity,
 } from '../../app/inventory-audit-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import { formatMoney } from '../../lib/money.js'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -23,7 +24,7 @@ function ProductVariantFilters({ products, draft, setDraft }) {
     <div><label htmlFor={`${draft.kind}-variant`}>Variant</label><select id={`${draft.kind}-variant`} value={draft.variantId} disabled={!product} onChange={(event) => setDraft({ ...draft, variantId: event.target.value })}><option value="">All variants</option>{product?.variants.map((item) => <option key={item.id} value={item.id}>{item.sku}</option>)}</select></div></>
 }
 
-export function InventoryHistory({ role, products }) {
+export function InventoryHistory({ role, currency, products }) {
   const [draft, setDraft] = useState({ kind: 'history', productId: '', variantId: '', type: '', from: '', to: '' })
   const [filters, setFilters] = useState({})
   const [version, setVersion] = useState(0)
@@ -79,7 +80,7 @@ export function InventoryHistory({ role, products }) {
       <div className="inventory-audit-card-heading"><strong>{MOVEMENT_LABELS[movement.type] ?? movement.type}</strong><strong className={movement.quantityChange < 0 ? 'inventory-negative' : 'inventory-positive'}>{signedQuantity(movement.quantityChange)}</strong></div>
       <p>{movement.product.name} · {movement.variant.sku}{[movement.variant.color, movement.variant.size].filter(Boolean).length ? ` · ${[movement.variant.color, movement.variant.size].filter(Boolean).join(' / ')}` : ''}</p>
       <small>{new Date(movement.createdAt).toLocaleString()} · {movement.performer.name}{movement.performer.employeeCode ? ` (${movement.performer.employeeCode})` : ''}</small>
-      {canShowMovementCost(role, movement) && <p>Unit cost: {movement.unitCost}</p>}
+      {canShowMovementCost(role, movement) && <p>Unit cost: {formatMoney(movement.unitCost, currency, 4)}</p>}
       {canShowMovementNote(role, movement) && <p>Note: {movement.note}</p>}
     </article>)}</div>}
       {state.moreError && <p role="alert" className="error-message">{state.moreError}</p>}

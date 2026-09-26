@@ -128,6 +128,8 @@ export function Modal({ children, description, onClose, open, title }) {
   useEffect(() => {
     if (!open) return undefined
     const previouslyFocused = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     closeButton.current?.focus()
 
     function handleKeyDown(event) {
@@ -151,6 +153,7 @@ export function Modal({ children, description, onClose, open, title }) {
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
       previouslyFocused?.focus?.()
     }
   }, [onClose, open])

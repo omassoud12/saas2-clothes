@@ -3,6 +3,7 @@ import { listProducts, canShowVariantCost } from '../../app/product-flow.js'
 import { RestockDialog } from '../../app/RestockDialog.jsx'
 import { canRestock } from '../../app/restock-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import { formatMoney } from '../../lib/money.js'
 import { InventoryHistory, InventoryReconciliation } from './InventoryAuditSections.jsx'
 
 function redirectIfNeeded(result) {
@@ -13,6 +14,7 @@ function redirectIfNeeded(result) {
 
 export function InventoryPage({ profile }) {
   const role = profile.user.role
+  const currency = profile.account?.baseCurrency
   const [searchDraft, setSearchDraft] = useState('')
   const [filters, setFilters] = useState({ search: '', page: 1 })
   const [version, setVersion] = useState(0)
@@ -35,6 +37,7 @@ export function InventoryPage({ profile }) {
 
   return <section className="business-page inventory-page">
     <header className="business-page-heading"><span className="eyebrow">Stock control</span><h1>Inventory</h1><p>Review stock by variant. Stock changes are recorded through Restock, not direct edits.</p></header>
+    {!currency && role === 'OWNER' && <p className="product-feedback error-message" role="alert">Account currency is unavailable. Purchase costs cannot be displayed safely.</p>}
     {feedback && <p className="product-feedback success-message" role="status">{feedback}</p>}
     <form className="product-filter-panel inventory-filter" onSubmit={(event) => { event.preventDefault(); changeFilters({ search: searchDraft.trim(), page: 1 }) }}>
       <label htmlFor="inventory-search">Search products, SKU, or barcode</label><div className="product-actions"><input id="inventory-search" type="search" maxLength="100" placeholder="Search inventory" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} /><button type="submit">Search</button><button type="button" className="secondary-action" onClick={() => { setSearchDraft(''); changeFilters({ search: '', page: 1 }) }}>Reset</button></div>
@@ -48,19 +51,19 @@ export function InventoryPage({ profile }) {
         {product.variants.length === 0 ? <p className="product-muted">No variants yet.</p> : <div className="inventory-variant-list">{product.variants.map((variant) => <div className="inventory-variant" key={variant.id}>
           <div><strong>{variant.sku}</strong><p>{[variant.color, variant.size].filter(Boolean).join(' / ') || 'No color / size'} · <span className={variant.isActive ? '' : 'inventory-inactive'}>{variant.isActive ? 'Active' : 'Inactive'}</span></p></div>
           <div><small>Current stock</small><strong>{variant.currentStock}</strong></div>
-          {canShowVariantCost(role, variant) && <div><small>Last purchase cost</small><strong>{variant.lastPurchaseCost ?? 'Not available'}</strong></div>}
+          {canShowVariantCost(role, variant) && <div><small>Last purchase cost</small><strong>{variant.lastPurchaseCost === null ? 'Not available' : formatMoney(variant.lastPurchaseCost, currency, 4)}</strong></div>}
           {canRestock(role, product, variant) && <button type="button" onClick={() => { setFeedback(''); setTarget({ product, variant }) }}>Restock</button>}
         </div>)}</div>}
       </article>)}</div>}
       <nav className="product-pagination" aria-label="Inventory pages"><button type="button" className="secondary-action" disabled={filters.page <= 1} onClick={() => changeFilters({ ...filters, page: filters.page - 1 })}>Previous</button><span>Page {state.page} of {pageCount}</span><button type="button" className="secondary-action" disabled={filters.page >= pageCount} onClick={() => changeFilters({ ...filters, page: filters.page + 1 })}>Next</button></nav>
     </>}
-    <InventoryHistory key={`history-${version}-${filters.page}-${filters.search}`} role={role} products={state.kind === 'ready' ? state.products : []} />
+    <InventoryHistory key={`history-${version}-${filters.page}-${filters.search}`} role={role} currency={currency} products={state.kind === 'ready' ? state.products : []} />
     <InventoryReconciliation key={`reconciliation-${version}-${filters.page}-${filters.search}`} products={state.kind === 'ready' ? state.products : []} />
     {target && role === 'OWNER' && <RestockDialog key={`${target.product.id}:${target.variant.id}`} product={target.product} variant={target.variant} onClose={() => setTarget(null)} onRefresh={refresh} onSuccess={(result) => {
       setTarget(null); refresh()
       setFeedback(result.idempotentReplay
         ? `This Restock was already processed. Current stock is ${result.variant.currentStock}.`
-        : `Restock completed: +${result.restock.quantity} units. Updated stock: ${result.variant.currentStock}. Purchase cost: ${result.restock.unitCost}.`)
+        : `Restock completed: +${result.restock.quantity} units. Updated stock: ${result.variant.currentStock}. Purchase cost: ${formatMoney(result.restock.unitCost, currency, 4)}.`)
     }} />}
   </section>
 }

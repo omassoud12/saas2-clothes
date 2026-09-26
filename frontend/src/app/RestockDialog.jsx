@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRestockWorkflow, postRestock } from './restock-flow.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -12,6 +12,48 @@ export function RestockDialog({ product, variant, onClose, onSuccess, onRefresh 
   const [editingUncertain, setEditingUncertain] = useState(false)
   const [workflow] = useState(() => createRestockWorkflow({ send: ({ productId, variantId, payload, idempotencyKey }) =>
     postRestock({ supabase, productId, variantId, ...payload, idempotencyKey }) }))
+  const dialog = useRef(null)
+  const trigger = useRef(document.activeElement)
+  const closeState = useRef({ busy: false, uncertain: false })
+
+  const uncertain = workflow.hasUncertainAttempt()
+
+  useEffect(() => {
+    closeState.current = { busy, uncertain }
+  }, [busy, uncertain])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    const initialTrigger = trigger.current
+    document.body.style.overflow = 'hidden'
+    dialog.current?.querySelector('input:not(:disabled), button:not(:disabled), textarea:not(:disabled)')?.focus()
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        if (!closeState.current.busy && !closeState.current.uncertain) onClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = dialog.current ? [...dialog.current.querySelectorAll(
+        'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )] : []
+      if (focusable.length === 0) return
+      if (event.shiftKey && document.activeElement === focusable[0]) {
+        event.preventDefault()
+        focusable.at(-1).focus()
+      } else if (!event.shiftKey && document.activeElement === focusable.at(-1)) {
+        event.preventDefault()
+        focusable[0].focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      initialTrigger?.focus?.()
+    }
+  }, [onClose])
 
   async function handleResult(result) {
     if (result.skipped) return
@@ -38,10 +80,9 @@ export function RestockDialog({ product, variant, onClose, onSuccess, onRefresh 
     finally { setBusy(false) }
   }
 
-  const uncertain = workflow.hasUncertainAttempt()
   const conflict = feedback?.code === 'RESTOCK_IDEMPOTENCY_CONFLICT'
   const locked = busy || (uncertain && !editingUncertain) || conflict || stale
-  return <div className="restock-overlay"><section className="restock-dialog" role="dialog" aria-modal="true" aria-labelledby="restock-title" aria-describedby="restock-context">
+  return <div className="restock-overlay"><section ref={dialog} className="restock-dialog" role="dialog" aria-modal="true" aria-labelledby="restock-title" aria-describedby="restock-context">
     <div className="product-section-heading"><div><span className="eyebrow">Inventory</span><h2 id="restock-title">Restock variant</h2></div><button type="button" className="secondary-action" disabled={busy || uncertain} onClick={onClose} aria-label="Close Restock form">Close</button></div>
     <p id="restock-context" className="product-muted">{product.name} · {variant.sku}{[variant.color, variant.size].filter(Boolean).length ? ` · ${[variant.color, variant.size].filter(Boolean).join(' / ')}` : ''}</p>
     <p>Current stock: <strong>{variant.currentStock}</strong> <small>(read-only)</small></p>

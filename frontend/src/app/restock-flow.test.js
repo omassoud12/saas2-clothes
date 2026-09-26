@@ -11,7 +11,7 @@ const draft = { quantity: '5', unitCost: '12.3456', note: '  Cafe\u0301  ' }
 const supabase = { auth: { async getSession() { return { data: { session: { user: { id: 'u' }, access_token: 'test-token' } } } } } }
 const response = { restock: { id: 'movement', quantity: 5, unitCost: '12.3456' }, variant: { currentStock: 17, lastPurchaseCost: '12.3456' }, idempotentReplay: false }
 
-function json(status, data) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } }) }
+function json(status, data, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } }) }
 
 describe('Restock frontend contract', () => {
   test('OWNER sees Restock for active records; WAREHOUSE never sees action or cost', () => {
@@ -134,5 +134,18 @@ describe('Restock frontend contract', () => {
     const inactive = await postRestock({ supabase, productId, variantId, idempotencyKey: keyA, ...payload, fetchImpl: async () => json(409, { error: { code: 'VARIANT_INACTIVE' } }) })
     assert.equal(inactive.refresh, true)
     assert.equal(inactive.uncertain, undefined)
+  })
+
+  test('rate limits preserve the shared safe message and retry delay', async () => {
+    const limited = await postRestock({
+      supabase, productId, variantId, idempotencyKey: keyA, ...validateRestockDraft(draft).payload,
+      fetchImpl: async () => json(429, { error: { code: 'RATE_LIMITED', message: 'private limiter detail' } }, { 'Retry-After': '20' }),
+    })
+    assert.deepEqual(limited, {
+      ok: false,
+      code: 'RATE_LIMITED',
+      message: 'Too many attempts. Please wait a moment and try again.',
+      retryAfterSeconds: 20,
+    })
   })
 })

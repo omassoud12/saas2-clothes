@@ -487,6 +487,9 @@ button:disabled { cursor: wait; opacity: .65; }
 .inventory-stock-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .7rem 0 0; }
 .inventory-stock-comparison dt { color: #657068; font-size: .72rem; }
 .inventory-stock-comparison dd { margin: .2rem 0 0; font-weight: 750; }
+.lifecycle-route-card { display: grid; gap: .75rem; }
+.lifecycle-route-card h2, .lifecycle-route-card p { margin: 0; }
+.lifecycle-route-card > div { margin-top: .25rem; }
 
 @media (max-width: 1000px) { .product-catalog-layout { grid-template-columns: 1fr; } }
 @media (max-width: 750px) { .inventory-variant { grid-template-columns: repeat(2, minmax(0, 1fr)); } .inventory-variant button { justify-self: start; } .inventory-audit-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

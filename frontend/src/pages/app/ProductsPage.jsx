@@ -136,6 +136,8 @@ export function ProductsPage({ profile }) {
     if (!filtersOpen) return undefined
     const panel = filterPanel.current
     const toggle = filterToggle.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const focusable = panel ? [...panel.querySelectorAll('button, select, input')] : []
     focusable[0]?.focus()
     function closeFilters(event) {
@@ -149,6 +151,7 @@ export function ProductsPage({ profile }) {
     window.addEventListener('keydown', closeFilters)
     return () => {
       window.removeEventListener('keydown', closeFilters)
+      document.body.style.overflow = previousOverflow
       toggle?.focus()
     }
   }, [filtersOpen])

@@ -120,6 +120,8 @@ export function SalesPage({ profile }) {
     if (!cartOpen) return undefined
     const sheet = cartSheet.current
     const toggle = cartToggle.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const initial = sheet?.querySelector('button, input')
     initial?.focus()
     function handleKey(event) {
@@ -130,7 +132,7 @@ export function SalesPage({ profile }) {
       else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0].focus() }
     }
     window.addEventListener('keydown', handleKey)
-    return () => { window.removeEventListener('keydown', handleKey); toggle?.focus() }
+    return () => { window.removeEventListener('keydown', handleKey); document.body.style.overflow = previousOverflow; toggle?.focus() }
   }, [cartOpen])
 
   function replaceCart(result) {

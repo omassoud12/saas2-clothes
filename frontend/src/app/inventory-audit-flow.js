@@ -12,6 +12,7 @@ function failure(result) {
   }
   if (result.code === 'INVALID_INVENTORY_FILTER' || result.code === 'INVALID_CATALOG_ID') return { ok: false, message: 'Check the inventory filters and try again.' }
   if (result.code === 'PRODUCT_NOT_FOUND' || result.code === 'VARIANT_NOT_FOUND') return { ok: false, message: 'This catalog item is unavailable. Refresh and try again.' }
+  if (result.status === 429) return { ok: false, message: result.message, retryAfterSeconds: result.retryAfterSeconds }
   return { ok: false, message: 'Inventory audit is unavailable. Please try again.' }
 }
 

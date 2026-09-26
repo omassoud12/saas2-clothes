@@ -11,7 +11,7 @@ const supabase = { auth: { async getSession() { return { data: { session: { user
 const row = { id: 'movement-1', type: 'RESTOCK', quantityChange: 15, unitCost: '12.3456', note: 'Supplier', createdAt: '2026-09-17T12:00:00.000Z', product: { id: productId, name: 'Shirt' }, variant: { id: variantId, sku: 'SHIRT-RED' }, performer: { name: 'Store Owner', employeeCode: null } }
 const matched = { variant: { id: variantId, sku: 'SHIRT-RED', product: { id: productId, name: 'Shirt' } }, storedStock: 10, ledgerStock: 10, difference: 0, status: 'RECONCILED' }
 const mismatch = { ...matched, storedStock: 10, ledgerStock: 11, difference: -1, status: 'MISMATCH' }
-function json(status, data) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } }) }
+function json(status, data, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } }) }
 
 describe('inventory history frontend contract', () => {
   test('presents all movement types and signed quantities', () => {
@@ -47,6 +47,18 @@ describe('inventory history frontend contract', () => {
     const result = await listInventoryMovements({ supabase, fetchImpl: async () => json(503, { error: { code: 'INTERNAL_SERVER_ERROR', message: 'SQL secret' } }) })
     assert.equal(result.ok, false)
     assert.doesNotMatch(result.message, /SQL|secret/)
+  })
+
+  test('rate limits preserve the shared safe message and retry delay', async () => {
+    const result = await listInventoryMovements({
+      supabase,
+      fetchImpl: async () => json(429, { error: { code: 'RATE_LIMITED', message: 'private limiter detail' } }, { 'Retry-After': '15' }),
+    })
+    assert.deepEqual(result, {
+      ok: false,
+      message: 'Too many attempts. Please wait a moment and try again.',
+      retryAfterSeconds: 15,
+    })
   })
 })
 

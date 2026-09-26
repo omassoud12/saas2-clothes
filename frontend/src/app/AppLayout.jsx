@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   getBusinessShellIdentity,
   logoutBusinessApp,
@@ -29,6 +29,7 @@ export function AppLayout({ pathname, navigate, profile }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
+  const menuTrigger = useRef(null)
   const identity = getBusinessShellIdentity(profile)
   const resolvedRoute = resolveAppRoute(pathname, identity.role)
   const Page = pageComponents[resolvedRoute.route.key]
@@ -42,12 +43,35 @@ export function AppLayout({ pathname, navigate, profile }) {
   useEffect(() => {
     if (!mobileMenuOpen) return undefined
 
-    function closeOnEscape(event) {
-      if (event.key === 'Escape') setMobileMenuOpen(false)
+    const sidebar = document.getElementById('business-sidebar')
+    const previousOverflow = document.body.style.overflow
+    menuTrigger.current = document.activeElement
+    document.body.style.overflow = 'hidden'
+    sidebar?.querySelector('button:not(:disabled), a[href]')?.focus()
+
+    function handleMenuKey(event) {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = sidebar ? [...sidebar.querySelectorAll('button:not(:disabled), a[href]')] : []
+      if (focusable.length === 0) return
+      if (event.shiftKey && document.activeElement === focusable[0]) {
+        event.preventDefault()
+        focusable.at(-1).focus()
+      } else if (!event.shiftKey && document.activeElement === focusable.at(-1)) {
+        event.preventDefault()
+        focusable[0].focus()
+      }
     }
 
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+    window.addEventListener('keydown', handleMenuKey)
+    return () => {
+      window.removeEventListener('keydown', handleMenuKey)
+      document.body.style.overflow = previousOverflow
+      menuTrigger.current?.focus?.()
+    }
   }, [mobileMenuOpen])
 
   async function handleLogout() {

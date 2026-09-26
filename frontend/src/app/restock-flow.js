@@ -57,6 +57,7 @@ export async function postRestock({ supabase, fetchImpl = globalThis.fetch, prod
     if (result.status === 403 && ['ACCOUNT_PENDING', 'ACCOUNT_REJECTED', 'ACCOUNT_SUSPENDED', 'ACCOUNT_NOT_ACTIVE'].includes(result.code)) {
       return { ok: false, requiresAccountReview: true, message: 'Your store is not currently active.' }
     }
+    if (result.status === 429) return { ok: false, code: result.code, message: result.message, retryAfterSeconds: result.retryAfterSeconds }
     if (result.code === 'API_UNAVAILABLE' || result.status >= 500) return { ok: false, uncertain: true, message: uncertainMessage }
     return { ok: false, code: result.code, message: messages[result.code] || 'Restock could not be completed. Refresh and try again.', refresh: ['PRODUCT_INACTIVE', 'VARIANT_INACTIVE', 'PRODUCT_NOT_FOUND', 'VARIANT_NOT_FOUND'].includes(result.code) }
   }
