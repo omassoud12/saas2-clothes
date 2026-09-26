@@ -1003,6 +1003,25 @@ two-decimal strings, negative net/profit values remain signed, the validated
 Account currency is not converted, and `stockValue` remains null. No public
 DailyReport rebuild or other Report mutation endpoint exists.
 
+The production frontend exposes Expenses and Financial Reports only inside the
+OWNER application route set. Expense creation sends only amount, description,
+and the exact `YYYY-MM-DD` business date; it derives neither tenant nor currency
+in browser state. Expense history uses the bounded backend cursor and preserves
+business dates as calendar strings without a timezone round trip. Submission is
+guarded against duplicate interaction, but Expense intentionally has no
+idempotency key, so each confirmed successful request remains a distinct record.
+
+Daily and Summary report screens render the authoritative response fields and
+Account currency as exact decimal strings. They do not recompute revenue, COGS,
+expenses, profit, percentages, or stock value in JavaScript. Daily selection
+uses one exact date; Summary validates an ordered inclusive range of no more
+than 366 days. Changing report type invalidates older in-flight requests so a
+stale response cannot replace the current view. Zero-valued periods remain
+explicit, negative net/profit fields retain their sign, and a null stock value
+is shown as unavailable rather than guessed. WAREHOUSE navigation and direct
+route resolution omit these screens, with the backend OWNER check remaining
+authoritative.
+
 ---
 
 ## 13. Security Principles
