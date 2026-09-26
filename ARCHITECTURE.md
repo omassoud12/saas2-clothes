@@ -133,11 +133,15 @@ Frontend foundation:
   sensitive callback fragments are cleared before routing. Only
   `VITE_API_URL`, `VITE_SUPABASE_URL`, and
   `VITE_SUPABASE_PUBLISHABLE_KEY` are valid browser configuration values.
-- The production frontend target is Netlify. Its later deployment phase must
-  configure the deployed frontend origin, `VITE_API_URL`, Railway CORS origin,
-  Supabase authentication callback allowlisting, and the Netlify SPA fallback
-  to `index.html` so callback, status, and protected-route refreshes reach the
-  client application. These deployment settings are not completed by F2.
+- The production frontend target is Netlify. Repository-root `netlify.toml`
+  runs the root workspace `npm run build` command and publishes
+  `frontend/dist`. A non-forced `/*` rewrite to `/index.html` supports direct
+  History API refreshes while allowing generated static assets to be served
+  normally. Netlify browser configuration is limited to `VITE_API_URL`,
+  `VITE_SUPABASE_URL`, and `VITE_SUPABASE_PUBLISHABLE_KEY`; the Railway API
+  remains a separate explicit origin and is never proxied through Netlify.
+  Live deployment must configure the final frontend origin in Railway CORS and
+  in the Supabase site URL and authentication redirect allowlist.
 
 ---
 
@@ -1243,8 +1247,22 @@ also rejected without an insecure fallback.
 
 ## 14. Deployment
 
-The frontend deploys separately to Netlify. The backend deploys as one Railway
-service from the repository root because the root `package-lock.json` is the
+The frontend deploys separately to Netlify from the repository root so the
+root npm workspace and lockfile remain authoritative. Netlify uses
+`npm run build` and publishes `frontend/dist`; no Netlify Base Directory is
+configured. The repository's single SPA fallback rewrites otherwise-unmatched
+paths to `/index.html`, including public authentication, Account-state, and
+tenant application routes, without proxying `/api` or replacing existing
+static assets. Only `VITE_API_URL`, `VITE_SUPABASE_URL`, and
+`VITE_SUPABASE_PUBLISHABLE_KEY` may be configured as frontend environment
+variables. `VITE_API_URL` points directly to the separate HTTPS Railway API
+origin. The Netlify site has not been deployed by this configuration step;
+live setup must add the final Netlify origin to Railway
+`CORS_ALLOWED_ORIGINS` and configure the corresponding Supabase site URL and
+authentication redirect URLs.
+
+The backend deploys as one Railway service from the repository root because
+the root `package-lock.json` is the
 authoritative npm-workspace lockfile for both `backend` and `frontend`.
 Selecting `/backend` as the Railway service root would omit that lockfile and
 make `npm ci` non-reproducible. Railway must use only the explicit backend
