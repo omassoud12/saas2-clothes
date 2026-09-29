@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { canShowVariantCost } from './product-flow.js'
+import { canShowVariantCost } from '../products/product-flow.js'
 import { canRestock, createRestockWorkflow, postRestock, validateRestockDraft } from './restock-flow.js'
 
 const productId = '11111111-1111-4111-8111-111111111111'

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createExpense, createLatestRequestGuard, listExpenses, localBusinessDate, validateBusinessDateRange, canAccessFinance } from '../../app/finance-flow.js'
+import { createExpense, createLatestRequestGuard, listExpenses, localBusinessDate, validateBusinessDateRange, canAccessFinance } from '../../features/finance/finance-flow.js'
 import { createSubmissionGuard } from '../../auth/owner-flow.js'
 import { ErrorState, LoadingState, PageHeader } from '../../components/ui/index.jsx'
 import { formatMoney } from '../../lib/money.js'

@@ -1,4 +1,4 @@
-import { authenticatedApiRequest } from '../auth/owner-flow.js'
+import { authenticatedApiRequest } from '../../auth/owner-flow.js'
 
 const costPattern = /^(?:0|[1-9]\d{0,13})(?:\.\d{1,4})?$/
 const messages = Object.freeze({

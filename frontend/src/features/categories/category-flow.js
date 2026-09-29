@@ -1,4 +1,4 @@
-import { authenticatedApiRequest } from '../auth/owner-flow.js'
+import { authenticatedApiRequest } from '../../auth/owner-flow.js'
 
 export const CATEGORY_NAME_MAX_LENGTH = 100
 export const CATEGORIES_INITIAL_STATE = Object.freeze({

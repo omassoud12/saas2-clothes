@@ -1,18 +1,18 @@
-import { ColorSwatch } from '../../app/ColorSwatch.jsx'
-import { groupVariantsByColor, operationalState } from '../../app/product-options.js'
-import { readStockRecovery, persistStockOperation, resolveStockOperation, migrateStockRecovery, withStockRecoveryLock, withStockMetadataLock, stockRecoveryEvent, stockRecoveryKey, newStockOperation } from '../../app/stock-recovery.js'
+import { ColorSwatch } from '../../features/products/ColorSwatch.jsx'
+import { groupVariantsByColor, operationalState } from '../../features/products/product-options.js'
+import { readStockRecovery, persistStockOperation, resolveStockOperation, migrateStockRecovery, withStockRecoveryLock, withStockMetadataLock, stockRecoveryEvent, stockRecoveryKey, newStockOperation } from '../../features/products/stock-recovery.js'
 import { useDirtyState, confirmDiscardChanges } from '../../app/dirty-state.js'
-import './products.css'
+import '../../features/products/products.css'
 import { useEffect, useRef, useState } from 'react'
-import { loadCategories } from '../../app/category-flow.js'
-import { CatalogConfirmation } from '../../app/CatalogConfirmation.jsx'
-import { ProductCreateForm } from '../../app/ProductCreateForm.jsx'
-import { canRestock } from '../../app/restock-flow.js'
+import { loadCategories } from '../../features/categories/category-flow.js'
+import { CatalogConfirmation } from '../../features/products/CatalogConfirmation.jsx'
+import { ProductCreateForm } from '../../features/products/ProductCreateForm.jsx'
+import { canRestock } from '../../features/inventory/restock-flow.js'
 import {
   canEditVariantPrice, canShowProductMargin, createVariant, findVariantDuplicate, getProduct, listProducts, removeProductImage,
-  applyVariantPrice, quickAddStock, setProductActive, setVariantActive, updateProduct, updateVariant,
+  applyVariantPrices, adjustVariantStock, setProductActive, setVariantActive, updateProduct, updateVariant,
   uploadProductImage, validateImage,
-} from '../../app/product-flow.js'
+} from '../../features/products/product-flow.js'
 import { formatMoney, summarizeProductCatalog } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
 
@@ -36,7 +36,7 @@ function ProductImage({ url, name, revision = 0, status }) {
   </span>
 }
 
-function ProductForm({ draft, change, categories, categoriesLoading = false, editing, busy, submit, cancel, error }) {
+function ProductIdentityForm({ draft, change, categories, categoriesLoading = false, editing, busy, submit, cancel, error }) {
   return <form className="product-form" aria-describedby={error ? 'products-feedback' : undefined} onSubmit={submit}>
     <div className="product-form-grid">
       <div><label htmlFor="catalog-product-name">Product name</label><input id="catalog-product-name" autoFocus required maxLength={150} value={draft.name} disabled={busy} placeholder="e.g. Linen shirt" onChange={(event) => change({ ...draft, name: event.target.value })} /></div>
@@ -283,7 +283,7 @@ export function ProductsPage({ profile, navigate, productId }) {
           }
           return
         }
-        const result = await quickAddStock({supabase, productId:selectedId, variantId:variant.id, operationId:record.operationId, delta:record.delta})
+        const result = await adjustVariantStock({supabase, productId:selectedId, variantId:variant.id, operationId:record.operationId, delta:record.delta})
         // Cleanup still runs after navigation, but only removes this request's key.
         if (result.ok || !result.uncertain) await withStockMetadataLock(recoveryKey, () => resolveStockOperation(recoveryKey, record.operationId))
         if (!stockMounted.current) return
@@ -305,7 +305,7 @@ export function ProductsPage({ profile, navigate, productId }) {
   async function submitPrices(event) {
     event.preventDefault()
     if (!priceReview) { setPriceReview(true); return }
-    const result = await run('bulk-price', () => applyVariantPrice({supabase, productId:selectedId, ...priceDraft}))
+    const result = await run('bulk-price', () => applyVariantPrices({supabase, productId:selectedId, ...priceDraft}))
     if (!result?.ok) return
     setDetailState({kind:'ready',product:result.product}); setPriceDraft(null); setPriceReview(false)
     setFeedback({kind:'success',message:'Selected option prices updated together.'})
@@ -406,7 +406,7 @@ export function ProductsPage({ profile, navigate, productId }) {
         <section className="product-panel product-overview">
           <div className="product-overview-summary"><ProductImage key={`${detail.imageUrl || detail.id}-${detailVersion}-${imageRevision}`} url={detail.imageUrl} status={detail.imageStatus} name={detail.name} revision={imageRevision} /><div className="product-overview-identity"><h2>{detail.name}</h2><div className="product-overview-meta"><span>{detail.category.name}</span><span>{detail.variants.length} option{detail.variants.length === 1 ? '' : 's'}</span><span className={`product-status ${detail.isActive ? '' : 'is-inactive'}`}>{detail.isActive ? 'Active' : 'Inactive'}</span></div>{canShowProductMargin(role, detail) && detail.profitMarginOverride != null && <p>Margin override: {valueOrUnavailable(detail.profitMarginOverride)}</p>}</div></div>
           <div className="product-actions"><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { if (productDirty && !confirmDiscardChanges()) return; setFeedback(null); setEditDraft({ name: detail.name, categoryId: detail.category.id, profitMarginOverride: detail.profitMarginOverride ?? '' }); setConfirmation(null) }} aria-label="Edit product">Edit</button><button type="button" className={detail.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'product', next: !detail.isActive, label: detail.name }) }}>{detail.isActive ? 'Deactivate product' : 'Reactivate product'}</button></div>
-          {editDraft && <ProductForm draft={editDraft} change={setEditDraft} categories={categories.some((category) => category.id === detail.category.id) ? categories : [...categories, detail.category]} role={role} editing error={feedback?.kind === 'error'} busy={Boolean(busy) || stockBusy.size > 0} submit={submitEdit} cancel={() => { if (!productDirty || confirmDiscardChanges()) { setEditDraft(null) } }} />}
+          {editDraft && <ProductIdentityForm draft={editDraft} change={setEditDraft} categories={categories.some((category) => category.id === detail.category.id) ? categories : [...categories, detail.category]} role={role} editing error={feedback?.kind === 'error'} busy={Boolean(busy) || stockBusy.size > 0} submit={submitEdit} cancel={() => { if (!productDirty || confirmDiscardChanges()) { setEditDraft(null) } }} />}
         <details className="product-photo-action product-optional"><summary>Product photo (optional)</summary><p className="product-muted">JPEG, PNG, or static WebP. Maximum 10 MiB. One primary image per product.</p>
           <form className="product-image-form" onSubmit={submitImage}><label htmlFor="product-image-file">Choose image</label><input key={`${selectedId}-${imageRevision}`} id="product-image-file" type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy) || stockBusy.size > 0} aria-disabled={Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined} onChange={(event) => chooseFile(event.target.files?.[0] || null)} />{previewUrl && <div className="product-image-preview"><img src={previewUrl} alt="Local preview, not yet uploaded" /><span>Local preview &mdash; not saved</span></div>}
             {stockBusy.size > 0 && <p id="product-photo-stock-wait" role="status">Waiting for stock update to finish.</p>}<div className="product-actions"><button type="submit" disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined}>{busy === 'image-upload' ? 'Uploading...' : detail.imageUrl ? 'Replace image' : 'Upload image'}</button>{detail.imageUrl && <button type="button" className="product-danger-button" disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'image', label: detail.name }) }}>Remove image</button>}</div></form>

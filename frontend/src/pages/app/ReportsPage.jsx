@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { canAccessFinance, createLatestRequestGuard, isZeroReport, loadDailyReport, loadSummaryReport, localBusinessDate, validateBusinessDateRange } from '../../app/finance-flow.js'
+import { canAccessFinance, createLatestRequestGuard, isZeroReport, loadDailyReport, loadSummaryReport, localBusinessDate, validateBusinessDateRange } from '../../features/finance/finance-flow.js'
 import { ErrorState, LoadingState, PageHeader } from '../../components/ui/index.jsx'
 import { formatSignedMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'

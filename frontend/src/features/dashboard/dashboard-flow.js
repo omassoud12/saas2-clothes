@@ -1,7 +1,7 @@
-import { loadDailyReport } from './finance-flow.js'
-import { listProducts } from './product-flow.js'
-import { loadSaleHistory } from './sale-flow.js'
-import { ROUTES } from './routes.js'
+import { loadDailyReport } from '../finance/finance-flow.js'
+import { listProducts } from '../products/product-flow.js'
+import { loadSaleHistory } from '../sales/sale-flow.js'
+import { ROUTES } from '../../app/routes.js'
 
 const recentSaleLimit = 6
 

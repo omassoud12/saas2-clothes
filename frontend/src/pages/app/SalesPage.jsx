@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadCategories } from '../../app/category-flow.js'
-import { listProducts } from '../../app/product-flow.js'
+import { loadCategories } from '../../features/categories/category-flow.js'
+import { listProducts } from '../../features/products/product-flow.js'
 import {
   addVariantToCart, calculateCart, checkoutOperation, createCheckoutGuard, loadSaleHistory,
   reconcileCart, removeCartLine, setCartPrice, setCartQuantity, settleCheckout, submitSale,
-} from '../../app/sale-flow.js'
+} from '../../features/sales/sale-flow.js'
 import { decimalToMinorUnits, formatMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
-import { SaleLifecyclePanel } from './SaleLifecyclePanel.jsx'
+import { SaleLifecyclePanel } from '../../features/sales/SaleLifecyclePanel.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')

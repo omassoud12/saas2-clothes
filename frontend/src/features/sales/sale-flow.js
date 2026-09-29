@@ -1,5 +1,5 @@
-import { authenticatedApiRequest } from '../auth/owner-flow.js'
-import { decimalToMinorUnits, minorUnitsToDecimal } from '../lib/money.js'
+import { authenticatedApiRequest } from '../../auth/owner-flow.js'
+import { decimalToMinorUnits, minorUnitsToDecimal } from '../../lib/money.js'
 
 export const POS_PAGE_SIZE = 12
 const maxLines = 100

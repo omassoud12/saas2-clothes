@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createRestockWorkflow, postRestock } from './restock-flow.js'
-import { supabase } from '../lib/supabase.js'
+import { supabase } from '../../lib/supabase.js'
 
 const blankDraft = { quantity: '', unitCost: '', note: '' }
 

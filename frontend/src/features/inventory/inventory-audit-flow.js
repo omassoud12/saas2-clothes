@@ -1,4 +1,4 @@
-import { authenticatedApiRequest } from '../auth/owner-flow.js'
+import { authenticatedApiRequest } from '../../auth/owner-flow.js'
 
 export const MOVEMENT_LABELS = Object.freeze({
   RESTOCK: 'Restock', SALE: 'Sale', RETURN: 'Return', SALE_VOID: 'Sale Void',

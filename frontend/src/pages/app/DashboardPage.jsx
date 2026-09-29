@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { dashboardQuickActions, loadDashboardCatalog, loadDashboardFinance, loadDashboardRecentSales } from '../../app/dashboard-flow.js'
-import { createLatestRequestGuard, isZeroReport, localBusinessDate } from '../../app/finance-flow.js'
+import { dashboardQuickActions, loadDashboardCatalog, loadDashboardFinance, loadDashboardRecentSales } from '../../features/dashboard/dashboard-flow.js'
+import { createLatestRequestGuard, isZeroReport, localBusinessDate } from '../../features/finance/finance-flow.js'
 import { ROUTES } from '../../app/routes.js'
 import { ErrorState, LoadingSpinner, PageHeader } from '../../components/ui/index.jsx'
 import { formatSignedMoney } from '../../lib/money.js'

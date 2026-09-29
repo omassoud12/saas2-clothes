@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { listProducts } from '../../app/product-flow.js'
+import { listProducts } from '../products/product-flow.js'
 import {
   calculateExchangePreview, calculateReturnPreview, canReturnSale, canVoidSale, exchangeOperation,
   loadSaleDetail, loadSaleReturns, returnOperation, setReturnQuantity, submitExchange, submitReturn, submitVoid,
-} from '../../app/sale-lifecycle-flow.js'
+} from './sale-lifecycle-flow.js'
 import {
   addVariantToCart, calculateCart, createCheckoutGuard, removeCartLine, setCartPrice, setCartQuantity,
-} from '../../app/sale-flow.js'
+} from './sale-flow.js'
 import { decimalToMinorUnits, formatMoney, formatSignedMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
 

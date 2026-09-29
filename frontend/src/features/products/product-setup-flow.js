@@ -1,5 +1,5 @@
 import { buildProductPayload, buildVariantPayload, findVariantDuplicate, validateImage } from './product-flow.js'
-import { validateRestockDraft } from './restock-flow.js'
+import { validateRestockDraft } from '../inventory/restock-flow.js'
 
 export function validateProductSetup(draft, role) {
   const product = buildProductPayload(draft, role)

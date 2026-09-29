@@ -10,7 +10,7 @@ import {
   removeCategoryFromList,
   renameCategory,
   upsertCategoryInList,
-} from '../../app/category-flow.js'
+} from '../../features/categories/category-flow.js'
 import { supabase } from '../../lib/supabase.js'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   MOVEMENT_LABELS, appendPage, canShowMovementCost, canShowMovementNote,
   getInventoryReconciliation, listInventoryMovements, reconciliationSummary, signedQuantity,
-} from '../../app/inventory-audit-flow.js'
+} from './inventory-audit-flow.js'
 import { supabase } from '../../lib/supabase.js'
 import { formatMoney } from '../../lib/money.js'
 

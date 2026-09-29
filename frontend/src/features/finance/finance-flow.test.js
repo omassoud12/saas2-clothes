@@ -5,7 +5,7 @@ import {
   isBusinessDate, isZeroReport, listExpenses, loadDailyReport, loadSummaryReport,
   localBusinessDate, validateBusinessDateRange,
 } from './finance-flow.js'
-import { createSubmissionGuard } from '../auth/owner-flow.js'
+import { createSubmissionGuard } from '../../auth/owner-flow.js'
 
 const supabase = { auth: { async getSession() { return { data: { session: { user: { id: 'owner' }, access_token: 'test-token' } } } } } }
 const expense = { id: 'expense-1', amount: '12.50', currency: 'USD', description: 'Packaging', expenseDate: '2026-09-26', createdById: 'owner', createdAt: '2026-09-26T08:00:00.000Z' }

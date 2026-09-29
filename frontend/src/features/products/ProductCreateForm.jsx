@@ -1,10 +1,10 @@
 import { ColorSwatch } from './ColorSwatch.jsx'
 import { clothingSizes, compareSizes } from './product-options.js'
-import { useDirtyState, confirmDiscardChanges } from './dirty-state.js'
+import { useDirtyState, confirmDiscardChanges } from '../../app/dirty-state.js'
 import { useEffect, useRef, useState } from 'react'
 import { createProduct, createVariant, createProductSetup, uploadProductImage, validateImage } from './product-flow.js'
 import { createProductSetupWorkflow } from './product-setup-flow.js'
-import { supabase } from '../lib/supabase.js'
+import { supabase } from '../../lib/supabase.js'
 
 const sizes = clothingSizes
 const colorChoices = ['Black', 'White', 'Gray', 'Charcoal', 'Navy', 'Blue', 'Light blue', 'Red', 'Burgundy', 'Green', 'Olive', 'Khaki', 'Beige', 'Cream', 'Brown', 'Camel', 'Pink', 'Purple', 'Lavender', 'Yellow', 'Orange', 'Teal', 'Turquoise', 'Gold', 'Silver', 'Multicolor']

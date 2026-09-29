@@ -4,8 +4,8 @@ import {
   dashboardQuickActions, dashboardRecentSales, loadDashboardCatalog,
   loadDashboardFinance, loadDashboardRecentSales, summarizeDashboardCatalog,
 } from './dashboard-flow.js'
-import { createLatestRequestGuard, isZeroReport } from './finance-flow.js'
-import { ROUTES } from './routes.js'
+import { createLatestRequestGuard, isZeroReport } from '../finance/finance-flow.js'
+import { ROUTES } from '../../app/routes.js'
 
 const supabase = { auth: { async getSession() { return { data: { session: { user: { id: 'user' }, access_token: 'test-token' } } } } } }
 const product = {

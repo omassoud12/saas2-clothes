@@ -1,5 +1,5 @@
 import { combinationKey } from './product-options.js'
-import { authenticatedApiRequest } from '../auth/owner-flow.js'
+import { authenticatedApiRequest } from '../../auth/owner-flow.js'
 
 export const PRODUCT_PAGE_SIZE = 12
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -244,7 +244,7 @@ export async function setOpeningCost({ supabase, fetchImpl, productId, variantId
   return variantResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/opening-cost`, method: 'PUT', payload: { unitCost } }), 200)
 }
 
-export async function quickAddStock({ supabase, fetchImpl, productId, variantId, operationId, delta = 1 }) {
+export async function adjustVariantStock({ supabase, fetchImpl, productId, variantId, operationId, delta = 1 }) {
   return variantResponse(await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/quick-stock`, method: 'POST', payload: { delta }, headers: { 'Idempotency-Key': operationId }, fallbackMessage: 'Stock could not be confirmed. Press the same stock button again to retry safely.' }), 200)
 }
 
@@ -261,6 +261,6 @@ export async function createProductSetup({ supabase, fetchImpl, draft, role }) {
   return productResponse(await request({ supabase, fetchImpl, path: '/api/products/setup', method: 'POST', payload: { product: product.payload, variants } }), 201)
 }
 
-export async function applyVariantPrice({supabase, fetchImpl, productId, variantIds, sellingPrice}) {
+export async function applyVariantPrices({supabase, fetchImpl, productId, variantIds, sellingPrice}) {
  return productResponse(await request({supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variant-prices`, method:'POST', payload:{variantIds, sellingPrice}}),200)
 }

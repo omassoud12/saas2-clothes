@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { listProducts, canShowVariantCost, setOpeningCost } from '../../app/product-flow.js'
-import { RestockDialog } from '../../app/RestockDialog.jsx'
-import { canRestock } from '../../app/restock-flow.js'
+import { listProducts, canShowVariantCost, setOpeningCost } from '../../features/products/product-flow.js'
+import { RestockDialog } from '../../features/inventory/RestockDialog.jsx'
+import { canRestock } from '../../features/inventory/restock-flow.js'
 import { supabase } from '../../lib/supabase.js'
 import { formatMoney } from '../../lib/money.js'
-import { InventoryHistory, InventoryReconciliation } from './InventoryAuditSections.jsx'
+import { InventoryHistory, InventoryReconciliation } from '../../features/inventory/InventoryAuditSections.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
