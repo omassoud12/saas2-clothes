@@ -160,3 +160,8 @@ describe('Product frontend contract', () => {
     assert.equal(Object.hasOwn(options, 'body'), false)
   })
 })
+
+test('normalized color/size identity catches semantic duplicates',()=>{
+ assert.equal(findVariantDuplicate({sku:'NEW',color:' black ',size:'m'},[{id:'old',sku:'OLD',color:'Black',size:'M'}]).code,'VARIANT_COMBINATION_ALREADY_EXISTS')
+ assert.equal(findVariantDuplicate({sku:'NEW',color:'White',size:'M'},[{id:'old',sku:'OLD',color:'Black',size:'M'}]).ok,true)
+})

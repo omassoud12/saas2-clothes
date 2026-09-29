@@ -124,7 +124,7 @@ export function AppLayout({ pathname, navigate, profile }) {
             </p>
           )}
           <Suspense fallback={<LoadingState label="Loading page" />}>
-            <Page profile={profile} navigate={navigate} />
+            <Page key={resolvedRoute.productId || resolvedRoute.route.key} profile={profile} navigate={navigate} productId={resolvedRoute.productId} />
           </Suspense>
         </main>
       </div>

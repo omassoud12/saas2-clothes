@@ -270,7 +270,7 @@ class ExchangeDouble {
         return {
           id: replacementSaleId, status: SaleStatus.COMPLETED, currency: 'USD',
           subtotal: new Prisma.Decimal(store.replacementAmount), totalAmount: new Prisma.Decimal(store.replacementAmount), createdAt: now,
-          sellerNameAtSale: 'Ada Owner', sellerCodeAtSale: null, items: [],
+          sellerNameAtSale: 'Ada Owner', sellerCodeAtSale: null, items: [{id:replacementItemId,productId,variantId,productNameAtSale:'Replacement',categoryNameAtSale:'Shirts',skuAtSale:'NEW',colorAtSale:'Black',sizeAtSale:'M',quantity:1,unitSoldPrice:new Prisma.Decimal(store.replacementAmount),unitCostAtSale:null,lineTotal:new Prisma.Decimal(store.replacementAmount)}],
         }
       },
     } as never
@@ -439,4 +439,12 @@ describe('Exchange route authorization and statuses', () => {
     assert.equal(response.status, 403)
     assert.equal(called, false)
   })
+})
+
+test('Exchange composition accepts an uncosted replacement and exposes only operational amounts',async()=>{
+ const store=new ExchangeDouble()
+ const result=await createExchangeDependencies(store.asClient(),store.primitives()).createExchange(accountId,ownerId,originalSaleId,exchangeKey,parseExchangeInput(rawInput))
+ assert.equal(result.exchange.differenceAmount,'10.00')
+ assert.doesNotMatch(JSON.stringify(result),/unitCostAtSale|costStatus|grossProfit|COGS/)
+ assert.ok(store.events.indexOf('Return')<store.events.indexOf('ReplacementSale'))
 })

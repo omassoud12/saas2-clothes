@@ -9,13 +9,14 @@ export interface DailyFinancials {
   readonly returnedRevenue: string
   readonly voidedRevenue: string
   readonly netRevenue: string
-  readonly grossCOGS: string
-  readonly returnedCOGS: string
-  readonly voidedCOGS: string
-  readonly netCOGS: string
-  readonly grossProfit: string
+  readonly grossCOGS: string | null
+  readonly returnedCOGS: string | null
+  readonly voidedCOGS: string | null
+  readonly netCOGS: string | null
+  readonly grossProfit: string | null
   readonly operatingExpenses: string
-  readonly netProfit: string
+  readonly netProfit: string | null
+  readonly costStatus: 'COMPLETE' | 'INCOMPLETE'
   readonly stockValue: null
 }
 

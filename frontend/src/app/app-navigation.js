@@ -76,15 +76,16 @@ export function getAppNavigation(role) {
 }
 
 export function isNavigationItemActive(pathname, itemPath) {
-  return pathname === itemPath
+  return pathname === itemPath || (itemPath === ROUTES.products && /^\/app\/products\/[0-9a-f-]{36}$/i.test(pathname))
 }
 
 export function resolveAppRoute(pathname, role) {
   const navigation = getAppNavigation(role)
-  const route = navigation.find((item) => item.path === pathname)
+  const productMatch = /^\/app\/products\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(pathname)
+  const route = navigation.find((item) => item.path === pathname || (item.key === 'products' && productMatch))
 
   if (route) {
-    return Object.freeze({ route, redirectTo: null })
+    return Object.freeze({ route, redirectTo: null, ...(productMatch ? { productId: productMatch[1].toLowerCase() } : {}) })
   }
 
   return Object.freeze({ route: dashboardRoute, redirectTo: dashboardRoute.path })

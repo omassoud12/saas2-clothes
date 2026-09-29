@@ -92,10 +92,12 @@ export function parseProductUpdate(body: unknown, isOwner: boolean): ProductUpda
 }
 
 export function parseVariantCreate(body: unknown, isOwner: boolean): VariantCreateInput {
-  const input = objectWithKeys(body, ['sku', 'barcode', 'color', 'size', 'sellingPrice'], 'INVALID_VARIANT_INPUT')
+  const input = objectWithKeys(body, ['sku', 'barcode', 'color', 'size', 'sellingPrice', 'openingStock'], 'INVALID_VARIANT_INPUT')
   if (!Object.hasOwn(input, 'sku')) invalid('INVALID_VARIANT_INPUT', 'sku is required')
   if (!isOwner && Object.hasOwn(input, 'sellingPrice')) forbidden('sellingPrice is OWNER-only')
+  if (!isOwner && Object.hasOwn(input, 'openingStock')) forbidden('Opening stock is OWNER-only')
   return {
+    ...(Object.hasOwn(input, 'openingStock') ? { openingStock: active(input.openingStock) } : {}),
     sku: requiredText(input.sku, 'sku', 100),
     ...(Object.hasOwn(input, 'barcode') ? { barcode: optionalText(input.barcode, 'barcode', 100) } : {}),
     ...(Object.hasOwn(input, 'color') ? { color: optionalText(input.color, 'color', 100) } : {}),
@@ -142,4 +144,18 @@ export function parseProductList(query: Record<string, unknown>): ProductListInp
     page: parseIntInRange(query.page, 1, 10_000),
     limit: parseIntInRange(query.limit, 20, 100),
   }
+}
+
+export function parseProductSetup(body: unknown, isOwner: boolean) {
+  const input = objectWithKeys(body, ['product', 'variants'], 'INVALID_PRODUCT_SETUP')
+  const product = parseProductCreate(input.product, isOwner)
+  if (!Array.isArray(input.variants) || input.variants.length < 1 || input.variants.length > 200) invalid('INVALID_PRODUCT_SETUP', 'Choose 1 to 200 color/size options')
+  const variants = input.variants.map(variant => parseVariantCreate(variant, isOwner))
+  const skus = new Set<string>(), barcodes = new Set<string>()
+  for (const variant of variants) {
+    if (skus.has(variant.sku) || (variant.barcode && barcodes.has(variant.barcode))) invalid('INVALID_PRODUCT_SETUP', 'Each option needs unique identifiers')
+    skus.add(variant.sku)
+    if (variant.barcode) barcodes.add(variant.barcode)
+  }
+  return { product, variants }
 }

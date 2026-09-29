@@ -28,9 +28,10 @@ function OwnerFinance({ state, onRetry }) {
   if (state.kind === 'loading') return <section className="dashboard-finance" aria-label="Today's financial performance"><SectionLoading label="Loading today’s financial performance" /></section>
   if (state.kind === 'error') return <section className="dashboard-finance"><ErrorState title="Financial overview unavailable" description={state.message} action={<button type="button" onClick={onRetry}>Try again</button>} /></section>
   const report = state.report
-  const negative = (value) => value.startsWith('-') && value !== '-0.00'
+  const negative = (value) => typeof value === 'string' && value.startsWith('-') && value !== '-0.00'
   return <section className="dashboard-finance" aria-labelledby="dashboard-finance-title">
     <div className="dashboard-section-heading"><div><span className="eyebrow">Today · {report.reportDate}</span><h2 id="dashboard-finance-title">Business performance</h2></div><span className="dashboard-source-label">Live report</span></div>
+    {report.costStatus === 'INCOMPLETE' && <p className="dashboard-zero" role="status">Cost data incomplete. Revenue is available; final COGS and profit are unavailable.</p>}
     {isZeroReport(report) && <p className="dashboard-zero">No financial activity has been recorded today yet.</p>}
     <dl className="dashboard-kpis">
       <div className="is-primary"><dt>Net profit</dt><dd className={negative(report.netProfit) ? 'is-negative' : ''}>{formatSignedMoney(report.netProfit, report.currency)}</dd><small>After operating expenses</small></div>

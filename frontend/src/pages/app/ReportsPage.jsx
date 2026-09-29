@@ -19,6 +19,7 @@ function MoneyBreakdown({ title, rows, report }) {
 
 function FinancialReport({ report, mode }) {
   return <div className="report-results">
+    {report.costStatus === 'INCOMPLETE' && <p className="report-zero-state" role="status"><strong>Cost data incomplete.</strong> Revenue is available. Final COGS and profit are unavailable because some historical purchase costs are unknown.</p>}
     <header className="report-period"><div><span className="eyebrow">Authoritative report</span><h2>{mode === 'daily' ? report.reportDate : `${report.from} to ${report.to}`}</h2></div>{mode === 'summary' && <span>{report.daysCount} inclusive day{report.daysCount === 1 ? '' : 's'}</span>}</header>
     {isZeroReport(report) && <p className="report-zero-state">No financial activity was recorded for this period. All authoritative totals are zero.</p>}
     <div className="report-kpis">

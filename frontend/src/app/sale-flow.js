@@ -14,7 +14,6 @@ const safeMessages = {
   SALE_VARIANT_UNAVAILABLE: 'An item is no longer available. Review the refreshed catalog.',
   SALE_PRODUCT_INACTIVE: 'A product in the cart is no longer active.',
   SALE_VARIANT_INACTIVE: 'A variant in the cart is no longer active.',
-  SALE_COST_UNAVAILABLE: 'An item cannot be sold until its inventory cost is available.',
   SALE_IDEMPOTENCY_CONFLICT: 'This checkout no longer matches its original attempt. Review the cart and start a new sale.',
   SALE_CART_TOO_LARGE: 'A sale may contain at most 100 different variants.',
   SALE_TOTAL_OVERFLOW: 'The sale total exceeds the supported limit.',

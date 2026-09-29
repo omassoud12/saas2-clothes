@@ -48,9 +48,11 @@ export function formatSignedMoney(amount, currency, fractionDigits = 2) {
 export function summarizeProductCatalog(product, currency) {
   const variants = Array.isArray(product?.variants) ? product.variants : []
   let stock = 0n
+  let inactiveStock = 0n
   const prices = []
 
   for (const variant of variants) {
+    if (variant.isActive === false || product.isActive === false) { if (Number.isInteger(variant.currentStock)) inactiveStock += BigInt(variant.currentStock); continue }
     if (Number.isInteger(variant?.currentStock)) stock += BigInt(variant.currentStock)
     const priceMatch = typeof variant?.sellingPrice === 'string' ? decimalPattern.exec(variant.sellingPrice) : null
     if (priceMatch && (priceMatch[1]?.length ?? 0) <= 2) {
@@ -70,5 +72,5 @@ export function summarizeProductCatalog(product, currency) {
     price = `${formatMoney(unique[0].raw, currency)} – ${formatMoney(unique.at(-1).raw, currency)}`
   }
 
-  return Object.freeze({ stock: stock.toString(), price })
+  return Object.freeze({ stock: stock.toString(), inactiveStock: inactiveStock.toString(), price })
 }

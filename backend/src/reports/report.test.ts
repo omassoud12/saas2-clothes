@@ -222,7 +222,7 @@ describe('authoritative report service', () => {
       reportDate: '2026-09-24', currency: 'LBP', salesCount: 0, totalUnitsSold: 0,
       grossRevenue: '0.00', returnedRevenue: '0.00', voidedRevenue: '0.00', netRevenue: '0.00',
       grossCOGS: '0.00', returnedCOGS: '0.00', voidedCOGS: '0.00', netCOGS: '0.00',
-      grossProfit: '0.00', operatingExpenses: '0.00', netProfit: '0.00', stockValue: null,
+      grossProfit: '0.00', operatingExpenses: '0.00', netProfit: '0.00', costStatus: 'COMPLETE', stockValue: null,
     })
     assert.equal(summary.report.daysCount, 3)
     assert.equal(summary.report.currency, 'LBP')

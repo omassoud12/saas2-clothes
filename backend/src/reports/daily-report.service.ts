@@ -6,6 +6,7 @@ import { FinancialComputationError } from './financial.types.js'
 function persistenceData(day: DailyFinancials, computedAt: Date) {
   return {
     currency: day.currency,
+    costStatus: day.costStatus,
     salesCount: day.salesCount,
     totalUnitsSold: day.totalUnitsSold,
     grossRevenue: day.grossRevenue,

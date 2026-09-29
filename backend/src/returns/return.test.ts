@@ -711,3 +711,12 @@ describe('Return route authorization and status', () => {
     })
   })
 })
+
+test('Return preserves null historical cost even when current purchase cost is known',async()=>{
+ const store=new ReturnDouble();store.state.saleItems.get(itemA)!.unitCostAtSale=null
+ const result=await createReturnDependencies(store.asClient()).createReturn(accountA,warehouseA,saleA,key,input())
+ assert.equal(result.return.totalRefund,'25.00')
+ assert.equal(store.state.movements[0].unitCost,null)
+ assert.equal(store.state.variants.get(variantA)!.currentStock,5)
+ assert.doesNotMatch(JSON.stringify(result),/costStatus|unitCostAtSale/)
+})

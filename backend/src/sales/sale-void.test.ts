@@ -377,3 +377,11 @@ describe('Sale Void route authorization and status', () => {
     })
   })
 })
+
+test('Void restores uncosted items using null historical movement cost',async()=>{
+ const store=new VoidDouble();for(const item of store.state.items.values()) item.unitCostAtSale=null
+ await createSaleDependencies(store.asClient()).voidSale(accountA,ownerA,saleA,{reason:'Correction'})
+ assert.equal(store.state.movements.length,2)
+ assert.ok(store.state.movements.every(movement=>movement.unitCost===null))
+ assert.equal(store.state.variants.get(variantA)!.currentStock,7)
+})

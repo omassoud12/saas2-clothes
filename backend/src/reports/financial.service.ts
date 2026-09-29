@@ -26,6 +26,7 @@ interface RawFinancialDay {
   readonly rawReturnedCOGS: NumericValue
   readonly rawVoidedCOGS: NumericValue
   readonly operatingExpenses: NumericValue
+  readonly costIncomplete: boolean
   readonly currencyMismatch: boolean
 }
 
@@ -110,6 +111,7 @@ function deriveDay(
   reportDate: string,
   currency: string,
   values: {
+    costIncomplete?: boolean
     salesCount: number
     totalUnitsSold: number
     grossRevenue: string
@@ -148,7 +150,9 @@ function deriveDay(
     grossProfit,
     operatingExpenses: money(operatingExpenses),
     netProfit,
+    costStatus: values.costIncomplete ? 'INCOMPLETE' : 'COMPLETE',
     stockValue: null,
+    ...(values.costIncomplete ? { grossCOGS: null, returnedCOGS: null, voidedCOGS: null, netCOGS: null, grossProfit: null, netProfit: null } : {}),
   }
 }
 
@@ -203,7 +207,8 @@ export async function computeFinancialRangeInTransaction(
     gross_item_totals AS (
       SELECT (s."createdAt" AT TIME ZONE 'UTC')::date AS report_date,
              COALESCE(SUM(si."quantity"), 0)::bigint AS total_units_sold,
-             COALESCE(SUM(si."quantity"::numeric * si."unitCostAtSale"), 0::numeric) AS raw_gross_cogs
+             COALESCE(SUM(si."quantity"::numeric * si."unitCostAtSale"), 0::numeric) AS raw_gross_cogs,
+             BOOL_OR(si."unitCostAtSale" IS NULL) AS cost_incomplete
       FROM "Sale" s
       JOIN "SaleItem" si ON si."saleId" = s."id" AND si."accountId" = s."accountId"
       CROSS JOIN bounds b
@@ -216,6 +221,7 @@ export async function computeFinancialRangeInTransaction(
       SELECT (sr."createdAt" AT TIME ZONE 'UTC')::date AS report_date,
              COALESCE(SUM(sri."refundAmount"), 0::numeric) AS returned_revenue,
              COALESCE(SUM(sri."quantity"::numeric * si."unitCostAtSale"), 0::numeric) AS raw_returned_cogs,
+             BOOL_OR(si."unitCostAtSale" IS NULL) AS cost_incomplete,
              BOOL_OR(s."currency" <> ${account.baseCurrency}) AS currency_mismatch
       FROM "SaleReturn" sr
       JOIN "SaleReturnItem" sri ON sri."returnId" = sr."id" AND sri."accountId" = sr."accountId"
@@ -239,7 +245,8 @@ export async function computeFinancialRangeInTransaction(
     ),
     void_item_totals AS (
       SELECT (s."voidedAt" AT TIME ZONE 'UTC')::date AS report_date,
-             COALESCE(SUM(si."quantity"::numeric * si."unitCostAtSale"), 0::numeric) AS raw_voided_cogs
+             COALESCE(SUM(si."quantity"::numeric * si."unitCostAtSale"), 0::numeric) AS raw_voided_cogs,
+             BOOL_OR(si."unitCostAtSale" IS NULL) AS cost_incomplete
       FROM "Sale" s
       JOIN "SaleItem" si ON si."saleId" = s."id" AND si."accountId" = s."accountId"
       CROSS JOIN bounds b
@@ -258,6 +265,7 @@ export async function computeFinancialRangeInTransaction(
       GROUP BY 1
     )
     SELECT d.report_date AS "reportDate",
+           (COALESCE(git.cost_incomplete, false) OR COALESCE(rt.cost_incomplete, false) OR COALESCE(vit.cost_incomplete, false)) AS "costIncomplete",
            COALESCE(st.sales_count, 0::bigint) AS "salesCount",
            COALESCE(git.total_units_sold, 0::bigint) AS "totalUnitsSold",
            COALESCE(st.gross_revenue, 0::numeric) AS "grossRevenue",
@@ -291,6 +299,7 @@ export async function computeFinancialRangeInTransaction(
       return fail('FINANCIAL_INVARIANT_VIOLATION', 'Financial history contains mixed currencies')
     }
     byDate.set(reportDate, deriveDay(reportDate, account.baseCurrency, {
+      costIncomplete: row.costIncomplete === true,
       salesCount: integer(row.salesCount),
       totalUnitsSold: integer(row.totalUnitsSold),
       grossRevenue: nonnegativeMoney(row.grossRevenue),
@@ -322,12 +331,13 @@ export function summarizeFinancialDays(days: readonly DailyFinancials[]): Financ
     return fail('FINANCIAL_INVARIANT_VIOLATION', 'Financial summary contains mixed currencies')
   }
   const sumMagnitude = (field: keyof DailyFinancials): string => nonnegativeMoney(days.reduce(
-    (sum, day) => sum.add(decimal(day[field] as string)),
+    (sum, day) => sum.add(decimal((day[field] ?? zeroMoney) as string)),
     new Prisma.Decimal(0),
   ))
   const salesCount = integer(days.reduce((sum, day) => sum + BigInt(day.salesCount), 0n))
   const totalUnitsSold = integer(days.reduce((sum, day) => sum + BigInt(day.totalUnitsSold), 0n))
   const { reportDate: _reportDate, ...summary } = deriveDay('', currency, {
+    costIncomplete: days.some(day => day.costStatus === 'INCOMPLETE'),
     salesCount,
     totalUnitsSold,
     grossRevenue: sumMagnitude('grossRevenue'),

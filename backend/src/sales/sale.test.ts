@@ -406,7 +406,7 @@ describe('Sale history service', () => {
     assert.deepEqual(result.sale.returnSummary, { hasReturns: false, returnCount: 0, totalReturnedUnits: 0, totalReturnedAmount: '0.00' })
     assert.deepEqual(result.sale.exchangeSummary, { originalExchangeCount: 0, replacementForExchangeId: null })
     assert.deepEqual(result.sale.items[0], { ...result.sale.items[0], returnedQuantity: 0, remainingReturnableQuantity: 2, unitCostAtSale: '12.3456', lineCost: '24.6912', lineGrossProfit: '35.3088' })
-    assert.deepEqual(result.sale.economics, { totalCOGS: '24.6912', grossProfit: '35.3088' })
+    assert.deepEqual(result.sale.economics, { costStatus: 'COMPLETE', totalCOGS: '24.6912', grossProfit: '35.3088' })
   })
 
   test('counts multiple original Exchanges and identifies one replacement Exchange without adding list joins', async () => {
@@ -460,7 +460,7 @@ describe('Sale history service', () => {
       { returnedQuantity: 2, remainingReturnableQuantity: 0 },
       { returnedQuantity: 2, remainingReturnableQuantity: 1 },
     ])
-    assert.deepEqual(result.sale.economics, { totalCOGS: '30.6912', grossProfit: '29.3088' })
+    assert.deepEqual(result.sale.economics, { costStatus: 'COMPLETE', totalCOGS: '30.6912', grossProfit: '29.3088' })
   })
 
   test('uses stored void snapshots, hides all economics from WAREHOUSE, and tenant-scopes detail', async () => {
@@ -502,7 +502,7 @@ describe('transactional Sale service', () => {
             variantId: result.items[0].variantId,
             quantity: result.items[0].quantity,
             price: result.items[0].unitSoldPrice.toFixed(2),
-            cost: result.items[0].unitCostAtSale.toFixed(4),
+            cost: result.items[0].unitCostAtSale!.toFixed(4),
             total: result.items[0].lineTotal.toFixed(2),
           },
           { productId: productA, variantId: variantA, quantity: 3, price: '27.00', cost: '12.3456', total: '81.00' },
@@ -576,9 +576,12 @@ describe('transactional Sale service', () => {
     await assert.rejects(createSaleDependencies(unpriced.asClient()).createSale(accountA, warehouseA, key, ownerInput('30')), (e) => expectHttp(e, 409, 'SALE_VARIANT_NOT_PRICED'))
   })
 
-  test('rejects unavailable catalog, missing cost, insufficient stock, overflow, and rolls back a multi-line cart', async () => {
+  test('allows unknown cost but rejects unavailable catalog, insufficient stock and overflow, rolling back a multi-line cart', async () => {
     const missing = new SaleDouble(); missing.state.variants.get(variantA)!.lastPurchaseCost = null
-    await assert.rejects(createSaleDependencies(missing.asClient()).createSale(accountA, ownerA, key, ownerInput()), (e) => expectHttp(e, 409, 'SALE_COST_UNAVAILABLE'))
+    await createSaleDependencies(missing.asClient()).createSale(accountA, ownerA, key, ownerInput())
+    assert.equal(missing.state.items[0].unitCostAtSale, null)
+    assert.equal(missing.state.movements[0].unitCost, null)
+    assert.equal(missing.state.variants.get(variantA)!.currentStock, 7)
     const inactive = new SaleDouble(); inactive.state.products.get(productA)!.isActive = false
     await assert.rejects(createSaleDependencies(inactive.asClient()).createSale(accountA, ownerA, key, ownerInput()), (e) => expectHttp(e, 409, 'SALE_PRODUCT_INACTIVE'))
     const inactiveVariant = new SaleDouble(); inactiveVariant.state.variants.get(variantA)!.isActive = false
@@ -701,4 +704,27 @@ describe('Sale route authorization and response', () => {
       assert.equal((await fetch(`${base}/api/sales/${saleA}`, { headers })).status, 403)
     })
   })
+})
+
+test('OWNER and WAREHOUSE sell unknown-cost stock without zero snapshots or cost disclosure',async()=>{
+ for(const actor of [ownerA,warehouseA]) {
+ const store=new SaleDouble();store.state.variants.get(variantA)!.lastPurchaseCost=null
+ const sale=await createSaleDependencies(store.asClient()).createSale(accountA,actor,randomUUID(),ownerInput('30'))
+ assert.equal(sale.sale.totalAmount,'90.00')
+ assert.equal(store.state.items[0].unitCostAtSale,null)
+ assert.equal(store.state.movements[0].unitCost,null)
+ assert.equal(store.state.variants.get(variantA)!.currentStock,7)
+ assert.doesNotMatch(JSON.stringify(sale),/costStatus|unitCostAtSale|profit/)
+ }
+})
+test('OWNER historical detail exposes incomplete economics while WAREHOUSE stays operational',async()=>{
+ const store=new HistoryDouble()
+ store.items[0].unitCostAtSale=null
+ const service=createSaleDependencies(store.asClient())
+ const owner=await service.getSale(accountA,UserRole.OWNER,saleA)
+ assert.equal(owner.sale.economics?.costStatus,'INCOMPLETE')
+ assert.equal(owner.sale.economics?.totalCOGS,null)
+ assert.equal(owner.sale.items[0].unitCostAtSale,null)
+ const warehouse=await service.getSale(accountA,UserRole.WAREHOUSE,saleA)
+ assert.doesNotMatch(JSON.stringify(warehouse),/costStatus|unitCostAtSale|lineCost|grossProfit/)
 })

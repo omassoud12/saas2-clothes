@@ -13,7 +13,7 @@ const totals = {
   currency: 'USD', salesCount: 2, totalUnitsSold: 3,
   grossRevenue: '100.00', returnedRevenue: '10.00', voidedRevenue: '20.00', netRevenue: '70.00',
   grossCOGS: '50.00', returnedCOGS: '5.00', voidedCOGS: '10.00', netCOGS: '35.00',
-  grossProfit: '35.00', operatingExpenses: '40.00', netProfit: '-5.00', stockValue: null,
+  grossProfit: '35.00', operatingExpenses: '40.00', netProfit: '-5.00', costStatus:'COMPLETE', stockValue: null,
 }
 function json(status, data, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } }) }
 
@@ -145,4 +145,11 @@ describe('authoritative report frontend contract', () => {
     const offline = await loadSummaryReport({ supabase, from: '2026-09-01', to: '2026-09-26', fetchImpl: async () => { throw new Error('provider hostname') } })
     assert.doesNotMatch(offline.message, /provider|hostname/)
   })
+})
+
+test('incomplete report accepts null economics and rejects falsely complete amounts',async()=>{
+ const report={...totals,reportDate:'2026-09-26',costStatus:'INCOMPLETE',grossCOGS:null,returnedCOGS:null,voidedCOGS:null,netCOGS:null,grossProfit:null,netProfit:null}
+ assert.equal((await loadDailyReport({supabase,date:'2026-09-26',fetchImpl:async()=>json(200,{report})})).ok,true)
+ assert.equal(isZeroReport(report),false)
+ assert.equal((await loadDailyReport({supabase,date:'2026-09-26',fetchImpl:async()=>json(200,{report:{...report,netProfit:'70.00'}})})).ok,false)
 })

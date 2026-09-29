@@ -26,7 +26,7 @@ describe('decimal-safe money presentation', () => {
       { sellingPrice: '12.00', currentStock: 3 },
       { sellingPrice: null, currentStock: 0 },
     ] }, 'EUR')
-    assert.deepEqual(summary, { stock: '7', price: '12.00 EUR – 25.50 EUR' })
+    assert.deepEqual(summary, { stock: '7', inactiveStock:'0', price: '12.00 EUR – 25.50 EUR' })
   })
 
   test('converts exact decimal strings to and from minor units without Number', () => {
@@ -42,4 +42,8 @@ describe('decimal-safe money presentation', () => {
     assert.equal(formatSignedMoney('-3.50', 'USD'), '-3.50 USD')
     assert.equal(formatSignedMoney('2.50', 'USD'), '2.50 USD')
   })
+})
+
+test('inactive stock is secondary and inactive prices do not pollute range',()=>{
+ assert.deepEqual(summarizeProductCatalog({isActive:true,variants:[{isActive:true,currentStock:1,sellingPrice:'15'},{isActive:false,currentStock:9,sellingPrice:'99'}]},'USD'),{stock:'1',inactiveStock:'9',price:'15.00 USD'})
 })

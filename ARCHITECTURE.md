@@ -281,8 +281,29 @@ users only. The backend derives `accountId` and `createdById` from authenticatio
 and scopes Product, Category, and Variant queries by Account. OWNER may see and
 edit Product `profitMarginOverride` and see Variant `lastPurchaseCost`;
 WAREHOUSE may not see or edit either field. Neither role may edit stock or
-`lastPurchaseCost` through Product APIs. New Variants begin with stock zero and
-null cost; inventory and Restock flows own subsequent changes. Products and
+`lastPurchaseCost` through Product APIs. New Variants normally begin with stock zero and null cost. OWNER creation may
+explicitly request `openingStock: true`: one physical opening piece is created
+atomically with an ADJUSTMENT ledger movement with unknown cost. The initial
+product form requests this for every selected color/size; WAREHOUSE creation
+retains zero stock and cannot request opening stock. Existing variants are never
+backfilled. Missing purchase cost does not block Sale; historical unknown cost remains null.
+
+Initial product setup uses POST `/api/products/setup` with `{product, variants}`
+(up to 200 variants). One authenticated request creates the tenant Product,
+Variants and opening movements in a transaction with bulk inserts. Active
+Category ownership is checked under a shared row lock. The response returns the
+complete Product; optional image upload runs afterward and image retry does not
+repeat catalog creation. Uncertain setup responses require catalog review,
+matching the existing non-idempotent catalog-create policy. Ordinary individual
+Product/Variant endpoints remain available for edits and adding options.
+
+An OWNER can later PUT `{unitCost}` to the tenant-scoped Variant `opening-cost`
+endpoint from Inventory. It locks Product then Variant, validates positive
+Decimal(18,4) cost, and requires active pending inventory, including zero remaining quantity, fully reconciled with
+opening/quick-adjustment and uncosted SALE/RETURN/SALE_VOID entries. It initializes lastPurchaseCost without changing
+quantity or rewriting the append-only movement. Repeating the same established
+cost is a no-op; a different established cost conflicts. Ordinary catalog updates
+still reject stock and cost edits; normal Restock behavior is unchanged. Products and
 Variants are deactivated with `isActive = false`, never hard-deleted. Inactive
 Products are omitted from the default active catalog/POS choices; inactive
 Variants must likewise be excluded from future sellable choices. Historical
@@ -329,8 +350,10 @@ differ from ProductVariant.sellingPrice without mutating the catalog price.
 
 SaleItem.unitCostAtSale is the immutable historical cost snapshot. Sale
 creation must copy the current ProductVariant.lastPurchaseCost into this field.
-If that cost is required and lastPurchaseCost is null, the sale must be rejected;
-the application must never silently substitute zero.
+If lastPurchaseCost is null, SaleItem.unitCostAtSale is null and Sale proceeds
+under the normal active/stock/positive-price rules. Unknown cost is never zero.
+Later cost entry changes only the current Variant basis; historical SaleItem
+snapshots remain immutable, including null snapshots.
 
 Purchase/unit costs use Decimal(18,4) for ProductVariant.lastPurchaseCost,
 InventoryMovement.unitCost, and SaleItem.unitCostAtSale. Catalog
@@ -430,6 +453,52 @@ After an uncertain outcome, retrying the same Product, Variant, quantity,
 cost, and normalized note reuses that key and frozen payload. Changing those
 semantics begins a new operation with a new key. A confirmed success or replay discards
 the key and refreshes catalog stock and cost from the backend.
+
+Product detail + / - controls use OWNER-only POST
+`/api/products/:productId/variants/:variantId/quick-stock` with `{delta:1|-1}`
+and a UUID Idempotency-Key. An empty body retains the original +1 behavior.
+Product-then-Variant locks, a guarded stock change, and an append-only movement
+share a transaction. New operations take two parameterized SQL statements;
+replays take one. +1 with known positive cost uses RESTOCK; unknown additions
+and -1 corrections use ADJUSTMENT. Decreases cannot cross zero. Replay checks
+actor, variant, direction and operation marker; the UUID is the movement ID.
+The browser persists unresolved operational metadata in localStorage scoped to
+the authenticated Account, user and Product. No tokens/costs/secrets are stored.
+Reload never sends a mutation automatically. Pending options block another
+ambiguous +/- action and offer Retry same update with the original payload/UUID.
+Confirmed success or authoritative rejection removes the metadata. Unknown
+outcomes retain it, including across remounts. Unresolved operations do not expire
+into new mutations; older records require Inventory review before deliberate
+retry. Controls show per-option progress and other stock options remain usable.
+Normal Inventory Restock retains explicit quantity and purchase cost.
+
+OWNER-only POST `/api/products/:productId/variant-prices` accepts up to 200
+unique active variant IDs and a nonnegative Decimal(18,2) catalog price. Product
+locks serialize option changes; one updateMany transaction updates all selected
+options or none. The UI lists current prices and requires review then confirmation.
+WAREHOUSE cannot call this endpoint or see the workflow.
+
+Variant combination identity is NFC-normalized, trimmed and lowercased color
+plus size, with empty/null canonicalized to empty. Creation/setup/combination
+updates enforce uniqueness under Product row locks (setup checks its frozen
+batch). Display values retain their original spelling. No combination constraint
+or destructive reconciliation is added without an existing-data audit. Existing
+identical combinations may be retained and non-combination fields edited; new
+ambiguous combinations are rejected. Standard size display order is XS through
+4XL, followed by deterministic custom sizes; backend options break timestamp
+ties with ID.
+
+Products catalog uses optional `view=summary` on the list endpoint: identity,
+image/category/status, active/inactive option counts, active available stock,
+inactive physical stock and active price min/max. It contains no variant arrays
+or financial fields. Detail remains full; POS/Inventory retain the default list
+contract. Summary selection reads only option status/stock/price, not costs or
+codes. Physical inactive stock is secondary; active price range excludes inactive
+options. Operational readiness is separate from OWNER-only Cost pending. Missing
+or zero catalog price keeps its catalog semantics; a positive explicit Sale
+price remains required, with OWNER override and WAREHOUSE exact catalog pricing.
+Draft guards cover meaningful product/create/variant/image/pricing edits on
+internal navigation, Back and browser unload; clean forms do not warn.
 
 ---
 
@@ -725,8 +794,8 @@ The transaction locks the Account, authenticated seller, Product rows sorted
 by ID, and ProductVariant rows sorted by ID. Products and Variants must be
 active. WAREHOUSE must submit the current locked non-null catalog price; OWNER
 may submit an explicit Sale-only price even when the catalog price is null.
-Every Variant must have a non-null `lastPurchaseCost`, which is copied exactly
-to `SaleItem.unitCostAtSale`. Currency comes from `Account.baseCurrency`, and
+Known `lastPurchaseCost` is copied exactly to `SaleItem.unitCostAtSale`;
+unknown cost is copied as null without blocking the Sale. Currency comes from `Account.baseCurrency`, and
 seller, Product, Category, and Variant snapshots come from trusted database
 state. Decimal line totals and Sale totals are calculated by the backend;
 normal Sales cannot have zero-price lines or negative stock.
@@ -743,7 +812,9 @@ Sale detail uses the immutable seller and SaleItem catalog snapshots rather
 than current User, Product, Category, or ProductVariant values. OWNER detail
 also derives historical economics from `SaleItem.unitCostAtSale`: `lineCost`,
 `totalCOGS`, `lineGrossProfit`, and `grossProfit` use Decimal arithmetic and
-are serialized to four fractional digits without being persisted. WAREHOUSE
+are serialized to four fractional digits when complete. Unknown line cost and
+line profit are null; OWNER economics has costStatus COMPLETE/INCOMPLETE and
+totalCOGS/grossProfit are null for an incomplete Sale. WAREHOUSE
 detail omits all cost and profit fields. Sale detail also exposes a derived,
 bounded `returnSummary`: whether any Returns exist, Return header count, total
 returned units, and the sum of stored ReturnItem refund amounts. Every SaleItem
@@ -1414,3 +1485,25 @@ Supabase PostgreSQL
 Do not add Redis, multiple API servers, or load balancers unless measurements show a real need.
 
 The backend should remain stateless so horizontal scaling can be added later.
+
+
+Quick stock correction: product size cards show + / ?. The OWNER-only quick-stock endpoint accepts optional delta 1 or -1 (empty body still adds one). Decreases create ADJUSTMENT history, preserve purchase cost, and cannot cross zero. Transaction locks and operation IDs protect retries; pending-cost initialization accepts documented positive and negative quick adjustments. No migration required.
+
+
+### Unknown-cost financial completeness
+
+Daily/range financial computation is authoritative. SQL detects any null
+historical unit cost in applicable Sale, Return or Void events. Revenue and
+expenses remain exact. costStatus is COMPLETE or INCOMPLETE; incomplete days
+and any range containing them return null gross/returned/voided/net COGS and
+null gross/net profit. A known-cost subset is never exposed as total COGS.
+This is conservative even when same-period reversals cancel unknown quantities.
+Complete periods preserve daily Decimal rounding. DailyReport persists the same
+nullable fields and a checked costStatus. OWNER Reports/Dashboard explain the
+incomplete state; WAREHOUSE receives no financial completeness or cost data.
+SALE/RETURN/SALE_VOID movement cost must be IS NOT DISTINCT FROM the immutable
+historical snapshot, including null. Return/Void/Exchange never substitute a
+current cost for an unknown historical cost. Later current cost entry does not
+resolve historical Sales: those periods remain explicitly incomplete.
+The reviewed nullable-cost migration must precede deploying this application;
+this task does not apply migrations or deploy.

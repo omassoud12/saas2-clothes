@@ -1,0 +1,4 @@
+{"products":12,"variantsPerProduct":8,"fullBytes":20481,"summaryBytes":3245,"reductionPercent":84.16,"fullSummaryWorkMs":8.25,"compactReadWorkMs":0.07}
+{"products":12,"variantsPerProduct":40,"fullBytes":96205,"summaryBytes":3281,"reductionPercent":96.59,"fullSummaryWorkMs":25.47,"compactReadWorkMs":0.07}
+{"products":12,"variantsPerProduct":200,"fullBytes":477597,"summaryBytes":3317,"reductionPercent":99.31,"fullSummaryWorkMs":87.86,"compactReadWorkMs":0.1}
+{"products":12,"variantsPerProduct":2000,"fullBytes":4808157,"summaryBytes":3365,"reductionPercent":99.93,"fullSummaryWorkMs":850.05,"compactReadWorkMs":0.05}

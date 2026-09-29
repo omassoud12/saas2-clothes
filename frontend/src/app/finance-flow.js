@@ -10,6 +10,7 @@ const reportMoneyFields = Object.freeze([
   'grossCOGS', 'returnedCOGS', 'voidedCOGS', 'netCOGS',
   'grossProfit', 'operatingExpenses', 'netProfit',
 ])
+const costFields = new Set(['grossCOGS', 'returnedCOGS', 'voidedCOGS', 'netCOGS', 'grossProfit', 'netProfit'])
 const reportMagnitudeFields = Object.freeze([
   'grossRevenue', 'returnedRevenue', 'voidedRevenue',
   'grossCOGS', 'returnedCOGS', 'voidedCOGS', 'operatingExpenses',
@@ -115,8 +116,9 @@ export async function createExpense({ supabase, fetchImpl = globalThis.fetch, in
 function reportIsValid(report, kind) {
   if (!report || !currencyPattern.test(report.currency) || !Number.isInteger(report.salesCount) || report.salesCount < 0 ||
       !Number.isInteger(report.totalUnitsSold) || report.totalUnitsSold < 0 || report.stockValue !== null ||
-      !reportMoneyFields.every((field) => typeof report[field] === 'string' && signedMoneyPattern.test(report[field])) ||
-      !reportMagnitudeFields.every((field) => unsignedMoneyPattern.test(report[field]))) return false
+      !['COMPLETE', 'INCOMPLETE'].includes(report.costStatus) ||
+      !reportMoneyFields.every((field) => report.costStatus === 'INCOMPLETE' && costFields.has(field) ? report[field] === null : typeof report[field] === 'string' && signedMoneyPattern.test(report[field])) ||
+      !reportMagnitudeFields.every((field) => report.costStatus === 'INCOMPLETE' && costFields.has(field) ? report[field] === null : unsignedMoneyPattern.test(report[field]))) return false
   if (kind === 'daily') return isBusinessDate(report.reportDate)
   const range = validateBusinessDateRange(report.from, report.to)
   return range.ok && report.daysCount === range.daysCount

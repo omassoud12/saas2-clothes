@@ -92,7 +92,7 @@ type LockedSaleItem = {
   variantId: string
   quantity: number
   unitSoldPrice: Prisma.Decimal | string
-  unitCostAtSale: Prisma.Decimal | string
+  unitCostAtSale: Prisma.Decimal | string | null
 }
 type LockedVariant = { id: string; currentStock: number }
 type SafeReturnItemSource = {
@@ -338,7 +338,7 @@ export async function createReturnInTransaction(
         variantId: created.original.variantId,
         type: InventoryMovementType.RETURN,
         quantityChange: created.item.quantity,
-        unitCost: decimal(created.original.unitCostAtSale),
+        unitCost: created.original.unitCostAtSale === null ? null : decimal(created.original.unitCostAtSale),
         performedById: processedById,
         saleItemId: null,
         returnItemId: created.id,

@@ -231,3 +231,15 @@ describe('business shell profile and logout', () => {
     assert.deepEqual(redirects, ['/login'])
   })
 })
+
+test('product detail URLs reuse the Products route and navigation for tenant roles', () => {
+  const path = '/app/products/66666666-6666-4666-8666-666666666666'
+  for (const role of ['OWNER', 'WAREHOUSE']) {
+    const result = resolveAppRoute(path, role)
+    assert.equal(result.route.key, 'products')
+    assert.equal(result.productId, '66666666-6666-4666-8666-666666666666')
+    assert.equal(result.redirectTo, null)
+  }
+  assert.equal(isNavigationItemActive(path, '/app/products'), true)
+  assert.equal(resolveAppRoute('/app/products/invalid', 'OWNER').redirectTo, ROUTES.dashboard)
+})

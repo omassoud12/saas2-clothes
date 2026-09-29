@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
@@ -113,6 +114,7 @@ function zeroDay(reportDate: string): DailyFinancials {
     grossProfit: '0.00',
     operatingExpenses: '0.00',
     netProfit: '0.00',
+    costStatus: 'COMPLETE',
     stockValue: null,
   }
 }
@@ -464,4 +466,30 @@ describe('DailyReport rebuild', () => {
     )
     assert.deepEqual(store.report, { id: 'report-id', grossRevenue: '7.00' })
   })
+})
+
+test('unknown-cost activity keeps revenue exact and all final economics unavailable, including cache and summary',async()=>{
+ const store=new FinancialStore()
+ for (const knownCogs of ['0','12.3456']) {
+ store.rows=[rawDay('2026-09-24',{grossRevenue:'50.00',rawGrossCOGS:knownCogs,costIncomplete:true,salesCount:1n,totalUnitsSold:2n})]
+ const day=await computeDailyFinancialsInTransaction(store.transaction(),accountId,'2026-09-24')
+ assert.equal(day.netRevenue,'50.00')
+ assert.equal(day.costStatus,'INCOMPLETE')
+ for(const field of ['grossCOGS','returnedCOGS','voidedCOGS','netCOGS','grossProfit','netProfit'] as const) assert.equal(day[field],null)
+ const summary=summarizeFinancialDays([zeroDay('2026-09-23'),day])
+ assert.equal(summary.netRevenue,'50.00');assert.equal(summary.netProfit,null);assert.equal(summary.costStatus,'INCOMPLETE')
+ await createDailyReportService(store.client()).rebuildDailyReport(accountId,'2026-09-24')
+ assert.equal(store.report?.costStatus,'INCOMPLETE');assert.equal(store.report?.grossCOGS,null)
+ assert.match(store.aggregateSql,/BOOL_OR\(si\."unitCostAtSale" IS NULL\)/)
+ }
+})
+
+test('unknown-cost migration preserves exact null-safe ledger matching and snapshot immutability',async()=>{
+ const sql=await readFile(new URL('../../prisma/migrations/20260929030000_allow_unknown_sale_cost/migration.sql',import.meta.url),'utf8')
+ assert.match(sql,/ALTER TABLE "SaleItem" ALTER COLUMN "unitCostAtSale" DROP NOT NULL/)
+ assert.match(sql,/IS DISTINCT FROM historical_unit_cost/)
+ assert.doesNotMatch(sql,/IF NEW\."unitCost" IS NULL/)
+ assert.doesNotMatch(sql,/UPDATE "SaleItem"|DELETE FROM|DROP TABLE/)
+ assert.match(sql,/DailyReport_cost_completeness_check/)
+ for(const type of ['SALE','RETURN','SALE_VOID']) assert.ok(sql.includes(`'${type}'`))
 })

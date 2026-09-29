@@ -1,7 +1,8 @@
 import type { RequestHandler } from 'express'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
-import { parseCatalogId, parseProductCreate, parseProductList, parseProductUpdate, parseVariantCreate, parseVariantUpdate } from './product.schemas.js'
+import { parseCatalogId, parseProductSetup, parseProductCreate, parseProductList, parseProductUpdate, parseVariantCreate, parseVariantUpdate } from './product.schemas.js'
+import { parseIdempotencyKey, parseRestockInput } from '../restocks/restock.schemas.js'
 import type { ProductDependencies } from './product.types.js'
 
 function tenant(auth: Express.Request['auth']): { accountId: string; userId: string; role: UserRole } {
@@ -26,7 +27,9 @@ export function listProducts(dependencies: ProductDependencies): RequestHandler 
   return async (request, response, next) => {
     try {
       const context = tenant(request.auth)
-      response.json(await dependencies.listProducts(context.accountId, context.role, parseProductList(request.query)))
+      const { view, ...query } = request.query
+      if (view !== undefined && view !== 'summary') throw new HttpError(422, 'INVALID_PRODUCT_FILTER', 'Unsupported catalog view')
+      response.json(view === 'summary' ? await dependencies.listProductSummaries(context.accountId, parseProductList(query)) : await dependencies.listProducts(context.accountId, context.role, parseProductList(query)))
     } catch (error) { next(error) }
   }
 }
@@ -72,6 +75,7 @@ export function createVariant(dependencies: ProductDependencies): RequestHandler
         parseCatalogId(request.params.productId, 'productId'),
         context.role,
         parseVariantCreate(request.body, context.role === UserRole.OWNER),
+        context.userId,
       )
       response.status(201).json({ variant })
     } catch (error) { next(error) }
@@ -121,6 +125,60 @@ export function deleteImage(dependencies: ProductDependencies): RequestHandler {
       }
       await dependencies.deleteImage(context.accountId, parseCatalogId(request.params.productId, 'productId'))
       response.status(204).send()
+    } catch (error) { next(error) }
+  }
+}
+
+export function setOpeningCost(dependencies: ProductDependencies): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const context = tenant(request.auth)
+      if (context.role !== UserRole.OWNER) throw new HttpError(403, 'ROLE_FORBIDDEN', 'Only an owner can set cost')
+      const body = request.body
+      if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !Object.hasOwn(body, 'unitCost')) {
+        throw new HttpError(422, 'INVALID_OPENING_COST', 'Only unitCost is accepted')
+      }
+      const input = parseRestockInput({ quantity: 1, unitCost: body.unitCost })
+      const variant = await dependencies.setOpeningCost(context.accountId, parseCatalogId(request.params.productId, 'productId'), parseCatalogId(request.params.variantId, 'variantId'), context.role, input.unitCost)
+      response.json({ variant })
+    } catch (error) { next(error) }
+  }
+}
+
+export function quickAddStock(dependencies: ProductDependencies): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const context = tenant(request.auth)
+      if (context.role !== UserRole.OWNER) throw new HttpError(403, 'ROLE_FORBIDDEN', 'Only an owner can add stock')
+      if (request.body !== undefined && (!request.body || typeof request.body !== 'object' || Array.isArray(request.body) || Object.keys(request.body).some(key => key !== 'delta') || (request.body.delta !== undefined && request.body.delta !== 1 && request.body.delta !== -1))) throw new HttpError(422, 'INVALID_QUICK_STOCK', 'Stock change must be 1 or -1')
+      const started = performance.now()
+      const variant = await dependencies.quickAddStock(context.accountId, parseCatalogId(request.params.productId, 'productId'), parseCatalogId(request.params.variantId, 'variantId'), context.role, context.userId, parseIdempotencyKey(request.headers, request.rawHeaders), request.body?.delta ?? 1)
+      response.setHeader('Server-Timing', `auth;dur=${Number(response.locals.productAuthMs ?? 0).toFixed(1)},stock;dur=${(performance.now() - started).toFixed(1)}`)
+      response.json({ variant })
+    } catch (error) { next(error) }
+  }
+}
+
+export function createProductSetup(dependencies: ProductDependencies): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const context = tenant(request.auth)
+      const input = parseProductSetup(request.body, context.role === UserRole.OWNER)
+      const product = await dependencies.createProductSetup(context.accountId, context.userId, context.role, input.product, input.variants)
+      response.status(201).json({ product })
+    } catch (error) { next(error) }
+  }
+}
+
+export function applyVariantPrice(dependencies: ProductDependencies): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const context = tenant(request.auth)
+      if (context.role !== UserRole.OWNER) throw new HttpError(403, 'ROLE_FORBIDDEN', 'Pricing requires an owner')
+      const body = request.body
+      if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['variantIds', 'sellingPrice'].includes(key)) || !Array.isArray(body.variantIds) || typeof body.sellingPrice !== 'string') throw new HttpError(422, 'INVALID_BULK_PRICE', 'Choose options and a price')
+      const ids = body.variantIds.map((id: unknown) => parseCatalogId(id, 'variantId'))
+      response.json({ product: await dependencies.applyVariantPrice(context.accountId, parseCatalogId(request.params.productId, 'productId'), context.role, ids, body.sellingPrice) })
     } catch (error) { next(error) }
   }
 }

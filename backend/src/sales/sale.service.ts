@@ -218,6 +218,7 @@ function detailView(
   replacementForExchangeId: string | null,
 ): SaleDetailView {
   let totalCOGS = new Prisma.Decimal(0)
+  let costComplete = true
   let totalReturnedUnits = 0
   let totalReturnedAmount = new Prisma.Decimal(0)
   const returnedBySaleItem = new Map<string, number>()
@@ -237,6 +238,10 @@ function detailView(
       returnedQuantity, remainingReturnableQuantity: item.quantity - returnedQuantity,
     }
     if (role !== UserRole.OWNER) return base
+    if (item.unitCostAtSale === null) {
+      costComplete = false
+      return { ...base, unitCostAtSale: null, lineCost: null, lineGrossProfit: null }
+    }
     const lineCost = item.unitCostAtSale.mul(item.quantity)
     totalCOGS = totalCOGS.add(lineCost)
     return {
@@ -274,8 +279,9 @@ function detailView(
       items,
       ...(role === UserRole.OWNER ? {
         economics: {
-          totalCOGS: totalCOGS.toFixed(4),
-          grossProfit: sale.totalAmount.sub(totalCOGS).toFixed(4),
+          costStatus: costComplete ? 'COMPLETE' : 'INCOMPLETE',
+          totalCOGS: costComplete ? totalCOGS.toFixed(4) : null,
+          grossProfit: costComplete ? sale.totalAmount.sub(totalCOGS).toFixed(4) : null,
         },
       } : {}),
     },
@@ -394,9 +400,6 @@ export async function createSaleInTransaction(
     const category = categoryById.get(product.categoryId)
     if (!category) throw unavailable()
     if (!variant.isActive) throw new HttpError(409, 'SALE_VARIANT_INACTIVE', 'Every Variant in a Sale must be active')
-    if (variant.lastPurchaseCost === null) {
-      throw new HttpError(409, 'SALE_COST_UNAVAILABLE', 'A requested Variant has no purchase cost')
-    }
     const unitSoldPrice = new Prisma.Decimal(item.unitSoldPrice)
     if (seller.role === UserRole.WAREHOUSE) {
       if (variant.sellingPrice === null) {
@@ -417,7 +420,7 @@ export async function createSaleInTransaction(
     if (subtotal.gt(maxMoney)) {
       throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
     }
-    return { item, variant, product, category, unitSoldPrice, unitCostAtSale: decimal(variant.lastPurchaseCost), lineTotal }
+    return { item, variant, product, category, unitSoldPrice, unitCostAtSale: variant.lastPurchaseCost === null ? null : decimal(variant.lastPurchaseCost), lineTotal }
   })
 
   const sale = await transaction.sale.create({

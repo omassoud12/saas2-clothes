@@ -71,13 +71,14 @@ export interface SaleDetailView {
       readonly returnedQuantity: number
       readonly remainingReturnableQuantity: number
     } & {
-      readonly unitCostAtSale?: string
-      readonly lineCost?: string
-      readonly lineGrossProfit?: string
+      readonly unitCostAtSale?: string | null
+      readonly lineCost?: string | null
+      readonly lineGrossProfit?: string | null
     })[]
     readonly economics?: {
-      readonly totalCOGS: string
-      readonly grossProfit: string
+      readonly costStatus: 'COMPLETE' | 'INCOMPLETE'
+      readonly totalCOGS: string | null
+      readonly grossProfit: string | null
     }
   }
 }
@@ -141,7 +142,7 @@ export interface SaleTransactionResult {
     readonly sizeAtSale: string | null
     readonly quantity: number
     readonly unitSoldPrice: Prisma.Decimal
-    readonly unitCostAtSale: Prisma.Decimal
+    readonly unitCostAtSale: Prisma.Decimal | null
     readonly lineTotal: Prisma.Decimal
   }[]
 }

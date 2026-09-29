@@ -1,3 +1,4 @@
+import { confirmDiscardChanges } from './app/dirty-state.js'
 import { useCallback, useEffect, useState } from 'react'
 import { AppRouteGuard } from './app/AppRouteGuard.jsx'
 import { isBusinessPath, normalizePathname, ROUTES } from './app/routes.js'
@@ -21,14 +22,16 @@ function App() {
 
   useEffect(() => {
     function handlePopState() {
+      if (!confirmDiscardChanges()) { window.history.pushState(null, '', pathname); return }
       setPathname(readPathname())
     }
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [pathname])
 
   const navigate = useCallback((path, options = {}) => {
+    if (!confirmDiscardChanges()) return
     if (options.replace) {
       window.history.replaceState(null, '', path)
     } else {

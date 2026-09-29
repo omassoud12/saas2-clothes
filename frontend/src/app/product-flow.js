@@ -1,9 +1,16 @@
+import { combinationKey } from './product-options.js'
 import { authenticatedApiRequest } from '../auth/owner-flow.js'
 
 export const PRODUCT_PAGE_SIZE = 12
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 const messages = {
+  INSUFFICIENT_STOCK: 'Stock is already zero. Refresh this option.',
+  STOCK_LIMIT_REACHED: 'Stock has reached the supported limit.',
+  QUICK_STOCK_CONFLICT: 'This stock update conflicts with another request. Review Inventory before continuing.',
+  VARIANT_COMBINATION_ALREADY_EXISTS: 'This color and size already exist. Edit the existing option.',
+  BULK_PRICE_TARGET_UNAVAILABLE: 'One of the selected options changed. Refresh and review your selection.',
+  INVALID_BULK_PRICE: 'Choose options and enter a nonnegative price with at most two decimals.',
   PRODUCT_NOT_FOUND: 'This product is no longer available. Refresh the catalog.',
   VARIANT_NOT_FOUND: 'This variant is no longer available. Refresh the product.',
   CATEGORY_NOT_FOUND: 'Choose an active category and try again.',
@@ -43,7 +50,7 @@ function mapFailure(result) {
   }
   if (result.status === 403) return error(result.code, 'You are not authorized for this action.')
   if (result.status === 429) return error(result.code, 'Too many attempts. Please wait a moment and try again.')
-  return error(result.code, messages[result.code] || 'Something went wrong. Please try again.')
+  return error(result.code, messages[result.code] || 'Something went wrong. Please try again.', { uncertain: result.code === 'API_UNAVAILABLE' || result.status >= 500 })
 }
 
 function validProduct(value) {
@@ -51,6 +58,11 @@ function validProduct(value) {
     value.category && typeof value.category.id === 'string' && typeof value.category.name === 'string' &&
     typeof value.isActive === 'boolean' && (value.imageUrl === null || typeof value.imageUrl === 'string') &&
     Array.isArray(value.variants)
+}
+
+function validSummary(product) {
+ const summary = product?.catalogSummary
+ return product && typeof product.id === 'string' && typeof product.name === 'string' && typeof product.category?.name === 'string' && typeof product.isActive === 'boolean' && (product.imageUrl===null||typeof product.imageUrl==='string') && summary && Number.isInteger(summary.activeVariantCount) && Number.isInteger(summary.inactiveVariantCount) && /^\d+$/.test(summary.availableStock) && /^\d+$/.test(summary.inactiveStock) && [summary.priceMin,summary.priceMax].every(value=>value===null||/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value))
 }
 
 export function canShowProductMargin(role, product) {
@@ -68,7 +80,7 @@ export function canEditVariantPrice(role) {
 function productResponse(result, status) {
   if (!result.ok) return mapFailure(result)
   if (result.status !== status || !validProduct(result.data?.product)) {
-    return error('INVALID_PRODUCT_RESPONSE', 'The product response was invalid. Refresh and try again.')
+    return error('INVALID_PRODUCT_RESPONSE', 'The product response was invalid. Refresh and try again.', { uncertain: true })
   }
   return { ok: true, product: result.data.product }
 }
@@ -76,7 +88,7 @@ function productResponse(result, status) {
 function variantResponse(result, status) {
   if (!result.ok) return mapFailure(result)
   if (result.status !== status || typeof result.data?.variant?.id !== 'string') {
-    return error('INVALID_VARIANT_RESPONSE', 'The variant response was invalid. Refresh and try again.')
+    return error('INVALID_VARIANT_RESPONSE', 'The variant response was invalid. Refresh and try again.', { uncertain: true })
   }
   return { ok: true, variant: result.data.variant }
 }
@@ -146,6 +158,7 @@ export function findVariantDuplicate(draft, variants, editingId = null) {
     if (barcode && String(variant.barcode ?? '').trim().toLowerCase() === barcode) {
       return error('VARIANT_BARCODE_ALREADY_EXISTS', messages.VARIANT_BARCODE_ALREADY_EXISTS)
     }
+    if (combinationKey(draft) === combinationKey(variant)) return error('VARIANT_COMBINATION_ALREADY_EXISTS', messages.VARIANT_COMBINATION_ALREADY_EXISTS)
   }
   return { ok: true }
 }
@@ -159,15 +172,16 @@ export function validateImage(file) {
   return { ok: true }
 }
 
-export async function listProducts({ supabase, fetchImpl, filters = {} }) {
+export async function listProducts({ supabase, fetchImpl, filters = {}, summary = false }) {
   const query = new URLSearchParams({ page: String(filters.page || 1), limit: String(PRODUCT_PAGE_SIZE) })
+  if (summary) query.set('view','summary')
   if (filters.isActive === 'false' || filters.isActive === 'all') query.set('isActive', filters.isActive)
   if (filters.categoryId) query.set('categoryId', filters.categoryId)
   if (filters.search?.trim()) query.set('search', filters.search.trim())
   const result = await request({ supabase, fetchImpl, path: `/api/products?${query}` })
   if (!result.ok) return mapFailure(result)
   const data = result.data
-  if (result.status !== 200 || !Array.isArray(data?.products) || !data.products.every(validProduct) ||
+  if (result.status !== 200 || !Array.isArray(data?.products) || !data.products.every(summary ? validSummary : validProduct) ||
       !Number.isInteger(data.total) || data.total < 0 || !Number.isInteger(data.page) || !Number.isInteger(data.limit)) {
     return error('INVALID_PRODUCTS_RESPONSE', 'The catalog response was invalid. Refresh and try again.')
   }
@@ -198,6 +212,7 @@ export async function setProductActive({ supabase, fetchImpl, productId, isActiv
 export async function createVariant({ supabase, fetchImpl, productId, draft, role }) {
   const built = buildVariantPayload(draft, role)
   if (!built.ok) return built
+  if (role === 'OWNER' && draft.openingStock === true) built.payload.openingStock = true
   return variantResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants`, method: 'POST', payload: built.payload }), 201)
 }
 
@@ -223,4 +238,29 @@ export async function removeProductImage({ supabase, fetchImpl, productId }) {
   const result = await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/image`, method: 'DELETE' })
   if (!result.ok) return mapFailure(result)
   return result.status === 204 ? { ok: true } : error('INVALID_IMAGE_RESPONSE', 'Image removal could not be confirmed. Refresh and try again.')
+}
+
+export async function setOpeningCost({ supabase, fetchImpl, productId, variantId, unitCost }) {
+  return variantResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/opening-cost`, method: 'PUT', payload: { unitCost } }), 200)
+}
+
+export async function quickAddStock({ supabase, fetchImpl, productId, variantId, operationId, delta = 1 }) {
+  return variantResponse(await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/quick-stock`, method: 'POST', payload: { delta }, headers: { 'Idempotency-Key': operationId }, fallbackMessage: 'Stock could not be confirmed. Press the same stock button again to retry safely.' }), 200)
+}
+
+export async function createProductSetup({ supabase, fetchImpl, draft, role }) {
+  const product = buildProductPayload(draft, role)
+  if (!product.ok) return product
+  const variants = []
+  for (const option of draft.options) {
+    const variant = buildVariantPayload(option, role)
+    if (!variant.ok) return variant
+    if (role === 'OWNER' && option.openingStock === true) variant.payload.openingStock = true
+    variants.push(variant.payload)
+  }
+  return productResponse(await request({ supabase, fetchImpl, path: '/api/products/setup', method: 'POST', payload: { product: product.payload, variants } }), 201)
+}
+
+export async function applyVariantPrice({supabase, fetchImpl, productId, variantIds, sellingPrice}) {
+ return productResponse(await request({supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variant-prices`, method:'POST', payload:{variantIds, sellingPrice}}),200)
 }

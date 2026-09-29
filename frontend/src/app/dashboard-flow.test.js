@@ -21,7 +21,7 @@ const report = {
   reportDate: '2026-09-26', currency: 'USD', salesCount: 1, totalUnitsSold: 3,
   grossRevenue: '100.00', returnedRevenue: '0.00', voidedRevenue: '0.00', netRevenue: '100.00',
   grossCOGS: '40.00', returnedCOGS: '0.00', voidedCOGS: '0.00', netCOGS: '40.00',
-  grossProfit: '60.00', operatingExpenses: '65.00', netProfit: '-5.00', stockValue: null,
+  grossProfit: '60.00', operatingExpenses: '65.00', netProfit: '-5.00', costStatus:'COMPLETE', stockValue: null,
 }
 function json(status, data, headers = {}) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } }) }
 
