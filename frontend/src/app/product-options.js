@@ -16,3 +16,14 @@ export function operationalState(product, variant, role) {
   if (/^0(?:\.0+)?$/.test(variant.sellingPrice)) return role === 'OWNER' ? 'Sale price override needed' : 'Positive sale price needed'
   return 'Sellable'
 }
+
+export function groupVariantsByColor(variants) {
+  const groups = new Map()
+  for (const variant of variants) {
+    const label = String(variant.color ?? '').normalize('NFC').trim()
+    const key = label.toLowerCase()
+    if (!groups.has(key)) groups.set(key, { label: label || 'No color', variants: [] })
+    groups.get(key).variants.push(variant)
+  }
+  return [...groups.values()].map(group => [group.label, [...group.variants].sort(compareSizes)])
+}

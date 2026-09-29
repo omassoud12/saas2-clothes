@@ -92,16 +92,27 @@ export function createProductDependencies(
     }
   }
 
+  async function imageView(accountId: string, productId: string, imageKey: string | null): Promise<{ imageUrl: string | null; imageStatus: 'none' | 'available' | 'unavailable' }> {
+    if (!imageKey) return { imageUrl: null, imageStatus: 'none' }
+    // Authorization failures remain errors; never sign a noncanonical key.
+    const key = requireProductImageKey(accountId, productId, imageKey)
+    try {
+      const imageUrl = await imageStore().signedReadUrl(accountId, productId, key)
+      return { imageUrl, imageStatus: 'available' }
+    } catch {
+      // Preserve catalog data and successful writes when image infrastructure fails.
+      return { imageUrl: null, imageStatus: 'unavailable' }
+    }
+  }
+
   async function productView(product: ProductRecord, role: UserRole): Promise<ProductView> {
-    const imageUrl = product.imageKey
-      ? await imageStore().signedReadUrl(product.accountId, product.id, product.imageKey)
-      : null
+    const image = await imageView(product.accountId, product.id, product.imageKey)
     return {
       id: product.id,
       name: product.name,
       category: { id: product.category.id, name: product.category.name },
       isActive: product.isActive,
-      imageUrl,
+      ...image,
       variants: product.variants.map((variant) => variantView(variant, role)),
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
@@ -152,8 +163,8 @@ export function createProductDependencies(
       const active = record.variants.filter(v=>record.isActive&&v.isActive)
       const inactive = record.variants.filter(v=>!record.isActive||!v.isActive)
       const prices = active.flatMap(v=>v.sellingPrice===null?[]:[v.sellingPrice]).sort((a,b)=>a.comparedTo(b))
-      const imageUrl = record.imageKey ? await imageStore().signedReadUrl(accountId,record.id,requireProductImageKey(accountId,record.id,record.imageKey)) : null
-      return {id:record.id,name:record.name,isActive:record.isActive,category:record.category,imageUrl,
+      const image = await imageView(accountId, record.id, record.imageKey)
+      return {id:record.id,name:record.name,isActive:record.isActive,category:record.category,...image,
         catalogSummary:{activeVariantCount:active.length,inactiveVariantCount:inactive.length,availableStock:active.reduce((sum,v)=>sum+BigInt(v.currentStock),0n).toString(),inactiveStock:inactive.reduce((sum,v)=>sum+BigInt(v.currentStock),0n).toString(),priceMin:prices[0]?.toFixed(2)??null,priceMax:prices.at(-1)?.toFixed(2)??null}}
     }))
     return {products,total,page:input.page,limit:input.limit}

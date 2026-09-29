@@ -1,0 +1,101 @@
+diff --git a/frontend/src/pages/app/ProductsPage.jsx b/frontend/src/pages/app/ProductsPage.jsx
+--- a/frontend/src/pages/app/ProductsPage.jsx
++++ b/frontend/src/pages/app/ProductsPage.jsx
+@@ -32,7 +32,7 @@
+   const [failed, setFailed] = useState(false)
+   return <span className="product-image-frame">{url && !failed
+     ? <img key={`${url}-${revision}`} src={url} alt={name} onError={() => setFailed(true)} />
+-    : <span className="product-image-placeholder" aria-label={failed || status === 'unavailable' ? 'Photo unavailable' : 'No product image'}><span aria-hidden="true">â—‡</span><small>{failed || status === 'unavailable' ? 'Photo unavailable' : 'No image'}</small></span>}
++    : <span className="product-image-placeholder" aria-label={failed || status === 'unavailable' ? 'Photo unavailable' : 'No product image'}><span aria-hidden="true">&#9671;</span><small>{failed || status === 'unavailable' ? 'Photo unavailable' : 'No image'}</small></span>}
+   </span>
+ }
+ 
+@@ -408,13 +408,13 @@
+           <div className="product-actions"><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { if (productDirty && !confirmDiscardChanges()) return; setFeedback(null); setEditDraft({ name: detail.name, categoryId: detail.category.id, profitMarginOverride: detail.profitMarginOverride ?? '' }); setConfirmation(null) }} aria-label="Edit product">Edit</button><button type="button" className={detail.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'product', next: !detail.isActive, label: detail.name }) }}>{detail.isActive ? 'Deactivate product' : 'Reactivate product'}</button></div>
+           {editDraft && <ProductForm draft={editDraft} change={setEditDraft} categories={categories.some((category) => category.id === detail.category.id) ? categories : [...categories, detail.category]} role={role} editing error={feedback?.kind === 'error'} busy={Boolean(busy) || stockBusy.size > 0} submit={submitEdit} cancel={() => { if (!productDirty || confirmDiscardChanges()) { setEditDraft(null) } }} />}
+         <details className="product-photo-action product-optional"><summary>Product photo (optional)</summary><p className="product-muted">JPEG, PNG, or static WebP. Maximum 10 MiB. One primary image per product.</p>
+-          <form className="product-image-form" onSubmit={submitImage}><label htmlFor="product-image-file">Choose image</label><input key={`${selectedId}-${imageRevision}`} id="product-image-file" type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy) || stockBusy.size > 0} aria-disabled={Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined} onChange={(event) => chooseFile(event.target.files?.[0] || null)} />{previewUrl && <div className="product-image-preview"><img src={previewUrl} alt="Local preview, not yet uploaded" /><span>Local preview â€” not saved</span></div>}
++          <form className="product-image-form" onSubmit={submitImage}><label htmlFor="product-image-file">Choose image</label><input key={`${selectedId}-${imageRevision}`} id="product-image-file" type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy) || stockBusy.size > 0} aria-disabled={Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined} onChange={(event) => chooseFile(event.target.files?.[0] || null)} />{previewUrl && <div className="product-image-preview"><img src={previewUrl} alt="Local preview, not yet uploaded" /><span>Local preview &mdash; not saved</span></div>}
+             {stockBusy.size > 0 && <p id="product-photo-stock-wait" role="status">Waiting for stock update to finish.</p>}<div className="product-actions"><button type="submit" disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined}>{busy === 'image-upload' ? 'Uploading...' : detail.imageUrl ? 'Replace image' : 'Upload image'}</button>{detail.imageUrl && <button type="button" className="product-danger-button" disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'image', label: detail.name }) }}>Remove image</button>}</div></form>
+         </details>
+         </section>
+         <section className="product-panel product-options-panel"><div className="product-section-heading"><div><h2>Colors & sizes</h2><p>Stock and price by size.</p></div><div className="product-section-actions">{role === 'OWNER' && <button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.size > 0 || !detail.isActive} onClick={() => { if (priceDraft) return; setPriceDraft({sellingPrice:'',variantIds:detail.variants.filter(v=>v.isActive).slice(0,200).map(v=>v.id)});setPriceReview(false) }}>Apply price to variants</button>}<button type="button" className="secondary-action" disabled={Boolean(busy) || !detail.isActive} onClick={() => { if (!variantDirty || confirmDiscardChanges()) setVariantEdit({ id: null, draft: newVariantDraft() }) }}>Add color / size</button></div></div>
+         {role === 'OWNER' && <div className="product-bulk-price">{priceDraft && <form className="product-form" onSubmit={submitPrices}><label htmlFor="product-common-price">Selling price ({currency})</label><input id="product-common-price" required inputMode="decimal" pattern="(?:0|[1-9][0-9]{0,15})(?:\.[0-9]{1,2})?" value={priceDraft.sellingPrice} disabled={Boolean(busy)} onChange={event=>{setPriceDraft({...priceDraft,sellingPrice:event.target.value});setPriceReview(false)}} />
+-        <div className="product-price-targets">{detail.variants.filter(v=>v.isActive).map(v=><label key={v.id}><input type="checkbox" checked={priceDraft.variantIds.includes(v.id)} disabled={Boolean(busy)} onChange={event=>{setPriceDraft({...priceDraft,variantIds:event.target.checked?[...priceDraft.variantIds,v.id]:priceDraft.variantIds.filter(id=>id!==v.id)});setPriceReview(false)}} />{v.color || 'No color'} / {v.size || 'No size'} ? {v.sellingPrice == null?'Not set':formatMoney(v.sellingPrice,currency)}</label>)}</div>
++        <details className="product-price-selection"><summary>Choose options ({priceDraft.variantIds.length} selected)</summary><div className="product-price-targets">{detail.variants.filter(v=>v.isActive).map(v=><label key={v.id}><input type="checkbox" checked={priceDraft.variantIds.includes(v.id)} disabled={Boolean(busy)} onChange={event=>{setPriceDraft({...priceDraft,variantIds:event.target.checked?[...priceDraft.variantIds,v.id]:priceDraft.variantIds.filter(id=>id!==v.id)});setPriceReview(false)}} />{v.color || 'No color'} / {v.size || 'No size'} ? {v.sellingPrice == null?'Not set':formatMoney(v.sellingPrice,currency)}</label>)}</div></details>
+         <p>{priceDraft.variantIds.length} selected options (up to 200 per update). {priceReview ? `Confirm replacing their existing prices with ${priceDraft.sellingPrice} ${currency}. Unselected options stay unchanged.` : 'Review existing prices above before confirming.'}</p>
+         {stockBusy.size > 0 && <p id="bulk-price-stock-wait" role="status">Waiting for stock update to finish.</p>}<div className="product-actions"><button type="submit" disabled={Boolean(busy)||stockBusy.size > 0||!priceDraft.variantIds.length||priceDraft.variantIds.length>200} aria-disabled={Boolean(busy)||stockBusy.size > 0||!priceDraft.variantIds.length||priceDraft.variantIds.length>200} aria-describedby={stockBusy.size > 0 ? 'bulk-price-stock-wait' : undefined}>{priceReview?'Confirm price update':'Review price update'}</button><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={()=>{if(!priceDirty || confirmDiscardChanges()){setPriceDraft(null);setPriceReview(false)}}}>Cancel</button></div></form>}</div>}
+           {!detail.isActive && <p className="product-muted">Reactivate this product before adding variants.</p>}
+diff --git a/frontend/src/pages/app/products.css b/frontend/src/pages/app/products.css
+--- a/frontend/src/pages/app/products.css
++++ b/frontend/src/pages/app/products.css
+@@ -417,3 +417,25 @@
+ @media (min-width: 701px) {
+   .products-page .product-stock-row { padding-block: 0; }
+ }
++
++/* Phase 4: presentation refinements after recovery and image hardening. */
++.products-page .product-price-selection { margin: 8px 0; }
++.products-page .product-price-selection summary { min-height: 44px; padding: 10px 0; color: var(--color-text); font-size: 14px; cursor: pointer; }
++.products-page .product-price-targets { max-height: 240px; overflow-y: auto; padding: 8px 4px; }
++.products-page .product-form-grid small,
++.products-page .product-create-fields small,
++.products-page input[type='file'],
++.products-page .product-stock-extra dt,
++.products-page .product-stock-extra dd,
++.products-page .product-stock-recovery,
++.products-page .product-stock-recovery p,
++.products-page .product-stock-recovery button { font-size: 13px; }
++.products-page .product-image-placeholder small { overflow-wrap: anywhere; }
++.products-page .product-stock-more summary { padding-inline: 4px; }
++@media (max-width: 700px) {
++  /* Price and More keep their own line; readiness never overlaps either. */
++  .products-page .product-option-state { grid-column: 1 / -1; grid-row: 3; max-width: none; }
++  .products-page .product-stock-more { grid-column: 3; grid-row: 2; }
++  .products-page .product-price-targets { max-height: 180px; }
++  .products-page .product-overview-summary { flex-basis: 100%; }
++}
+diff --git a/scripts/products-ui.test.mjs b/scripts/products-ui.test.mjs
+--- a/scripts/products-ui.test.mjs
++++ b/scripts/products-ui.test.mjs
+@@ -547,6 +547,7 @@
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+  await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+  await page.locator('#product-common-price').fill('27.50');
++ await page.locator('.product-price-selection summary').click();
+  await page.locator('.product-price-targets input').first().uncheck();
+  await page.getByRole('button',{name:'Review price update',exact:true}).click();
+  await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+@@ -676,6 +677,7 @@
+  try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+  await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
++ await page.locator('.product-price-selection summary').click();
+  await page.locator('.product-price-targets input').first().uncheck();
+  const answers=[false,true];let prompts=0;
+  page.on('dialog',async dialog=>{prompts++;if(answers.shift())await dialog.accept();else await dialog.dismiss()});
+@@ -822,3 +824,24 @@
+   await noOverflow(page);assert.deepEqual(errors,[])
+  }finally{await page.close()}
+ })
++
++test('phase 4: mobile state badges and More do not overlap and bulk selector is compact',async()=>{
++ const {page}=await open(390,844)
++ try {
++  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
++  await page.locator('.product-stock-row').first().waitFor()
++  const separated=await page.locator('.product-stock-row').first().evaluate(row=>{
++   const badge=row.querySelector('.product-option-state').getBoundingClientRect()
++   const more=row.querySelector('.product-stock-more').getBoundingClientRect()
++   return badge.top>=more.bottom || badge.bottom<=more.top || badge.right<=more.left || badge.left>=more.right
++  })
++  assert.equal(separated,true)
++  await page.getByRole('button',{name:'Apply price to variants',exact:true}).click()
++  assert.equal(await page.locator('.product-price-targets input').first().isVisible(),false)
++  await page.locator('.product-price-selection summary').click()
++  assert.equal(await page.locator('.product-price-targets input').first().isVisible(),true)
++  await page.locator('.product-price-targets input').first().uncheck()
++  assert.equal(await page.locator('.product-price-selection summary').textContent(),'Choose options (2 selected)')
++  await noOverflow(page)
++ }finally{await page.close()}
++})

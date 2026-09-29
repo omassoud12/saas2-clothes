@@ -58,6 +58,7 @@ export interface ProductView {
   readonly category: { readonly id: string; readonly name: string }
   readonly isActive: boolean
   readonly imageUrl: string | null
+  readonly imageStatus?: 'none' | 'available' | 'unavailable'
   readonly variants: readonly VariantView[]
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -70,6 +71,7 @@ export interface ProductSummaryView {
  readonly category: { readonly id: string; readonly name: string }
  readonly isActive: boolean
  readonly imageUrl: string | null
+  readonly imageStatus?: 'none' | 'available' | 'unavailable'
  readonly catalogSummary: { readonly activeVariantCount: number; readonly inactiveVariantCount: number; readonly availableStock: string; readonly inactiveStock: string; readonly priceMin: string | null; readonly priceMax: string | null }
 }
 

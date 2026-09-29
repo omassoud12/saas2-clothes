@@ -301,7 +301,9 @@ describe('Product and Variant service', () => {
     const created = await service.createProduct(accountA, userId, UserRole.OWNER, { categoryId: categoryA, name: 'Cargo Pants' })
     assert.equal(created.imageUrl, null)
     store.products.get(productA)!.imageKey = productImageKey(accountA, productA)
-    await assert.rejects(service.getProduct(accountA, productA, UserRole.OWNER), (error) => expectError(error, 503, 'IMAGE_STORAGE_UNAVAILABLE'))
+    const pictured = await service.getProduct(accountA, productA, UserRole.OWNER)
+    assert.equal(pictured.imageUrl, null)
+    assert.equal(pictured.imageStatus, 'unavailable')
   })
 
   test('rejects a foreign or inactive Category and scopes Product updates', async () => {
@@ -779,4 +781,70 @@ test('cost entered after an uncosted sale changes only current variant basis',as
  const updated=await fixture.service.setOpeningCost(accountA,productA,variant.id,UserRole.OWNER,'8.1234')
  assert.equal(updated.currentStock,0);assert.equal(updated.lastPurchaseCost,'8.1234')
  assert.equal(fixture.movements.at(-1)?.unitCost,null)
+})
+
+describe('Phase 3 image failure isolation', () => {
+  test('summary and full catalogs isolate one failed signer and keep healthy or absent images', async () => {
+    const store = new CatalogDouble()
+    store.addProduct().imageKey = productImageKey(accountA, productA)
+    store.addProduct(productB).imageKey = productImageKey(accountA, productB)
+    const emptyId = randomUUID(); store.addProduct(emptyId)
+    const images = new ImageDouble()
+    images.signedReadUrl = async (_account, id) => {
+      if (id === productA) throw new Error('signing unavailable')
+      return 'https://images.example.test/healthy.webp'
+    }
+    const service = createProductDependencies(store.asClient(), () => images)
+    for (const result of [await service.listProductSummaries(accountA,{page:1,limit:12}), await service.listProducts(accountA,UserRole.WAREHOUSE,{page:1,limit:12})]) {
+      assert.equal(result.total,3)
+      assert.equal(result.products.find(p=>p.id===productA)?.imageStatus,'unavailable')
+      assert.equal(result.products.find(p=>p.id===productA)?.imageUrl,null)
+      assert.equal(result.products.find(p=>p.id===productB)?.imageStatus,'available')
+      assert.equal(result.products.find(p=>p.id===emptyId)?.imageStatus,'none')
+      assert.doesNotMatch(JSON.stringify(result),/imageKey|lastPurchaseCost|profitMarginOverride/)
+    }
+  })
+  test('catalog HTTP 200 and committed edit/price success survive unavailable image storage', async () => {
+    const store=new CatalogDouble();store.addProduct().imageKey=productImageKey(accountA,productA);store.addVariant()
+    store.addProduct(productB,accountB,categoryB)
+    const service=createProductDependencies(store.asClient(),()=>{throw Error('storage unavailable')})
+    const app=express();app.use(express.json());app.use('/api/products',createProductRouter(auth(UserRole.OWNER),service));app.use(errorHandler)
+    const server=await new Promise<ReturnType<typeof app.listen>>(resolve=>{const listener=app.listen(0,'127.0.0.1',()=>resolve(listener))})
+    const base=`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/products`
+    const headers={Authorization:'Bearer fixture','Content-Type':'application/json'}
+    try {
+      for(const query of ['', '?view=summary']) {
+        const response=await fetch(base+query,{headers});assert.equal(response.status,200)
+        const body=await response.json();assert.equal(body.products.length,1);assert.equal(body.products[0].imageStatus,'unavailable')
+      }
+      const edit=await fetch(`${base}/${productA}`,{method:'PATCH',headers,body:JSON.stringify({name:'Saved despite photo failure'})})
+      assert.equal(edit.status,200);assert.equal((await edit.json()).product.imageStatus,'unavailable')
+      assert.equal(store.products.get(productA)?.name,'Saved despite photo failure')
+      const pricing=await fetch(`${base}/${productA}/variant-prices`,{method:'POST',headers,body:JSON.stringify({variantIds:[variantA],sellingPrice:'31.50'})})
+      assert.equal(pricing.status,200);assert.equal((await pricing.json()).product.imageStatus,'unavailable')
+      assert.equal(store.variants.get(variantA)?.sellingPrice?.toFixed(2),'31.50')
+      const foreign=await fetch(`${base}/${productB}`,{headers});assert.equal(foreign.status,404)
+    }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()))}
+  })
+  test('canonical key validation remains mandatory even when signer is unavailable', async () => {
+    const store=new CatalogDouble();store.addProduct().imageKey=productImageKey(accountB,productA)
+    let signCalls=0
+    const service=createProductDependencies(store.asClient(),()=>{signCalls++;throw Error('storage unavailable')})
+    await assert.rejects(service.listProductSummaries(accountA,{page:1,limit:12}),e=>expectError(e,403,'PRODUCT_IMAGE_KEY_FORBIDDEN'))
+    await assert.rejects(service.getProduct(accountA,productA,UserRole.OWNER),e=>expectError(e,403,'PRODUCT_IMAGE_KEY_FORBIDDEN'))
+    assert.equal(signCalls,0)
+  })
+})
+
+test('Phase 3 post-commit signer rejection preserves name and transactional bulk price success',async()=>{
+ const store=new CatalogDouble();store.addProduct().imageKey=productImageKey(accountA,productA);store.addVariant()
+ const images=new ImageDouble();images.signedReadUrl=async()=>{throw Error('signing failed')}
+ const service=createProductDependencies(store.asClient(),()=>images)
+ const edited=await service.updateProduct(accountA,productA,UserRole.WAREHOUSE,{name:'Warehouse saved'})
+ assert.equal(edited.name,'Warehouse saved');assert.equal(edited.imageStatus,'unavailable')
+ assert.equal(Object.hasOwn(edited,'profitMarginOverride'),false)
+ assert.equal(Object.hasOwn(edited.variants[0],'lastPurchaseCost'),false)
+ const priced=await service.applyVariantPrice(accountA,productA,UserRole.OWNER,[variantA],'44.25')
+ assert.equal(priced.imageStatus,'unavailable');assert.equal(priced.variants[0].sellingPrice,'44.25')
+ assert.equal(store.variants.get(variantA)?.sellingPrice?.toFixed(2),'44.25')
 })

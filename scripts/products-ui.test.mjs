@@ -46,15 +46,18 @@ before(async () => {
 })
 after(async () => { await browser?.close(); await server?.close() })
 
-async function open(width, height, role = 'OWNER', mode = 'normal') {
-  const page = await browser.newPage({ viewport: { width, height } })
+async function open(width, height, role = 'OWNER', mode = 'normal', shared = false) {
+  const context = shared ? await browser.newContext({ viewport: { width, height } }) : null
+  const page = context ? await context.newPage() : await browser.newPage({ viewport: { width, height } })
   const calls = [], errors = [], stockKeys = new Set()
   const records = [1, 2, 3].map((id) => product(id, role === 'OWNER'))
   if (mode === 'dense') { records[0].variants = ['Black', 'White'].flatMap((color, c) => ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'].map((size, i) => ({ ...records[0].variants[0], id: `dense-${c}-${i}`, color, size, currentStock: 1 }))) }
+  if (mode === 'photo-unavailable') { records[0].imageUrl=null; records[0].imageStatus='unavailable' }
+  if (mode === 'mixed-color') { records[0].variants[0].color='Black'; records[0].variants[1].color='black'; records[0].variants[2].color=' Black ' }
   if (mode === 'pending-cost') records[0].variants.forEach(variant=>{variant.lastPurchaseCost=null})
   if (mode === 'inventory') { records[0].variants[0].currentStock = 1; records[0].variants[0].lastPurchaseCost = null }
   page.on('pageerror', (error) => errors.push(error.message))
-  await page.route('**/*', async (route) => {
+  await (context || page).route('**/*', async (route) => {
     const url = new URL(route.request().url())
     if (url.origin !== origin) { errors.push(`Blocked external URL: ${url.origin}`); return route.abort() }
     if (!url.pathname.startsWith('/api/')) return route.continue()
@@ -66,13 +69,13 @@ async function open(width, height, role = 'OWNER', mode = 'normal') {
     if (url.pathname === '/api/inventory/reconciliation') return reply({ variants: [], nextCursor: null })
     if (url.pathname === '/api/reports/daily') return reply({report:{reportDate:url.searchParams.get('date'),currency:'USD',salesCount:1,totalUnitsSold:2,grossRevenue:'50.00',returnedRevenue:'0.00',voidedRevenue:'0.00',netRevenue:'50.00',operatingExpenses:'3.00',costStatus:'INCOMPLETE',grossCOGS:null,returnedCOGS:null,voidedCOGS:null,netCOGS:null,grossProfit:null,netProfit:null,stockValue:null}})
     if (url.pathname === '/api/categories') return reply({ categories: [category] })
-    if (url.pathname === '/api/products' && method === 'GET') return reply({ products: mode === 'empty' || url.searchParams.get('search') === 'missing' ? [] : url.searchParams.get('view') === 'summary' ? records.map(item => {const summary=summarizeProductCatalog(item,'USD'); const prices=item.variants.filter(v=>item.isActive&&v.isActive&&v.sellingPrice!==null).map(v=>v.sellingPrice).sort((a,b)=>Number(a)-Number(b));return {id:item.id,name:item.name,category:item.category,isActive:item.isActive,imageUrl:item.imageUrl,catalogSummary:{availableStock:summary.stock,inactiveStock:summary.inactiveStock,activeVariantCount:item.variants.filter(v=>item.isActive&&v.isActive).length,inactiveVariantCount:item.variants.filter(v=>!item.isActive||!v.isActive).length,priceMin:prices[0]??null,priceMax:prices.at(-1)??null}}}) : records, total: mode === 'empty' || url.searchParams.get('search') === 'missing' ? 0 : 25, page: Number(url.searchParams.get('page') || 1), limit: 12 })
+    if (url.pathname === '/api/products' && method === 'GET') return reply({ products: mode === 'empty' || url.searchParams.get('search') === 'missing' ? [] : url.searchParams.get('view') === 'summary' ? records.map(item => {const summary=summarizeProductCatalog(item,'USD'); const prices=item.variants.filter(v=>item.isActive&&v.isActive&&v.sellingPrice!==null).map(v=>v.sellingPrice).sort((a,b)=>Number(a)-Number(b));return {id:item.id,name:item.name,category:item.category,isActive:item.isActive,imageUrl:item.imageUrl,...(item.imageStatus ? {imageStatus:item.imageStatus} : {}),catalogSummary:{availableStock:summary.stock,inactiveStock:summary.inactiveStock,activeVariantCount:item.variants.filter(v=>item.isActive&&v.isActive).length,inactiveVariantCount:item.variants.filter(v=>!item.isActive||!v.isActive).length,priceMin:prices[0]??null,priceMax:prices.at(-1)??null}}}) : records, total: mode === 'empty' || url.searchParams.get('search') === 'missing' ? 0 : 25, page: Number(url.searchParams.get('page') || 1), limit: 12 })
     if (url.pathname === '/api/products/setup' && method === 'POST') { const added = { ...product(4, role === 'OWNER'), name: body.product.name, variants: body.variants.map((option,i) => ({ ...product(1, role === 'OWNER').variants[0], ...option, id:`setup-${i}`, currentStock: option.openingStock ? 1 : 0, ...(role === 'OWNER' ? { lastPurchaseCost: null } : {}) })) }; records.push(added); return reply({ product: added }, 201) }
     if (url.pathname === '/api/products' && method === 'POST') { const added = { ...product(4, role === 'OWNER'), name: body.name, variants: [] }; records.push(added); return reply({ product: added }, 201) }
     const record = records.find((item) => url.pathname.includes(item.id))
     if (!record) return reply({ error: { code: 'PRODUCT_NOT_FOUND' } }, 404)
     if (url.pathname.endsWith('/variant-prices')) { for (const variant of record.variants) if (body.variantIds.includes(variant.id)) variant.sellingPrice=body.sellingPrice; return reply({product:record}) }
-    if (url.pathname.endsWith('/quick-stock') && method === 'POST') { const variant = record.variants.find(item => url.pathname.includes(item.id)); const key = route.request().headers()['idempotency-key']; const first = !stockKeys.has(key); if (first) { variant.currentStock += route.request().postDataJSON().delta ?? 1; stockKeys.add(key) } if (mode === 'quick-slow') await new Promise(resolve=>setTimeout(resolve,600)); if (mode === 'quick-uncertain' && first && stockKeys.size === 1) return route.abort(); return reply({ variant }) }
+    if (url.pathname.endsWith('/quick-stock') && method === 'POST') { const variant = record.variants.find(item => url.pathname.includes(item.id)); const key = route.request().headers()['idempotency-key']; const first = !stockKeys.has(key); if (first) { variant.currentStock += route.request().postDataJSON().delta ?? 1; stockKeys.add(key) } if (mode === 'quick-slow') await new Promise(resolve=>setTimeout(resolve,600)); if ((mode === 'quick-all-uncertain' && first) || (mode === 'quick-uncertain' && first && stockKeys.size === 1)) return route.abort(); return reply({ variant }) }
     if (url.pathname.endsWith('/opening-cost') && method === 'PUT') { const variant = record.variants.find(item => url.pathname.includes(item.id)); variant.lastPurchaseCost = body.unitCost; return reply({ variant }) }
     if (url.pathname.endsWith('/image')) {
       if (method === 'DELETE') { record.imageUrl = null; return route.fulfill({ status: 204 }) }
@@ -158,7 +161,7 @@ test('mobile filter sheet traps focus, restores focus, Escape and applies draft 
     assert.equal(await page.evaluate(() => document.body.style.overflow), '')
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
     await page.getByLabel('Status', { exact: true }).selectOption('false')
-    await page.getByRole('button', { name: 'Apply', exact: true }).click()
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
     await page.waitForFunction(() => !document.querySelector('.product-filter-options.is-open'))
     assert.ok(calls.some((call) => call.query.includes('isActive=false')))
     assert.deepEqual(errors, [])
@@ -172,7 +175,7 @@ test('search, empty/no-results and server pagination keep their contracts', asyn
     await page.getByText('Page 2 of 3', { exact: true }).waitFor()
     assert.ok(calls.some((call) => call.query.includes('page=2')))
     await page.getByRole('searchbox', { name: 'Search', exact: true }).fill('missing')
-    await page.getByRole('button', { name: 'Search', exact: true }).click()
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
     await page.getByRole('heading', { name: 'No matching products' }).waitFor()
     assert.ok(calls.some((call) => call.query.includes('search=missing') && call.query.includes('page=1')))
   } finally { await page.close() }
@@ -327,7 +330,7 @@ test('one View product action opens a standalone page with product editing and r
   } finally { await page.close() }
 })
 
-test('size cards run horizontally inside each color section', async () => {
+test('compact size matrix uses one row per size inside each color section', async () => {
   const { page, errors } = await open(1366, 900, 'OWNER', 'dense')
   try {
     await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
@@ -335,9 +338,10 @@ test('size cards run horizontally inside each color section', async () => {
     assert.equal(await page.locator('.product-color-stock-card').count(), 2)
     assert.equal(await page.locator('.product-stock-row').count(), 16)
     const tiles = await page.locator('.product-color-stock-card').first().locator('.product-stock-row').evaluateAll(nodes => nodes.map(n => ({ top:n.getBoundingClientRect().top, left:n.getBoundingClientRect().left })))
-    assert.equal(tiles[0].top, tiles[1].top)
-    assert.ok(tiles[1].left > tiles[0].left)
+    assert.ok(tiles[1].top > tiles[0].top)
+    assert.equal(tiles[1].left, tiles[0].left)
     assert.ok(await page.locator('.product-color-stock-card').first().evaluate(el => el.getBoundingClientRect().height < 480))
+    assert.ok(await page.evaluate(() => document.documentElement.scrollHeight < 1300), 'Dense details should be shorter than the previous layout')
     await noOverflow(page)
     await page.screenshot({ path: join(screenshots, 'compact-colors-1366.png'), fullPage: true })
     assert.deepEqual(errors, [])
@@ -471,7 +475,7 @@ test('Warehouse detail exposes operational readiness and no financial completene
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
  assert.equal(await page.getByText('Sellable',{exact:true}).count(),3)
- assert.equal(await page.getByText('Cost pending',{exact:true}).count(),0)
+ assert.equal(await page.getByText('Cost pending: Inventory',{exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Apply price to variants',exact:true}).count(),0)
  }finally{await page.close()}
 })
@@ -480,7 +484,7 @@ for(const width of [390,768,1024,1366,1440]) test(`owner cost pending is indepen
  const {page}=await open(width,width===390?844:900,'OWNER','pending-cost')
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
- assert.equal(await page.getByText('Cost pending',{exact:true}).count(),3)
+ assert.equal(await page.getByText('Cost pending: Inventory',{exact:true}).count(),3)
  assert.equal(await page.locator('.product-option-state').filter({hasText:'Sellable'}).count(),3)
  await noOverflow(page)
  await page.screenshot({path:join(screenshots,`cost-pending-${width}.png`),fullPage:true})
@@ -505,5 +509,339 @@ test('dashboard handles incomplete economics without crashing or claiming profit
  await page.getByText('Cost data incomplete. Revenue is available; final COGS and profit are unavailable.',{exact:true}).waitFor()
  assert.ok(await page.getByText('Unavailable',{exact:true}).count()>0)
  assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
+
+
+test('phase 1: cancelling product deactivation preserves unsaved product draft',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Edit product',exact:true}).click();
+ await page.locator('#catalog-product-name').fill('Unsaved model');
+ await page.getByRole('button',{name:'Deactivate product',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(await page.locator('#catalog-product-name').count(),1);
+ assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
+ }finally{await page.close()}
+});
+
+test('phase 1: clean product Cancel preserves an unrelated dirty variant',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Edit product',exact:true}).click();
+ await page.locator('.product-stock-row').first().getByRole('button',{name:'Edit',exact:true}).click();
+ await page.locator('#catalog-variant-color').fill('Unsaved color');
+ let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()});
+ await page.locator('.product-overview').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(await page.locator('#catalog-variant-color').count(),1);
+ assert.equal(await page.locator('#catalog-variant-color').inputValue(),'Unsaved color');
+ assert.equal(prompts,0);
+ }finally{await page.close()}
+});
+
+test('phase 1: reopening bulk pricing preserves price selection and review',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+ await page.locator('#product-common-price').fill('27.50');
+ await page.locator('.product-price-selection summary').click();
+ await page.locator('.product-price-targets input').first().uncheck();
+ await page.getByRole('button',{name:'Review price update',exact:true}).click();
+ await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+ assert.equal(await page.locator('#product-common-price').inputValue(),'27.50');
+ assert.equal(await page.locator('.product-price-targets input').first().isChecked(),false);
+ assert.equal(await page.getByRole('button',{name:'Confirm price update',exact:true}).count(),1);
+ }finally{await page.close()}
+});
+
+test('phase 1: cancelling variant deactivation preserves unsaved variant draft',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ const row=page.locator('.product-stock-row').first();
+ await row.getByRole('button',{name:'Edit',exact:true}).click();
+ await page.locator('#catalog-variant-color').fill('Unsaved color');
+ await row.locator('.product-stock-more').evaluate(el=>{el.open=true});
+ await row.getByRole('button',{name:'Deactivate variant',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(await page.locator('#catalog-variant-color').count(),1);
+ assert.equal(await page.locator('#catalog-variant-color').inputValue(),'Unsaved color');
+ }finally{await page.close()}
+});
+
+test('phase 1: pending stock disables price and photo saves with accessible wait feedback',async()=>{
+ const {page,calls}=await open(1366,900);
+ let release;
+ const gate=new Promise(resolve=>{release=resolve});
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+ await page.locator('#product-common-price').fill('27.50');
+ await page.getByRole('button',{name:'Review price update',exact:true}).click();
+ await page.locator('.product-photo-action summary').click();
+ await page.locator('#product-image-file').setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF9sAAAAASUVORK5CYII=','base64')});
+ await page.route('**/quick-stock',async route=>{await gate;await route.fallback()});
+ await page.locator('.product-stock-row').first().getByRole('button',{name:'Add stock',exact:true}).click();
+ await page.locator('.product-stock-row').first().getByRole('status').waitFor();
+ const confirm=page.getByRole('button',{name:'Confirm price update',exact:true});
+ const photo=page.getByRole('button',{name:'Replace image',exact:true});
+ assert.equal(await confirm.isDisabled(),true);
+ assert.equal(await photo.isDisabled(),true);
+ for(const button of [confirm,photo]){
+ assert.equal(await button.getAttribute('aria-disabled'),'true');
+ const id=await button.getAttribute('aria-describedby');assert.ok(id);
+ assert.equal(await page.locator('#'+id).textContent(),'Waiting for stock update to finish.');
+ assert.equal(await page.locator('#'+id).isVisible(),true);
+ }
+ assert.equal(await page.locator('.product-stock-row').nth(1).getByRole('button',{name:'Add stock',exact:true}).isEnabled(),true);
+ release();
+ await page.locator('.product-stock-row').first().getByRole('status').waitFor({state:'hidden'});
+ assert.equal(await confirm.isEnabled(),true);assert.equal(await photo.isEnabled(),true);
+ assert.equal(await page.getByText('Waiting for stock update to finish.',{exact:true}).count(),0);
+ assert.equal(calls.filter(call=>call.path.endsWith('/variant-prices')||call.path.endsWith('/image')).length,0);
+ assert.equal(await page.locator('#product-common-price').inputValue(),'27.50');
+ }finally{release?.();await page.close()}
+});
+
+
+test('phase 1: cancelling a clean bulk form does not warn about unrelated product edits',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Edit product',exact:true}).click();
+ await page.locator('#catalog-product-name').fill('Unsaved model');
+ await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+ let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()});
+ await page.locator('.product-bulk-price').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(prompts,0);
+ assert.equal(await page.locator('#product-common-price').count(),0);
+ assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
+ }finally{await page.close()}
+});
+
+test('phase 1: clean variant Cancel preserves an unrelated dirty product',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Edit product',exact:true}).click();
+ await page.locator('#catalog-product-name').fill('Unsaved model');
+ await page.locator('.product-stock-row').first().getByRole('button',{name:'Edit',exact:true}).click();
+ let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()});
+ await page.locator('.product-stock-row').first().getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(prompts,0);
+ assert.equal(await page.locator('#catalog-variant-color').count(),0);
+ assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
+ }finally{await page.close()}
+});
+
+for(const kind of ['product','variant'])test(`phase 1: ${kind} draft survives failed confirmation and clears only after success`,async()=>{
+ const {page,calls}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Edit product',exact:true}).click();
+ await page.locator('#catalog-product-name').fill('Unsaved model');
+ const row=page.locator('.product-stock-row').first();
+ await row.getByRole('button',{name:'Edit',exact:true}).click();
+ await page.locator('#catalog-variant-color').fill('Unsaved color');
+ const pattern=kind==='product'?'**/api/products/22222222-2222-4222-8222-000000000001':'**/api/products/*/variants/*';
+ await page.route(pattern,async route=>{
+ if(route.request().method()==='PATCH')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'API_UNAVAILABLE'}})});
+ await route.fallback();
+ });
+ if(kind==='product')await page.getByRole('button',{name:'Deactivate product',exact:true}).click();
+ else {await row.locator('.product-stock-more').evaluate(el=>{el.open=true});await row.getByRole('button',{name:'Deactivate variant',exact:true}).click()}
+ const dialog=page.getByRole('dialog');
+ const action=dialog.getByRole('button',{name:kind==='product'?'Deactivate product':'Deactivate color / size',exact:true});
+ await action.click();await dialog.getByRole('alert').waitFor();
+ assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
+ assert.equal(await page.locator('#catalog-variant-color').inputValue(),'Unsaved color');
+ await page.unroute(pattern);
+ await action.click();await dialog.waitFor({state:'hidden'});
+ if(kind==='product'){
+ assert.equal(await page.locator('#catalog-product-name').count(),0);
+ assert.equal(await page.locator('#catalog-variant-color').inputValue(),'Unsaved color');
+ }else{
+ assert.equal(await page.locator('#catalog-variant-color').count(),0);
+ assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
+ }
+ assert.equal(calls.filter(call=>call.method==='PATCH'&&call.body?.isActive===false).length,1);
+ }finally{await page.close()}
+});
+
+
+test('phase 1: selection-only bulk changes receive their own discard guard',async()=>{
+ const {page}=await open(1366,900);
+ try {
+ await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
+ await page.getByRole('button',{name:'Apply price to variants',exact:true}).click();
+ await page.locator('.product-price-selection summary').click();
+ await page.locator('.product-price-targets input').first().uncheck();
+ const answers=[false,true];let prompts=0;
+ page.on('dialog',async dialog=>{prompts++;if(answers.shift())await dialog.accept();else await dialog.dismiss()});
+ await page.locator('.product-bulk-price').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(prompts,1);
+ assert.equal(await page.locator('#product-common-price').count(),1);
+ assert.equal(await page.locator('.product-price-targets input').first().isChecked(),false);
+ await page.locator('.product-bulk-price').getByRole('button',{name:'Cancel',exact:true}).click();
+ assert.equal(prompts,2);
+ assert.equal(await page.locator('#product-common-price').count(),0);
+ }finally{await page.close()}
+});
+
+async function stockKeysOn(page) {
+ return page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('saas2:quick-stock:v1:')&&key.includes(':operation:')))
+}
+test('phase 2: two tabs retain separate unresolved operations across reload and replay original UUIDs',async()=>{
+ const {page,calls}=await open(1366,900,'OWNER','quick-all-uncertain',true)
+ const context=page.context();const other=await context.newPage()
+ try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await other.goto(page.url());await other.locator('.product-stock-row').first().waitFor()
+  await page.getByRole('button',{name:'Add stock',exact:true}).nth(0).click()
+  await page.locator('#products-feedback[role=alert]').waitFor()
+  await other.getByRole('button',{name:'Add stock',exact:true}).nth(1).click()
+  await other.locator('#products-feedback[role=alert]').waitFor()
+  assert.equal((await stockKeysOn(page)).length,2)
+  await page.reload();await other.reload()
+  await page.getByRole('button',{name:'Retry same update',exact:true}).nth(1).waitFor()
+  await other.getByRole('button',{name:'Retry same update',exact:true}).nth(1).waitFor()
+  assert.equal(await other.getByRole('button',{name:'Retry same update',exact:true}).count(),2)
+  assert.equal(calls.filter(call=>call.path.endsWith('/quick-stock')).length,2)
+  await page.getByRole('button',{name:'Retry same update',exact:true}).first().click()
+  await page.getByText(/5 pieces\./).waitFor()
+  await other.getByRole('button',{name:'Retry same update',exact:true}).click()
+  await other.getByText(/9 pieces\./).waitFor()
+  const requests=calls.filter(call=>call.path.endsWith('/quick-stock'))
+  assert.equal(requests[0].operationId,requests[2].operationId)
+  assert.equal(requests[1].operationId,requests[3].operationId)
+  assert.equal((await stockKeysOn(page)).length,0)
+ }finally{await context.close()}
+})
+test('phase 2: cross-tab same-variant retry is blocked while original request holds lock',async()=>{
+ const {page,calls}=await open(1366,900,'OWNER','normal',true)
+ const context=page.context();const other=await context.newPage()
+ let release;const gate=new Promise(resolve=>{release=resolve})
+ try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await other.goto(page.url());await other.locator('.product-stock-row').first().waitFor()
+  await page.route('**/quick-stock',async route=>{await gate;await route.fallback()})
+  await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
+  await other.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
+  assert.equal(await other.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
+  await other.getByRole('button',{name:'Retry same update',exact:true}).click()
+  await other.getByText('Another page is confirming this option. Wait for it to finish before retrying.').waitFor()
+  release();await page.getByText(/5 pieces\./).waitFor()
+  assert.equal(calls.filter(call=>call.path.endsWith('/quick-stock')).length,1)
+  assert.equal((await stockKeysOn(other)).length,0)
+ }finally{release();await context.close()}
+})
+test('phase 2: late response after navigation clears only its own operation',async()=>{
+ const {page}=await open(1366,900,'OWNER','normal',true)
+ let release;const gate=new Promise(resolve=>{release=resolve})
+ try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.route('**/quick-stock',async route=>{
+   if(route.request().url().includes('000000000010')){await gate;await route.fallback()}
+   else await route.abort()
+  })
+  await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
+  await page.locator('.product-stock-row').first().getByRole('status').waitFor()
+  await page.getByRole('button',{name:'Back to products',exact:true}).click()
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
+  await page.getByRole('button',{name:'Add stock',exact:true}).nth(1).click()
+  await page.locator('#products-feedback[role=alert]').waitFor()
+  assert.equal((await stockKeysOn(page)).length,2)
+  release()
+  await page.waitForFunction(()=>Object.keys(localStorage).filter(k=>k.includes(':operation:')).length===1)
+  assert.equal(await page.getByRole('button',{name:'Retry same update',exact:true}).count(),1)
+  const remaining=await page.evaluate(()=>JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.includes(':operation:')))))
+  assert.ok(remaining.variantId.endsWith('000000000011'))
+ }finally{release();await page.context().close()}
+})
+test('phase 2: unsupported Web Locks preserves pending data and sends no stock request',async()=>{
+ const {page,calls}=await open(1366,900,'OWNER','normal',true)
+ try {
+  await page.evaluate(()=>localStorage.setItem('saas2:quick-stock:v1:qa-account:qa-user:22222222-2222-4222-8222-000000000001',JSON.stringify([{operationId:'77777777-7777-4777-8777-777777777777',variantId:'33333333-3333-4333-8333-000000000010',delta:1,createdAt:Date.now()}])))
+  await page.addInitScript(()=>Object.defineProperty(navigator,'locks',{value:undefined}))
+  await page.reload()
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.getByText(/Safe stock updates require browser Web Locks/).waitFor()
+  assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
+  assert.equal(calls.filter(call=>call.path.endsWith('/quick-stock')).length,0)
+  assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('saas2:quick-stock:v1:')).length),1)
+ }finally{await page.context().close()}
+})
+
+test('phase 2: browser migrates legacy recovery once and keeps explicit retry UUID',async()=>{
+ const {page,calls}=await open(1366,900,'OWNER','normal',true)
+ const operationId='77777777-7777-4777-8777-777777777777'
+ const legacyKey='saas2:quick-stock:v1:qa-account:qa-user:22222222-2222-4222-8222-000000000001'
+ try {
+  await page.evaluate(({key,id})=>localStorage.setItem(key,JSON.stringify([{operationId:id,variantId:'33333333-3333-4333-8333-000000000010',delta:-1,createdAt:Date.now()}])),{key:legacyKey,id:operationId})
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
+  await page.waitForFunction(key=>localStorage.getItem(key)===null,legacyKey)
+  assert.equal((await stockKeysOn(page)).length,1)
+  assert.equal(calls.filter(call=>call.path.endsWith('/quick-stock')).length,0)
+  await page.reload()
+  await page.getByRole('button',{name:'Retry same update',exact:true}).click()
+  await page.getByText(/3 pieces\./).waitFor()
+  const request=calls.find(call=>call.path.endsWith('/quick-stock'))
+  assert.equal(request.operationId,operationId);assert.equal(request.body.delta,-1)
+  assert.equal((await stockKeysOn(page)).length,0)
+ }finally{await page.context().close()}
+})
+
+test('phase 3: unavailable photo is explicit in catalog and detail while edits remain usable',async()=>{
+ const {page,calls,errors}=await open(1366,900,'OWNER','photo-unavailable')
+ try {
+  await page.getByLabel('Photo unavailable',{exact:true}).waitFor()
+  assert.equal(await page.getByLabel('No product image',{exact:true}).count(),1)
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.getByLabel('Photo unavailable',{exact:true}).waitFor()
+  await page.getByRole('button',{name:'Edit product',exact:true}).click()
+  await page.locator('#catalog-product-name').fill('Photo independent product')
+  await page.getByRole('button',{name:'Save product',exact:true}).click()
+  await page.getByText('Product updated.',{exact:true}).waitFor()
+  assert.equal(await page.getByLabel('Photo unavailable',{exact:true}).count(),1)
+  assert.equal(calls.filter(call=>call.method==='PATCH').length,1)
+  assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
+test('phase 3: mixed-case trimmed colors share one group and retain separate sizes and quantities',async()=>{
+ const {page,errors}=await open(390,844,'OWNER','mixed-color')
+ try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.locator('.product-stock-row').nth(2).waitFor()
+  assert.equal(await page.locator('.product-color-stock-card').count(),1)
+  assert.equal(await page.getByRole('heading',{name:'Black',exact:true}).count(),1)
+  assert.deepEqual(await page.locator('.product-stock-size').allTextContents(),['S','M','L'])
+  assert.deepEqual(await page.locator('.product-stock-quantity').allTextContents(),['Stock4','Stock8','Stock12'])
+  await noOverflow(page);assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
+
+test('phase 4: mobile state badges and More do not overlap and bulk selector is compact',async()=>{
+ const {page}=await open(390,844)
+ try {
+  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+  await page.locator('.product-stock-row').first().waitFor()
+  const separated=await page.locator('.product-stock-row').first().evaluate(row=>{
+   const badge=row.querySelector('.product-option-state').getBoundingClientRect()
+   const more=row.querySelector('.product-stock-more').getBoundingClientRect()
+   return badge.top>=more.bottom || badge.bottom<=more.top || badge.right<=more.left || badge.left>=more.right
+  })
+  assert.equal(separated,true)
+  await page.getByRole('button',{name:'Apply price to variants',exact:true}).click()
+  assert.equal(await page.locator('.product-price-targets input').first().isVisible(),false)
+  await page.locator('.product-price-selection summary').click()
+  assert.equal(await page.locator('.product-price-targets input').first().isVisible(),true)
+  await page.locator('.product-price-targets input').first().uncheck()
+  assert.equal(await page.locator('.product-price-selection summary').textContent(),'Choose options (2 selected)')
+  await noOverflow(page)
  }finally{await page.close()}
 })
