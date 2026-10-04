@@ -1,3 +1,4 @@
+import { createReceiptDependencies } from './receipts/receipt.service.js'
 import 'dotenv/config'
 import { once } from 'node:events'
 import { createAdminAccountDependencies } from './admin/admin-account.service.js'
@@ -79,6 +80,7 @@ async function start(): Promise<void> {
         categories,
         products,
         inventory,
+        receipts: createReceiptDependencies(prisma),
         sales,
         returns,
         exchanges,

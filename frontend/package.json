@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/auth/auth-flow.test.js src/auth/owner-flow.test.js src/auth/admin-flow.test.js src/app/app-flow.test.js src/app/landing-flow.test.js src/features/categories/category-flow.test.js src/features/products/product-flow.test.js src/features/products/product-hardening.test.js src/features/products/product-setup-flow.test.js src/features/inventory/restock-flow.test.js src/features/inventory/inventory-audit-flow.test.js src/features/sales/sale-flow.test.js src/features/sales/sale-lifecycle-flow.test.js src/features/finance/finance-flow.test.js src/features/dashboard/dashboard-flow.test.js src/lib/api-client.test.js src/lib/money.test.js",
+    "test": "node --test src/auth/auth-flow.test.js src/auth/owner-flow.test.js src/auth/admin-flow.test.js src/app/app-flow.test.js src/app/landing-flow.test.js src/features/categories/category-flow.test.js src/features/products/product-flow.test.js src/features/products/product-hardening.test.js src/features/products/product-setup-flow.test.js src/features/inventory/stock-receipt-flow.test.js src/features/inventory/inventory-presentation.test.js src/features/inventory/restock-flow.test.js src/features/inventory/inventory-audit-flow.test.js src/features/sales/sale-flow.test.js src/features/sales/sale-lifecycle-flow.test.js src/features/finance/finance-flow.test.js src/features/dashboard/dashboard-flow.test.js src/lib/api-client.test.js src/lib/money.test.js",
     "preview": "vite preview",
     "lint": "eslint ."
   },

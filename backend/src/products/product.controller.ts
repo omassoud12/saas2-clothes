@@ -145,14 +145,14 @@ export function setOpeningCost(dependencies: ProductDependencies): RequestHandle
   }
 }
 
-export function quickAddStock(dependencies: ProductDependencies): RequestHandler {
+export function quickAddStock(dependencies: ProductDependencies, adjustment = false): RequestHandler {
   return async (request, response, next) => {
     try {
       const context = tenant(request.auth)
       if (context.role !== UserRole.OWNER) throw new HttpError(403, 'ROLE_FORBIDDEN', 'Only an owner can add stock')
       if (request.body !== undefined && (!request.body || typeof request.body !== 'object' || Array.isArray(request.body) || Object.keys(request.body).some(key => key !== 'delta') || (request.body.delta !== undefined && request.body.delta !== 1 && request.body.delta !== -1))) throw new HttpError(422, 'INVALID_QUICK_STOCK', 'Stock change must be 1 or -1')
       const started = performance.now()
-      const variant = await dependencies.quickAddStock(context.accountId, parseCatalogId(request.params.productId, 'productId'), parseCatalogId(request.params.variantId, 'variantId'), context.role, context.userId, parseIdempotencyKey(request.headers, request.rawHeaders), request.body?.delta ?? 1)
+      const variant = await dependencies.quickAddStock(context.accountId, parseCatalogId(request.params.productId, 'productId'), parseCatalogId(request.params.variantId, 'variantId'), context.role, context.userId, parseIdempotencyKey(request.headers, request.rawHeaders), request.body?.delta ?? 1, adjustment)
       response.setHeader('Server-Timing', `auth;dur=${Number(response.locals.productAuthMs ?? 0).toFixed(1)},stock;dur=${(performance.now() - started).toFixed(1)}`)
       response.json({ variant })
     } catch (error) { next(error) }

@@ -24,7 +24,7 @@ function ProductVariantFilters({ products, draft, setDraft }) {
     <div><label htmlFor={`${draft.kind}-variant`}>Variant</label><select id={`${draft.kind}-variant`} value={draft.variantId} disabled={!product} onChange={(event) => setDraft({ ...draft, variantId: event.target.value })}><option value="">All variants</option>{product?.variants.map((item) => <option key={item.id} value={item.id}>{item.sku}</option>)}</select></div></>
 }
 
-export function InventoryHistory({ role, currency, products }) {
+export function InventoryHistory({ role, currency, products, refreshVersion = 0 }) {
   const [draft, setDraft] = useState({ kind: 'history', productId: '', variantId: '', type: '', from: '', to: '' })
   const [filters, setFilters] = useState({})
   const [version, setVersion] = useState(0)
@@ -40,7 +40,7 @@ export function InventoryHistory({ role, currency, products }) {
       setState(result.ok ? { kind: 'ready', ...result } : { kind: 'error', message: result.message })
     })
     return () => { active = false }
-  }, [filters, version])
+  }, [filters, version, refreshVersion])
 
   function refresh() { generation.current += 1; setState({ kind: 'loading' }); setVersion((value) => value + 1) }
   function apply(event) {
@@ -89,7 +89,7 @@ export function InventoryHistory({ role, currency, products }) {
   </section>
 }
 
-export function InventoryReconciliation({ products }) {
+export function InventoryReconciliation({ products, refreshVersion = 0 }) {
   const [draft, setDraft] = useState({ kind: 'reconciliation', productId: '', variantId: '', status: '' })
   const [filters, setFilters] = useState({})
   const [version, setVersion] = useState(0)
@@ -105,7 +105,7 @@ export function InventoryReconciliation({ products }) {
       setState(result.ok ? { kind: 'ready', ...result } : { kind: 'error', message: result.message })
     })
     return () => { active = false }
-  }, [filters, version])
+  }, [filters, version, refreshVersion])
 
   function refresh() { generation.current += 1; setState({ kind: 'loading' }); setVersion((value) => value + 1) }
   async function loadMore() {

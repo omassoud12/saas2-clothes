@@ -5,17 +5,18 @@ import { useEffect, useRef, useState } from 'react'
 import { createProduct, createVariant, createProductSetup, uploadProductImage, validateImage } from './product-flow.js'
 import { createProductSetupWorkflow } from './product-setup-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import './products.css'
 
 const sizes = clothingSizes
 const colorChoices = ['Black', 'White', 'Gray', 'Charcoal', 'Navy', 'Blue', 'Light blue', 'Red', 'Burgundy', 'Green', 'Olive', 'Khaki', 'Beige', 'Cream', 'Brown', 'Camel', 'Pink', 'Purple', 'Lavender', 'Yellow', 'Orange', 'Teal', 'Turquoise', 'Gold', 'Silver', 'Multicolor']
 const newColor = (name) => ({ id: crypto.randomUUID(), color: name, customSize: '', options: [] })
 const newSize = (size) => ({ sku: `ITEM-${crypto.randomUUID()}`, barcode: '', size, selected: true })
 
-export function ProductCreateForm({ role, currency, categories, categoriesLoading, onCancel, onSaved, onBusy }) {
-  const [draft, setDraft] = useState(() => ({ name: '', categoryId: '', sellingPrice: '', colors: [] }))
+export function ProductCreateForm({ role, currency, categories, categoriesLoading, onCancel, onSaved, onBusy, onDefine, initialDraft, initialImageFile }) {
+  const [draft, setDraft] = useState(() => initialDraft ?? ({ name: '', categoryId: '', sellingPrice: '', colors: [] }))
   const [customColor, setCustomColor] = useState('')
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
+  const [imageFile, setImageFile] = useState(initialImageFile ?? null)
+  const [imagePreview, setImagePreview] = useState(() => initialImageFile ? URL.createObjectURL(initialImageFile) : null)
   const imageInput = useRef(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -68,7 +69,8 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
       if (draft.colors.some((color) => !color.options.some((option) => option.selected))) {
         setFeedback({ message: 'Choose at least one size for each color.' }); return
       }
-      const options = draft.colors.flatMap((color) => color.options.filter((option) => option.selected).map((option) => ({ ...option, color: color.color, ...(role === 'OWNER' ? { sellingPrice: draft.sellingPrice, openingStock: true } : {}) })))
+      const options = draft.colors.flatMap((color) => color.options.filter((option) => option.selected).map((option) => ({ ...option, color: color.color, ...(role === 'OWNER' ? { sellingPrice: draft.sellingPrice, ...(!onDefine ? { openingStock: true } : {}) } : {}) })))
+      if (onDefine) { markClean(); onDefine({ name: draft.name, categoryId: draft.categoryId, options: [...options].sort(compareSizes) }, imageFile); return }
       const result = await workflow.submit({ name: draft.name, categoryId: draft.categoryId, options: [...options].sort(compareSizes) }, imageFile)
       if (result.skipped) return
       if (result.requiresLogin) { window.location.replace('/login'); return }
@@ -109,10 +111,10 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
           <details className="product-optional"><summary>Code & barcode for {option.size}</summary><div className="product-form-grid">{[['sku', 'Product code (auto-filled)'], ['barcode', 'Barcode']].map(([field, label]) => <div key={field}><label htmlFor={`${color.id}-${option.size}-${field}`}>{label}</label><input id={`${color.id}-${option.size}-${field}`} maxLength={100} value={option[field]} onChange={(event) => changeOption(color.id, option.size, field, event.target.value)} /></div>)}</div></details>
         </div>)}</div></details>
       </fieldset>)}</div>
-      <p className="product-muted product-form-note">{role === 'OWNER' ? '1 piece per selected size. Set purchase cost later in Inventory.' : 'An owner can add stock in Inventory.'}</p>
+      <p className="product-muted product-form-note">{onDefine ? 'Product definition starts with zero stock. Enter received quantities in the next step, or save without stock.' : role === 'OWNER' ? '1 piece per selected size. Set purchase cost later in Inventory.' : 'An owner can add stock in Inventory.'}</p>
       {feedback && <p id="product-create-error" role="alert" className="product-feedback error-message">{feedback.message}</p>}
       {workflow.started && feedback && <p>Saved steps are kept. {feedback.review ? 'Open the catalog to check what was saved.' : 'Retry continues from the unfinished step with the same details.'}</p>}
-      <div className="product-actions product-create-footer"><button type="submit" disabled={busy || feedback?.review || categories.length === 0}>{busy ? 'Saving product...' : workflow.started ? 'Retry remaining steps' : 'Save product'}</button>
+      <div className="product-actions product-create-footer"><button type="submit" disabled={busy || feedback?.review || categories.length === 0}>{busy ? 'Saving product...' : onDefine ? 'Continue' : workflow.started ? 'Retry remaining steps' : 'Save product'}</button>
         <button type="button" className="secondary-action" disabled={busy || (feedback?.uncertain && !feedback?.review)} onClick={() => { if (confirmDiscardChanges()) { markClean(); if (workflow.productId) onSaved(workflow.productId, true); else onCancel() } }}>{workflow.started ? 'View catalog / saved product' : 'Cancel'}</button></div>
     </form>
   </section>

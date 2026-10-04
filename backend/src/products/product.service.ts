@@ -375,7 +375,7 @@ export function createProductDependencies(
     }
   }
 
-  async function quickAddStock(accountId: string, productId: string, variantId: string, role: UserRole, performedById: string, operationId: string, delta: 1 | -1 = 1): Promise<VariantView> {
+  async function quickAddStock(accountId: string, productId: string, variantId: string, role: UserRole, performedById: string, operationId: string, delta: 1 | -1 = 1, adjustment = false): Promise<VariantView> {
     if (role !== UserRole.OWNER) throw new HttpError(403, 'ROLE_FORBIDDEN', 'Only an owner can add stock')
     if (delta !== 1 && delta !== -1) throw new HttpError(422, 'INVALID_QUICK_STOCK', 'Stock change must be 1 or -1')
     try {
@@ -406,7 +406,7 @@ export function createProductDependencies(
         const cost = current.lastPurchaseCost
         if (cost !== null && !cost.gt(0)) throw new HttpError(409, 'INVALID_QUICK_STOCK_COST', 'Set a positive purchase cost before adding stock')
         const note = `Quick ${delta === 1 ? 'add' : 'remove'}: one piece${cost ? '.' : '; purchase cost pending.'}`
-        const isRestock = delta === 1 && cost !== null
+        const isRestock = !adjustment && delta === 1 && cost !== null
         const fingerprint = isRestock ? restockFingerprint(accountId, performedById, variantId, { quantity: 1, unitCost: cost.toFixed(4), note }) : null
         // The ledger insert and stock increment share one statement. Any failure
         // rolls back both; the surrounding transaction retains the row locks.

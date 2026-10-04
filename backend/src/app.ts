@@ -1,3 +1,5 @@
+import { createReceiptRouter } from './receipts/receipt.routes.js'
+import type { ReceiptDependencies } from './receipts/receipt.service.js'
 import cors from 'cors'
 import express, { type Express, type RequestHandler } from 'express'
 import { createAdminAccountRouter } from './admin/admin-account.routes.js'
@@ -151,6 +153,7 @@ export const jsonNotFoundHandler: RequestHandler = (
 }
 
 export interface AppDependencies {
+  readonly receipts?: ReceiptDependencies
   readonly auth: AuthDependencies
   readonly adminAccounts: AdminAccountDependencies
   readonly categories: CategoryDependencies
@@ -223,6 +226,7 @@ export function createApp(
     createCategoryRouter(dependencies.auth, dependencies.categories),
   )
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
+  if (dependencies.receipts) app.use('/api/inventory', createReceiptRouter(dependencies.auth, dependencies.receipts))
   app.use('/api/inventory', createInventoryRouter(dependencies.auth, dependencies.inventory))
   app.use('/api/sales', createSaleRouter(
     dependencies.auth,

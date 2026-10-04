@@ -85,7 +85,7 @@ export interface ProductDependencies extends RestockDependencies {
   updateProduct(accountId: string, productId: string, role: UserRole, input: ProductUpdateInput): Promise<ProductView>
   createVariant(accountId: string, productId: string, role: UserRole, input: VariantCreateInput, performedById?: string): Promise<VariantView>
   updateVariant(accountId: string, productId: string, variantId: string, role: UserRole, input: VariantUpdateInput): Promise<VariantView>
-  quickAddStock(accountId: string, productId: string, variantId: string, role: UserRole, performedById: string, operationId: string, delta?: 1 | -1): Promise<VariantView>
+  quickAddStock(accountId: string, productId: string, variantId: string, role: UserRole, performedById: string, operationId: string, delta?: 1 | -1, adjustment?: boolean): Promise<VariantView>
   setOpeningCost(accountId: string, productId: string, variantId: string, role: UserRole, unitCost: string): Promise<VariantView>
   assertProductOwned(accountId: string, productId: string): Promise<void>
   uploadImage(accountId: string, productId: string, role: UserRole, buffer: Buffer): Promise<ProductView>

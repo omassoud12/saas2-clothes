@@ -1,3 +1,4 @@
+import { persistOperation } from '../../app/operation-recovery.js'
 const prefix = 'saas2:quick-stock:v1:'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const stockRecoveryEvent = 'saas2:quick-stock-change'
@@ -45,7 +46,7 @@ export function persistStockOperation(scope, value, storage = globalThis.localSt
   const record = clean(value), key = operationKey(scope, record.operationId)
   const previous = storage.getItem(key)
   if (previous !== null && JSON.stringify(clean(JSON.parse(previous))) !== JSON.stringify(record)) throw new Error('Conflicting stock recovery data')
-  if (previous === null) storage.setItem(key, JSON.stringify(record))
+  if (previous === null) persistOperation(scope, record, storage)
   notify(scope)
 }
 export function resolveStockOperation(scope, operationId, storage = globalThis.localStorage) {

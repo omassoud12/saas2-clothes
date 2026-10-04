@@ -107,6 +107,12 @@ Frontend foundation:
   include catalog selling price; WAREHOUSE mutations omit that OWNER-only field
   while retaining its permitted read-only display. Catalog rows adapt to
   touch-oriented cards and a compact filter sheet on mobile.
+- Inventory is the canonical frontend for defining new Products and their
+  color/size options, saving zero-stock definitions, and receiving purchased
+  stock. Products is the catalog/details workspace for browsing, editing
+  identity/options/prices/status/images, and OWNER one-piece count corrections.
+  Products links new-product and receiving actions into Inventory; it does not
+  implement a separate current creation or purchased-receiving workflow.
 - The Sales frontend uses the authenticated Account currency and exact
   decimal-string/BigInt preview totals. Its cart remains local until the
   transactional Sale endpoint confirms checkout; one frozen payload and UUID
@@ -166,6 +172,8 @@ Examples:
 - Product
 - ProductVariant
 - InventoryMovement
+- StockReceipt
+- StockReceiptItem
 - Sale
 - SaleItem
 - SaleReturn
@@ -204,12 +212,12 @@ SUPER_ADMIN does not belong to an Account.
 Belongs to one Account.
 
 Can:
-- manage products
+- define new products in Inventory and manage their catalog details
 - manage variants
 - manage categories
 - view costs
 - manage pricing
-- restock inventory
+- receive purchased inventory and correct physical counts
 - manage expenses
 - access accounting
 - access reports
@@ -226,7 +234,7 @@ Belongs to one Account.
 
 Can:
 - view products
-- create products
+- define products with zero stock in Inventory
 - create categories
 - perform sales
 - process returns and exchanges
@@ -239,7 +247,7 @@ Cannot:
 - access accounting
 - access expenses
 - view sensitive costs/profit
-- restock inventory in the MVP
+- receive purchased stock or perform count corrections
 - manage account-level settings
 - void sales
 
@@ -281,21 +289,38 @@ users only. The backend derives `accountId` and `createdById` from authenticatio
 and scopes Product, Category, and Variant queries by Account. OWNER may see and
 edit Product `profitMarginOverride` and see Variant `lastPurchaseCost`;
 WAREHOUSE may not see or edit either field. Neither role may edit stock or
-`lastPurchaseCost` through Product APIs. New Variants normally begin with stock zero and null cost. OWNER creation may
-explicitly request `openingStock: true`: one physical opening piece is created
-atomically with an ADJUSTMENT ledger movement with unknown cost. The initial
-product form requests this for every selected color/size; WAREHOUSE creation
-retains zero stock and cannot request opening stock. Existing variants are never
-backfilled. Missing purchase cost does not block Sale; historical unknown cost remains null.
+`lastPurchaseCost` through ordinary catalog create/update payloads. The current
+canonical creation flow is Inventory's idempotent POST
+`/api/inventory/product-setups` with one client-generated UUID in the
+`Idempotency-Key` header. It accepts one Product and 1–200 color/size options,
+checks the active tenant Category under a shared row lock, and creates every
+new option with `currentStock = 0` and `lastPurchaseCost = null`.
 
-Initial product setup uses POST `/api/products/setup` with `{product, variants}`
-(up to 200 variants). One authenticated request creates the tenant Product,
-Variants and opening movements in a transaction with bulk inserts. Active
-Category ownership is checked under a shared row lock. The response returns the
-complete Product; optional image upload runs afterward and image retry does not
-repeat catalog creation. Uncertain setup responses require catalog review,
-matching the existing non-idempotent catalog-create policy. Ordinary individual
-Product/Variant endpoints remain available for edits and adding options.
+Save Product Only creates the Product and options in one transaction and
+creates no StockReceipt, StockReceiptItem, InventoryMovement, or purchase cost.
+OWNER may instead include a receipt in the same request; Product definition,
+options, receipt, stock changes, latest purchase costs, receipt items, and
+RESTOCK movements then commit or roll back together. WAREHOUSE may call the
+same setup endpoint only without a receipt, so its result is always a zero-stock
+definition. Same operation/same normalized payload replays the original result;
+same operation/different payload conflicts. Optional image upload runs only
+after the database operation succeeds, and photo-only retry never repeats
+creation or receiving.
+
+POST `/api/products/setup` remains a legacy compatibility endpoint for older
+clients. Its explicit OWNER `openingStock: true` semantics create exactly one
+physical piece per selected option, null purchase cost, and one ADJUSTMENT
+movement. The individual Product Variant creation endpoint retains the same
+explicit compatibility field. The current Inventory and Products frontends do
+not request this opening-piece behavior: new definitions use zero stock, and
+purchased quantities use StockReceipt receiving. The legacy setup remains
+non-idempotent and is not the canonical new-product path. Existing opening
+pieces are never backfilled or converted automatically. Missing purchase cost
+does not block Sale; historical unknown cost remains null.
+
+Ordinary individual Product/Variant endpoints remain available for catalog
+edits and adding options. Newly added options begin with zero stock and null
+cost unless an older client explicitly invokes the legacy opening-piece field.
 
 An OWNER can later PUT `{unitCost}` to the tenant-scoped Variant `opening-cost`
 endpoint from Inventory. It locks Product then Variant, validates positive
@@ -365,6 +390,14 @@ ProductVariant.sellingPrice remains Decimal(18,2).
 
 Inventory history must never be lost.
 
+Inventory owns the current new-product definition, zero-stock save-only,
+purchased receiving, receipt history, movement history, opening-cost support,
+and read-only stock reconciliation workflows. Products owns catalog browsing
+and details, Product/option editing, pricing/status/image management, and the
+OWNER one-piece count-correction shortcut. Products deep-links an existing
+Product to Inventory with `productId` for receiving and sends Add product to
+Inventory's new-product flow.
+
 InventoryMovement is the inventory ledger.
 
 Supported movement concepts:
@@ -409,68 +442,71 @@ choosing indexes, precomputed state, or another strategy.
 
 Stock must never become negative.
 
-In the MVP, RESTOCK is OWNER-only. WAREHOUSE cannot create RESTOCK movements or
-receive purchase-cost fields. A normal RESTOCK requires an active Product and
-active Variant, a positive integer quantity, and a unit purchase cost greater
-than zero with at most four decimal places. Free or promotional inventory needs
-a separate, explicitly approved workflow. The future backend must atomically
-increase ProductVariant.currentStock, set lastPurchaseCost to that RESTOCK's
-unit cost, and append one RESTOCK InventoryMovement; failure rolls back all
-three changes. RESTOCK movements require a positive unitCost and have no SaleItem
-or ReturnItem reference.
+Normal purchased receiving is OWNER-only. WAREHOUSE cannot create RESTOCK
+movements or receive purchase-cost fields. A receipt belongs to one active
+Product, uses one positive Decimal(18,4) purchase cost per piece, and contains
+1–200 unique active options with positive whole-number quantities up to
+1,000,000 per option. Free or promotional inventory requires a separately
+approved workflow; unknown cost never becomes zero.
 
-Each RESTOCK requires a UUID idempotency key unique per Account and a canonical
-SHA-256 request fingerprint. The future backend derives accountId and
-performedById from authentication and hashes a UTF-8 JSON object with keys in
-this fixed order: type, accountId, performedById, variantId, quantity, unitCost,
-note. Use type "RESTOCK", lowercase canonical UUIDs, an integer quantity, a
-decimal unitCost string normalized to exactly four fractional digits, and a
-Unicode-NFC note trimmed at both ends (empty becomes JSON null). JSON null
-represents an absent note. The hash is lowercase 64-character hexadecimal;
-raw request JSON is not stored. An identical retry within the same Account
-returns the original successful movement result without another stock change.
-The same key with a different fingerprint is a conflict. A tenant-scoped unique
-database index is the final concurrent-duplicate guard. Idempotency metadata
-is part of the append-only movement record. In this MVP, SALE, RETURN,
-SALE_VOID, DAMAGE, and ADJUSTMENT must have null idempotencyKey and
-requestFingerprint; only RESTOCK may carry them.
+The canonical existing-product endpoint is OWNER-only POST
+`/api/inventory/receipts`. In one transaction it locks Product then sorted
+options, creates one StockReceipt, increments each option's `currentStock`, sets
+each option's latest `lastPurchaseCost`, creates one RESTOCK InventoryMovement
+per selected option, and links each movement through one StockReceiptItem.
+Failure rolls back the whole batch. New-product Save & Receive uses the same
+receiving operation inside `/api/inventory/product-setups`, so definition and
+receipt are atomic.
 
-The OWNER-only `POST /api/products/:productId/variants/:variantId/restocks`
-endpoint requires one client-generated UUID in the `Idempotency-Key` header.
-It accepts only a positive integer quantity (at most 1,000,000), a positive
-decimal-string unitCost with at most four fractional digits, and an optional
-note of at most 500 Unicode characters after NFC normalization and trimming.
-The backend locks the tenant-owned Product then Variant in one transaction,
-checks both remain active, atomically increments stock, updates lastPurchaseCost,
-and inserts the movement. A matching-key retry returns the original movement
-without another mutation, even if the catalog item was later deactivated; a
-different fingerprint returns a conflict. The response's Variant
-`currentStock` and `lastPurchaseCost` are current state,
-not an historical stock-after snapshot for the returned movement.
+Both receiving endpoints require one UUID `Idempotency-Key`. Receipt-level
+fingerprints include authenticated tenant and actor context plus the normalized
+request. Same key/same payload returns the original receipt without another
+stock change; same key/different payload conflicts. Each receipt-linked RESTOCK
+also has a deterministic UUIDv5 child idempotency key derived from the receipt
+operation, Account, and option, plus a SHA-256 movement fingerprint. This
+satisfies the append-only movement RESTOCK contract while StockReceipt remains
+the batch replay boundary. Account/actor identity always comes from
+authentication, never the request body.
 
-The OWNER frontend creates one idempotency key per valid Restock operation.
-After an uncertain outcome, retrying the same Product, Variant, quantity,
-cost, and normalized note reuses that key and frozen payload. Changing those
-semantics begins a new operation with a new key. A confirmed success or replay discards
-the key and refreshes catalog stock and cost from the backend.
+Receipt history is tenant-scoped. OWNER receives purchase unit costs and batch
+totals; WAREHOUSE may read permitted receipt identities and quantities but no
+purchase-cost fields. Receipt quantities describe that received delivery, not
+the option's later current stock.
 
-Product detail + / - controls use OWNER-only POST
-`/api/products/:productId/variants/:variantId/quick-stock` with `{delta:1|-1}`
-and a UUID Idempotency-Key. An empty body retains the original +1 behavior.
-Product-then-Variant locks, a guarded stock change, and an append-only movement
-share a transaction. New operations take two parameterized SQL statements;
-replays take one. +1 with known positive cost uses RESTOCK; unknown additions
-and -1 corrections use ADJUSTMENT. Decreases cannot cross zero. Replay checks
-actor, variant, direction and operation marker; the UUID is the movement ID.
-The browser persists unresolved operational metadata in localStorage scoped to
-the authenticated Account, user and Product. No tokens/costs/secrets are stored.
-Reload never sends a mutation automatically. Pending options block another
-ambiguous +/- action and offer Retry same update with the original payload/UUID.
-Confirmed success or authoritative rejection removes the metadata. Unknown
-outcomes retain it, including across remounts. Unresolved operations do not expire
-into new mutations; older records require Inventory review before deliberate
-retry. Controls show per-option progress and other stock options remain usable.
-Normal Inventory Restock retains explicit quantity and purchase cost.
+The older OWNER-only POST
+`/api/products/:productId/variants/:variantId/restocks` remains compatible for
+single-option receiving. It accepts one positive quantity, Decimal(18,4) cost,
+optional normalized note, and UUID idempotency key; locks Product then Variant;
+updates stock/latest cost; and appends one RESTOCK movement atomically. Its
+canonical SHA-256 fingerprint and tenant-scoped unique movement key preserve
+same-request replay. Inventory exposes this as the secondary “Legacy Restock”
+tool; batch Receive stock is the primary purchased-delivery workflow. Existing
+legacy history is not rewritten.
+
+Every RESTOCK movement has a positive unit cost, positive quantity,
+non-null idempotency key and request fingerprint, and no SaleItem or ReturnItem
+reference. SALE, RETURN, SALE_VOID, DAMAGE, and ADJUSTMENT movements keep null
+RESTOCK idempotency fields. Receiving changes the option's current/latest cost
+basis only. It never rewrites `SaleItem.unitCostAtSale`, including historical
+null snapshots.
+
+Products + / - controls are OWNER one-piece physical count corrections. The
+current frontend calls POST
+`/api/products/:productId/variants/:variantId/stock-adjustment` with
+`{delta: 1|-1}` and a UUID operation key; it always writes ADJUSTMENT, including
+when a positive current cost is known. Stock and movement commit atomically,
+decreases cannot cross zero, and replay verifies actor, option and direction.
+The legacy `/quick-stock` endpoint remains for older clients and retains its
+previous behavior: a +1 with known cost may write RESTOCK, while unknown-cost
+adds and removals write ADJUSTMENT. New UI work must use `stock-adjustment` for
+count corrections and Inventory receipts for purchases.
+
+The Products browser persists unresolved count-correction metadata in
+localStorage scoped to authenticated Account, user and Product. No
+tokens/costs/secrets are stored. Reload never sends a mutation automatically.
+Pending options block another ambiguous +/- action and offer retry with the
+original payload/UUID. Confirmed success or authoritative rejection removes the
+metadata; unknown outcomes retain it across remounts.
 
 OWNER-only POST `/api/products/:productId/variant-prices` accepts up to 200
 unique active variant IDs and a nonnegative Decimal(18,2) catalog price. Product
@@ -1487,7 +1523,12 @@ Do not add Redis, multiple API servers, or load balancers unless measurements sh
 The backend should remain stateless so horizontal scaling can be added later.
 
 
-Quick stock correction: product size cards show + / ?. The OWNER-only quick-stock endpoint accepts optional delta 1 or -1 (empty body still adds one). Decreases create ADJUSTMENT history, preserve purchase cost, and cannot cross zero. Transaction locks and operation IDs protect retries; pending-cost initialization accepts documented positive and negative quick adjustments. No migration required.
+Product count correction: Product size cards show + / - and the current UI uses
+the OWNER-only `stock-adjustment` endpoint for exactly one piece in either
+direction. Every current UI correction writes ADJUSTMENT, preserves purchase
+cost, cannot cross zero, and uses transaction locks plus a durable operation ID
+for retry protection. The older `quick-stock` endpoint remains available only
+as a compatibility boundary with its documented legacy movement semantics.
 
 
 ### Unknown-cost financial completeness

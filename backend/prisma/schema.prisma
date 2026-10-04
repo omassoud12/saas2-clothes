@@ -46,6 +46,8 @@ model Account {
   reviewedById    String?       @db.Uuid
   rejectionReason String?
 
+  stockReceipts StockReceipt[]
+
   reviewedBy User? @relation("AccountReviewedBy", fields: [reviewedById], references: [id], onDelete: Restrict)
 
   users              User[]
@@ -80,6 +82,8 @@ model User {
   isActive     Boolean  @default(true)
 
   account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  stockReceipts StockReceipt[]
 
   reviewedAccounts Account[] @relation("AccountReviewedBy")
 
@@ -131,6 +135,10 @@ model Product {
   category  Category @relation(fields: [categoryId, accountId], references: [id, accountId], onDelete: Restrict)
   createdBy User     @relation("ProductCreatedBy", fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
 
+  creationOperationId String? @db.Uuid
+  creationFingerprint String? @db.VarChar(64)
+  stockReceipts StockReceipt[]
+
   variants  ProductVariant[]
   saleItems SaleItem[]
 
@@ -138,6 +146,7 @@ model Product {
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   @@unique([id, accountId])
+  @@unique([accountId, creationOperationId])
   @@unique([id, categoryId, accountId])
   @@index([accountId, categoryId, isActive])
   @@index([accountId, name])
@@ -164,6 +173,7 @@ model ProductVariant {
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
   product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
 
+  receiptItems StockReceiptItem[]
   movements   InventoryMovement[]
   saleItems   SaleItem[]
   returnItems SaleReturnItem[]
@@ -194,6 +204,8 @@ model InventoryMovement {
   idempotencyKey     String?               @db.Uuid
   requestFingerprint String?               @db.VarChar(64)
 
+  receiptItem StockReceiptItem?
+
   account     Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   variant     ProductVariant  @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
   performedBy User            @relation("InventoryMovementPerformedBy", fields: [performedById, accountId], references: [id, accountId], onDelete: Restrict)
@@ -204,6 +216,7 @@ model InventoryMovement {
 
   @@index([accountId, createdAt])
   @@index([accountId, variantId, createdAt])
+  @@unique([id, variantId, accountId])
   @@index([accountId, type, createdAt])
   @@index([variantId, accountId])
   @@index([performedById, accountId])
@@ -416,4 +429,40 @@ model DailyReport {
   computedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([accountId, reportDate])
+}
+
+
+model StockReceipt {
+  id String @id @default(uuid()) @db.Uuid
+  accountId String @db.Uuid
+  productId String @db.Uuid
+  createdById String @db.Uuid
+  operationId String @db.Uuid
+  requestFingerprint String @db.VarChar(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
+  createdBy User @relation(fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
+  items StockReceiptItem[]
+  @@unique([accountId, operationId])
+  @@unique([id, productId, accountId])
+  @@index([accountId, createdAt, id])
+  @@index([accountId, productId, createdAt])
+}
+
+model StockReceiptItem {
+  id String @id @default(uuid()) @db.Uuid
+  accountId String @db.Uuid
+  productId String @db.Uuid
+  receiptId String @db.Uuid
+  variantId String @db.Uuid
+  movementId String @unique @db.Uuid
+  quantity Int
+  unitCost Decimal @db.Decimal(18,4)
+  receipt StockReceipt @relation(fields: [receiptId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
+  variant ProductVariant @relation(fields: [variantId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
+  movement InventoryMovement @relation(fields: [movementId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
+  @@unique([movementId, variantId, accountId])
+  @@unique([receiptId, variantId])
+  @@index([accountId, variantId])
 }

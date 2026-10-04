@@ -662,6 +662,17 @@ describe('opening piece and deferred purchase cost', () => {
 })
 
 describe('one-click stock addition', () => {
+  test('explicit count correction stays ADJUSTMENT even with a known cost; legacy quick-stock stays compatible', async()=>{
+    const {service,movements,store}=openingFixture()
+    const variant=store.addVariant();variant.lastPurchaseCost=new Prisma.Decimal('8')
+    const key=randomUUID()
+    const before=variant.currentStock
+    await service.quickAddStock(accountA,productA,variant.id,UserRole.OWNER,userId,key,1,true)
+    await service.quickAddStock(accountA,productA,variant.id,UserRole.OWNER,userId,key,1,true)
+    assert.equal(store.variants.get(variant.id)?.currentStock,before+1)
+    assert.equal(movements.length,1);assert.equal(movements[0].type,'ADJUSTMENT')
+    assert.equal(movements[0].idempotencyKey ?? null,null)
+  })
   test('each operation adds one piece; same-operation replay is harmless and pending cost can be set later', async () => {
     const { service, movements } = openingFixture()
     const created = await service.createVariant(accountA, productA, UserRole.OWNER, { sku: 'QUICK', openingStock: true }, userId)

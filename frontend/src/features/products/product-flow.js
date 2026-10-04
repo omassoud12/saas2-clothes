@@ -245,7 +245,7 @@ export async function setOpeningCost({ supabase, fetchImpl, productId, variantId
 }
 
 export async function adjustVariantStock({ supabase, fetchImpl, productId, variantId, operationId, delta = 1 }) {
-  return variantResponse(await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/quick-stock`, method: 'POST', payload: { delta }, headers: { 'Idempotency-Key': operationId }, fallbackMessage: 'Stock could not be confirmed. Press the same stock button again to retry safely.' }), 200)
+  return variantResponse(await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}/stock-adjustment`, method: 'POST', payload: { delta }, headers: { 'Idempotency-Key': operationId }, fallbackMessage: 'Stock could not be confirmed. Press the same stock button again to retry safely.' }), 200)
 }
 
 export async function createProductSetup({ supabase, fetchImpl, draft, role }) {

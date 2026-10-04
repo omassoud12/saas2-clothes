@@ -37,6 +37,7 @@ export function createProductRouter(auth: AuthDependencies, products: ProductDep
   router.post('/:productId/variants', createVariant(products))
   router.patch('/:productId/variants/:variantId', updateVariant(products))
   router.post('/:productId/variants/:variantId/quick-stock', requireRole(UserRole.OWNER), quickAddStock(products))
+  router.post('/:productId/variants/:variantId/stock-adjustment', requireRole(UserRole.OWNER), quickAddStock(products, true))
   router.put('/:productId/variants/:variantId/opening-cost', requireRole(UserRole.OWNER), setOpeningCost(products))
   router.post('/:productId/variants/:variantId/restocks', requireRole(UserRole.OWNER), createRestock(products))
   router.post('/:productId/image', productOwnership(products), productImageUpload, uploadImage(products))
