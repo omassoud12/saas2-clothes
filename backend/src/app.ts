@@ -86,6 +86,7 @@ function requestPath(request: express.Request): string {
 export function isWriteRequest(request: express.Request): boolean {
   return (
     request.method === 'POST' ||
+    request.method === 'PUT' ||
     request.method === 'PATCH' ||
     request.method === 'DELETE'
   )
@@ -137,7 +138,7 @@ export function configureHttpSecurity(
         )
       },
       credentials: false,
-      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'],
       optionsSuccessStatus: 204,
     }),

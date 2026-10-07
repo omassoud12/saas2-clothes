@@ -148,8 +148,8 @@ describe('business app navigation', () => {
       [
         'dashboard',
         'products',
-        'categories',
         'inventory',
+        'categories',
         'sales',
         'returns',
         'exchanges',
@@ -162,7 +162,7 @@ describe('business app navigation', () => {
   test('hides Expenses and Reports from WAREHOUSE', () => {
     assert.deepEqual(
       getAppNavigation('WAREHOUSE').map(({ key }) => key),
-      ['dashboard', 'products', 'categories', 'inventory', 'sales', 'returns', 'exchanges'],
+      ['dashboard', 'products', 'inventory', 'categories', 'sales', 'returns', 'exchanges'],
     )
   })
 
@@ -241,5 +241,21 @@ test('product detail URLs reuse the Products route and navigation for tenant rol
     assert.equal(result.redirectTo, null)
   }
   assert.equal(isNavigationItemActive(path, '/app/products'), true)
-  assert.equal(resolveAppRoute('/app/products/invalid', 'OWNER').redirectTo, ROUTES.dashboard)
+  assert.deepEqual(resolveAppRoute('/app/products/invalid', 'OWNER'), { route: null, redirectTo: null })
 })
+
+test('unknown tenant URLs remain on a not-found page rather than rendering another module', () => {
+  for (const role of ['OWNER', 'WAREHOUSE']) {
+    for (const path of ['/app/unknown', '/app/products/invalid', '/app/sales/unknown', '/app/reports/extra']) {
+      assert.deepEqual(resolveAppRoute(path, role), { route: null, redirectTo: null })
+    }
+  }
+})
+
+ test('Entry preserves the Inventory bookmark with an intake label after Products', () => {
+   const navigation = getAppNavigation('OWNER')
+   const entry = navigation.find(item => item.key === 'inventory')
+   assert.equal(entry.label, 'Entry')
+   assert.equal(entry.path, '/app/inventory')
+   assert.equal(navigation[navigation.indexOf(entry)-1].key, 'products')
+ })

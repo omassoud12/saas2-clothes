@@ -266,6 +266,7 @@ describe('process-local API rate limiting', () => {
 
     assert.equal(isWriteRequest(request('POST', '/api/sales')), true)
     assert.equal(isWriteRequest(request('PATCH', '/api/products/id')), true)
+    assert.equal(isWriteRequest(request('PUT', '/api/products/id/variants/id/opening-cost')), true)
     assert.equal(isWriteRequest(request('GET', '/api/products')), false)
     assert.equal(isExpensiveRead(request('GET', '/api/reports/daily?date=x')), true)
     assert.equal(isExpensiveRead(request('GET', '/api/inventory/reconciliation')), true)
@@ -297,6 +298,7 @@ describe('process-local API rate limiting', () => {
       ),
     )
     app.post('/api/write', (_request, response) => response.json({ ok: true }))
+    app.put('/api/write', (_request, response) => response.json({ ok: true }))
     app.get('/api/reports/daily', (_request, response) =>
       response.json({ ok: true }),
     )
@@ -315,6 +317,10 @@ describe('process-local API rate limiting', () => {
       assert.equal((await request('/api/write', 'POST', '198.51.100.40')).status, 200)
       assert.equal((await request('/api/write', 'POST', '198.51.100.40')).status, 200)
       assert.equal((await request('/api/write', 'POST', '198.51.100.40')).status, 429)
+
+      assert.equal((await request('/api/write', 'PUT', '198.51.100.43')).status, 200)
+      assert.equal((await request('/api/write', 'PUT', '198.51.100.43')).status, 200)
+      assert.equal((await request('/api/write', 'PUT', '198.51.100.43')).status, 429)
 
       assert.equal((await request('/api/reports/daily', 'GET', '198.51.100.41')).status, 200)
       assert.equal((await request('/api/reports/daily', 'GET', '198.51.100.41')).status, 429)

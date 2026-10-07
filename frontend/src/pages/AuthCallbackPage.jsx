@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { completeAuthCallback } from '../auth/auth-flow.js'
 import { AuthLayout, AuthLoading, FormMessage } from '../components/auth/AuthLayout.jsx'
-import { authCallbackContext, supabase } from '../lib/supabase.js'
+import { authCallbackContext, exchangeAuthCallbackCode, supabase } from '../lib/supabase.js'
 
 export function AuthCallbackPage() {
   const callbackPromise = useRef(null)
@@ -10,6 +10,7 @@ export function AuthCallbackPage() {
     if (!callbackPromise.current) callbackPromise.current = completeAuthCallback({
       supabase,
       callback: authCallbackContext,
+      exchangeCode: exchangeAuthCallbackCode,
       storage: window.sessionStorage,
       clearUrl: () => window.history.replaceState(null, '', '/auth/callback'),
       navigate: (path) => window.location.replace(path),

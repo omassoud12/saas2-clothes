@@ -20,7 +20,7 @@ function outcome(result, kind, value, message, extra = {}) {
 function domainMessage(code, kind) {
   const productSave = kind === 'product-save'
   const messages = {
-    PRODUCT_NOT_FOUND: 'This product is no longer available. Return to Inventory and refresh before starting again.',
+    PRODUCT_NOT_FOUND: 'This product is no longer available. Return to Products and refresh before starting again.',
     VARIANT_NOT_FOUND: 'One or more color / size options are no longer available. Refresh the product before starting again.',
     PRODUCT_INACTIVE: 'This product is inactive. Reactivate it before receiving stock.',
     VARIANT_INACTIVE: 'One or more color / size options are inactive. Update the selection before receiving stock.',
@@ -84,8 +84,8 @@ export function buildReceivingSetup(definition, role, receipt = null) {
   }
   return {ok:true,payload:{product:product.payload,variants,receipt}}
 }
-export async function loadReceiptHistory({supabase,page=1,fetchImpl}) {
-  const result=await authenticatedApiRequest({supabase,fetchImpl,path:`/api/inventory/receipts?page=${page}`,method:'GET',fallbackMessage:'Receipt history is unavailable.'})
+export async function loadReceiptHistory({supabase,page=1,fetchImpl,signal}) {
+  const result=await authenticatedApiRequest({supabase,fetchImpl,path:`/api/inventory/receipts?page=${page}`,method:'GET',fallbackMessage:'Receipt history is unavailable.',signal})
   if(!result.ok)return result
   if(!Array.isArray(result.data?.receipts)||typeof result.data.hasMore!=='boolean')return {ok:false,message:'Receipt history could not load. Refresh and try again.'}
   return {ok:true,...result.data}

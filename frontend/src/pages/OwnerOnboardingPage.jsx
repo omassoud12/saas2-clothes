@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { bootstrapOwnerAccount, createSubmissionGuard, verifyAuthenticatedSession } from '../auth/owner-flow.js'
+import { bootstrapOwnerAccount, createSubmissionGuard, loadOwnerOnboarding } from '../auth/owner-flow.js'
 import { AuthAction, AuthLayout, AuthLoading, FormMessage, Input } from '../components/auth/AuthLayout.jsx'
 import { Select } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
@@ -14,12 +14,13 @@ export function OwnerOnboardingPage() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
-    if (!sessionCheckPromise.current) sessionCheckPromise.current = verifyAuthenticatedSession({ supabase })
+    if (!sessionCheckPromise.current) sessionCheckPromise.current = loadOwnerOnboarding({ supabase })
     let active = true
     void sessionCheckPromise.current.then((result) => {
       if (!active) return
-      if (result.ok) setPageState('ready')
-      else if (result.code === 'SESSION_REQUIRED') window.location.replace('/login')
+      if (result.ok && result.redirectTo) window.location.replace(result.redirectTo)
+      else if (result.ok) setPageState('ready')
+      else if (result.code === 'SESSION_REQUIRED' || result.status === 401) window.location.replace('/login')
       else { setMessage(result.message); setPageState('error') }
     })
     return () => { active = false }

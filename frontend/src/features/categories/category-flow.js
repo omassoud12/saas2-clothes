@@ -43,6 +43,7 @@ function invalidResponse() {
 }
 
 function mapCategoryFailure(result) {
+  if (result.aborted) return result
   const knownMessage = categoryErrorMessages[result.code]
   if (knownMessage) {
     return resultError(result.code, knownMessage, result.status)
@@ -180,6 +181,7 @@ export function createCategoryDeleteConfirmation(category) {
 export async function loadCategories({
   supabase,
   fetchImpl = globalThis.fetch,
+  signal,
 }) {
   const result = await authenticatedApiRequest({
     supabase,
@@ -187,6 +189,7 @@ export async function loadCategories({
     path: '/api/categories',
     method: 'GET',
     fallbackMessage: 'Something went wrong. Please try again.',
+    signal,
   })
 
   if (!result.ok) return mapCategoryFailure(result)

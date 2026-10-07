@@ -4,6 +4,7 @@ import { useDirtyState, confirmDiscardChanges } from '../../app/dirty-state.js'
 import { useEffect, useRef, useState } from 'react'
 import { createProduct, createVariant, createProductSetup, uploadProductImage, validateImage } from './product-flow.js'
 import { createProductSetupWorkflow } from './product-setup-flow.js'
+import { buildReceivingSetup } from '../inventory/stock-receipt-flow.js'
 import { supabase } from '../../lib/supabase.js'
 import './products.css'
 
@@ -70,7 +71,12 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
         setFeedback({ message: 'Choose at least one size for each color.' }); return
       }
       const options = draft.colors.flatMap((color) => color.options.filter((option) => option.selected).map((option) => ({ ...option, color: color.color, ...(role === 'OWNER' ? { sellingPrice: draft.sellingPrice, ...(!onDefine ? { openingStock: true } : {}) } : {}) })))
-      if (onDefine) { markClean(); onDefine({ name: draft.name, categoryId: draft.categoryId, options: [...options].sort(compareSizes) }, imageFile); return }
+      if (onDefine) {
+        const definition = { name: draft.name, categoryId: draft.categoryId, options: [...options].sort(compareSizes) }
+        const valid = buildReceivingSetup(definition, role)
+        if (!valid.ok) { setFeedback(valid); return }
+        markClean(); onDefine(definition, imageFile); return
+      }
       const result = await workflow.submit({ name: draft.name, categoryId: draft.categoryId, options: [...options].sort(compareSizes) }, imageFile)
       if (result.skipped) return
       if (result.requiresLogin) { window.location.replace('/login'); return }
@@ -84,21 +90,13 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
   return <section className="product-panel product-create-panel" aria-label="Add product">
     <div className="product-create-title"><h2>New product</h2></div>
     <form ref={form} className="product-form product-create-form" aria-describedby={feedback ? 'product-create-error' : undefined} onSubmit={submit}>
-      <fieldset disabled={locked} className="product-create-fields product-info-fields"><legend className="sr-only">Product details</legend>
+      <fieldset disabled={locked} className="product-create-fields product-info-fields"><legend>Product details</legend>
         <div className="product-form-grid"><div><label htmlFor="new-product-name">Product name</label><input id="new-product-name" required maxLength={150} placeholder="e.g. Cotton T-shirt" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></div>
           <div><label htmlFor="new-product-category">Category</label><select id="new-product-category" required value={draft.categoryId} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value })}><option value="">Choose a category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div>
       </fieldset>
-      {role === 'OWNER' && <fieldset disabled={locked} className="product-create-fields product-price-fields"><legend className="sr-only">Price for all colors & sizes</legend><div className="product-form-grid">
-        <div><label htmlFor="new-product-price">Price for all sizes{suffix}</label><input id="new-product-price" inputMode="decimal" maxLength={24} placeholder="15.00" value={draft.sellingPrice} onChange={(event) => setDraft({ ...draft, sellingPrice: event.target.value })} /></div>
-      </div></fieldset>}
-      <details className="product-optional product-photo-fields"><summary>Product photo (optional)</summary><fieldset disabled={locked} className="product-create-fields">
-        <label htmlFor="new-product-photo">Choose a photo</label><input ref={imageInput} id="new-product-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseImage(event.target.files?.[0] || null)} aria-describedby="new-product-photo-help" />
-        <p id="new-product-photo-help" className="product-muted">JPEG, PNG or WebP, up to 10 MB. Uploaded when you save the product.</p>
-        {imagePreview && <div className="product-image-preview"><img src={imagePreview} alt="Selected product photo preview" /><button type="button" className="secondary-action" onClick={() => chooseImage(null)}>Remove photo</button></div>}
-      </fieldset></details>
       {categoriesLoading && <p role="status">Loading categories...</p>}
       {!categoriesLoading && categories.length === 0 && <p>Add a category first in <a href="/app/categories">Categories</a>.</p>}
-      <fieldset disabled={locked} className="product-create-fields product-color-fields"><legend className="sr-only">Choose colors</legend>
+      <fieldset disabled={locked} className="product-create-fields product-color-fields"><legend>Variants</legend>
         <label htmlFor="product-color-list">Colors</label><select id="product-color-list" value="" onChange={(event) => addColor(event.target.value)}><option value="">Choose a color...</option>{colorChoices.map((name) => <option key={name} value={name} disabled={draft.colors.some((color) => color.color.toLowerCase() === name.toLowerCase())}>{name}</option>)}</select>
         <details className="product-optional"><summary>Add a color not in the list</summary><div className="product-custom-size"><label htmlFor="product-custom-color" className="sr-only">Custom color name</label><input id="product-custom-color" maxLength={100} placeholder="e.g. Dusty rose" value={customColor} onChange={(event) => setCustomColor(event.target.value)} /><button type="button" className="secondary-action" disabled={!customColor.trim()} onClick={() => addColor(customColor)}>Add color</button></div></details>
       </fieldset>
@@ -111,7 +109,15 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
           <details className="product-optional"><summary>Code & barcode for {option.size}</summary><div className="product-form-grid">{[['sku', 'Product code (auto-filled)'], ['barcode', 'Barcode']].map(([field, label]) => <div key={field}><label htmlFor={`${color.id}-${option.size}-${field}`}>{label}</label><input id={`${color.id}-${option.size}-${field}`} maxLength={100} value={option[field]} onChange={(event) => changeOption(color.id, option.size, field, event.target.value)} /></div>)}</div></details>
         </div>)}</div></details>
       </fieldset>)}</div>
-      <p className="product-muted product-form-note">{onDefine ? 'Product definition starts with zero stock. Enter received quantities in the next step, or save without stock.' : role === 'OWNER' ? '1 piece per selected size. Set purchase cost later in Inventory.' : 'An owner can add stock in Inventory.'}</p>
+      <p className="product-muted product-form-note">{onDefine ? role === 'OWNER' ? 'Product definition starts with zero stock. Enter received quantities in the next step, or save without stock.' : 'Save this definition with zero stock. An owner can then set its selling prices and receive stock.' : role === 'OWNER' ? '1 piece per selected size. Set purchase cost later in Inventory.' : 'An owner can add stock in Inventory.'}</p>
+      {role === 'OWNER' && <fieldset disabled={locked} className="product-create-fields product-price-fields"><legend>Selling price</legend><div className="product-form-grid">
+        <div><label htmlFor="new-product-price">Price for all sizes{suffix}</label><input id="new-product-price" inputMode="decimal" maxLength={24} placeholder="15.00" value={draft.sellingPrice} onChange={(event) => setDraft({ ...draft, sellingPrice: event.target.value })} /></div>
+      </div></fieldset>}
+      <details className="product-optional product-photo-fields"><summary>Product photo (optional)</summary><fieldset disabled={locked} className="product-create-fields">
+        <label htmlFor="new-product-photo">Choose a photo</label><input ref={imageInput} id="new-product-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseImage(event.target.files?.[0] || null)} aria-describedby="new-product-photo-help" />
+        <p id="new-product-photo-help" className="product-muted">JPEG, PNG or WebP, up to 10 MB. Uploaded when you save the product.</p>
+        {imagePreview && <div className="product-image-preview"><img src={imagePreview} alt="Selected product photo preview" /><button type="button" className="secondary-action" onClick={() => chooseImage(null)}>Remove photo</button></div>}
+      </fieldset></details>
       {feedback && <p id="product-create-error" role="alert" className="product-feedback error-message">{feedback.message}</p>}
       {workflow.started && feedback && <p>Saved steps are kept. {feedback.review ? 'Open the catalog to check what was saved.' : 'Retry continues from the unfinished step with the same details.'}</p>}
       <div className="product-actions product-create-footer"><button type="submit" disabled={busy || feedback?.review || categories.length === 0}>{busy ? 'Saving product...' : onDefine ? 'Continue' : workflow.started ? 'Retry remaining steps' : 'Save product'}</button>

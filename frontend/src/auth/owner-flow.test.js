@@ -8,6 +8,7 @@ import {
   getApplicationDestination,
   getPendingAccountView,
   inspectSignupCallbackUrl,
+  loadOwnerOnboarding,
   OWNER_SIGNUP_MESSAGE,
   requestOwnerSignup,
   resolveExistingSessionDestination,
@@ -259,6 +260,56 @@ describe('signup confirmation callback', () => {
 })
 
 describe('OWNER onboarding', () => {
+  test('allows only an authenticated unprovisioned identity to see the form', async () => {
+    const result = await loadOwnerOnboarding({
+      supabase: createSupabase().client,
+      fetchImpl: async () => jsonResponse(403, { error: { code: 'APPLICATION_USER_NOT_FOUND' } }),
+    })
+    assert.deepEqual(result, { ok: true })
+  })
+
+  for (const [role, status, redirectTo] of [
+    ['SUPER_ADMIN', null, '/admin'],
+    ['OWNER', 'ACTIVE', '/app'],
+    ['WAREHOUSE', 'ACTIVE', '/app'],
+    ['OWNER', 'PENDING', '/pending-approval'],
+    ['OWNER', 'REJECTED', '/account-inactive'],
+    ['WAREHOUSE', 'SUSPENDED', '/account-inactive'],
+  ]) {
+    test(`routes provisioned ${role}/${status} away from onboarding`, async () => {
+      const result = await loadOwnerOnboarding({
+        supabase: createSupabase().client,
+        fetchImpl: async () => jsonResponse(200, { user: { role }, account: status ? { status } : null }),
+      })
+      assert.deepEqual(result, { ok: true, redirectTo })
+    })
+  }
+
+  for (const [status, code] of [[401, 'INVALID_ACCESS_TOKEN'], [403, 'USER_INACTIVE'], [500, 'APPLICATION_USER_NOT_FOUND']]) {
+    test(`does not show onboarding for ${status}/${code}`, async () => {
+      const result = await loadOwnerOnboarding({
+        supabase: createSupabase().client,
+        fetchImpl: async () => jsonResponse(status, { error: { code } }),
+      })
+      assert.equal(result.ok, false)
+      assert.equal(result.code, code)
+    })
+  }
+
+  test('does not show onboarding without a session or after a network failure', async () => {
+    let requested = false
+    const result = await loadOwnerOnboarding({
+      supabase: createSupabase({ missingSession: true }).client,
+      fetchImpl: async () => { requested = true },
+    })
+    assert.equal(result.code, 'SESSION_REQUIRED')
+    assert.equal(requested, false)
+    assert.equal((await loadOwnerOnboarding({
+      supabase: createSupabase().client,
+      fetchImpl: async () => { throw new Error('private network detail') },
+    })).ok, false)
+  })
+
   test('blocks unauthenticated access', async () => {
     const result = await verifyAuthenticatedSession({
       supabase: createSupabase({ missingSession: true }).client,
@@ -353,6 +404,13 @@ describe('OWNER onboarding', () => {
     assert.equal(result.ok, false)
     assert.doesNotMatch(result.message, /private|database/i)
   })
+})
+
+test('account status pages send a tenantless SUPER_ADMIN to admin without throwing', () => {
+  assert.deepEqual(getPendingAccountView({ user: { role: 'SUPER_ADMIN' }, account: null }), {
+    ok: true, redirectTo: '/admin',
+  })
+  assert.equal(getPendingAccountView({ user: { role: 'OWNER' }, account: null }).ok, false)
 })
 
 describe('pending approval state', () => {

@@ -1,3 +1,9 @@
+import { ProductRestock } from '../../features/inventory/ProductRestock.jsx'
+import { InventoryHistory, InventoryReconciliation } from '../../features/inventory/InventoryAuditSections.jsx'
+import { ReceiptHistory } from '../../features/inventory/ReceiptHistory.jsx'
+import { ProductStock, ProductCountCheck } from '../../features/products/ProductStockSections.jsx'
+import '../../features/inventory/receiving.css'
+import '../../features/products/product-workspace.css'
 import { ProductImage, ProductIdentityForm, VariantForm, ProductCatalogCard } from '../../features/products/ProductComponents.jsx'
 import { ColorSwatch } from '../../features/products/ColorSwatch.jsx'
 import { groupVariantsByColor, operationalState } from '../../features/products/product-options.js'
@@ -8,7 +14,6 @@ import { useEffect, useRef, useState } from 'react'
 import { loadCategories } from '../../features/categories/category-flow.js'
 import { CatalogConfirmation } from '../../features/products/CatalogConfirmation.jsx'
 
-import { canRestock } from '../../features/inventory/restock-flow.js'
 import {
   canShowProductMargin, createVariant, findVariantDuplicate, getProduct, listProducts, removeProductImage,
   applyVariantPrices, adjustVariantStock, setProductActive, setVariantActive, updateProduct, updateVariant,
@@ -30,6 +35,19 @@ function redirectIfNeeded(result) {
 export function ProductsPage({ profile, navigate, productId }) {
   const role = profile.user.role
   const currency = profile.account?.baseCurrency
+  const [section, setSection] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('section')
+    return ['stock', 'movements', 'count', 'receipts', ...(role === 'OWNER' ? ['restock'] : [])].includes(requested) ? requested : 'overview'
+  })
+  const [visited, setVisited] = useState(() => ({ [section]: true }))
+  const [auditVersion, setAuditVersion] = useState(0)
+  function selectSection(next) {
+    setVisited(current => ({ ...current, [next]: true })); setSection(next)
+    const url = new URL(window.location.href)
+    if (next === 'overview') url.searchParams.delete('section')
+    else url.searchParams.set('section', next)
+    window.history.replaceState(null, '', url.pathname + url.search)
+  }
   const [categories, setCategories] = useState([])
   const [categoryState, setCategoryState] = useState({ kind: 'loading' })
   const [categoryAttempt, setCategoryAttempt] = useState(0)
@@ -82,7 +100,7 @@ export function ProductsPage({ profile, navigate, productId }) {
     window.addEventListener(stockRecoveryEvent, sync)
     void migrateStockRecovery(recoveryKey).then(supported => {
       if (!stockMounted.current) return
-      if (!supported) setRecoveryError('Safe stock updates require browser Web Locks. Use Inventory or a supported browser. Pending updates have been preserved.')
+      if (!supported) setRecoveryError('Safe stock updates require browser Web Locks. Use a supported browser. Pending updates have been preserved.')
       sync()
     }).catch(() => {
       if (stockMounted.current) setRecoveryError('Stock recovery migration could not finish. Pending updates have been preserved.')
@@ -112,34 +130,37 @@ export function ProductsPage({ profile, navigate, productId }) {
 
   useEffect(() => {
     let active = true
-    void loadCategories({ supabase }).then((result) => {
-      if (!active || redirectIfNeeded(result)) return
+    const controller = new AbortController()
+    void loadCategories({ supabase, signal: controller.signal }).then((result) => {
+      if (!active || result.aborted || redirectIfNeeded(result)) return
       if (result.ok) { setCategories(result.categories); setCategoryState({ kind: 'ready' }) }
       else setCategoryState({ kind: 'error', message: result.message })
     })
-    return () => { active = false }
+    return () => { active = false; controller.abort() }
   }, [categoryAttempt])
 
   useEffect(() => {
     if (productId) return undefined
     let active = true
     const requestId = listRequestId.current
-    void listProducts({ supabase, filters, summary: true }).then((result) => {
-      if (!active || requestId !== listRequestId.current || redirectIfNeeded(result)) return
+    const controller = new AbortController()
+    void listProducts({ supabase, filters, summary: true, signal: controller.signal }).then((result) => {
+      if (!active || result.aborted || requestId !== listRequestId.current || redirectIfNeeded(result)) return
       setListState(result.ok ? { kind: 'ready', ...result } : { kind: 'error', message: result.message })
     })
-    return () => { active = false }
+    return () => { active = false; controller.abort() }
   }, [filters, listVersion, productId])
 
   useEffect(() => {
     if (!selectedId) return undefined
     let active = true
     const requestId = detailRequestId.current
-    void getProduct({ supabase, productId: selectedId }).then((result) => {
-      if (!active || requestId !== detailRequestId.current || redirectIfNeeded(result)) return
+    const controller = new AbortController()
+    void getProduct({ supabase, productId: selectedId, signal: controller.signal }).then((result) => {
+      if (!active || result.aborted || requestId !== detailRequestId.current || redirectIfNeeded(result)) return
       setDetailState(result.ok ? { kind: 'ready', product: result.product } : { kind: 'error', message: result.message })
     })
-    return () => { active = false }
+    return () => { active = false; controller.abort() }
   }, [selectedId, detailVersion])
 
   useEffect(() => {
@@ -216,7 +237,7 @@ export function ProductsPage({ profile, navigate, productId }) {
     try {
       const supported = await migrateStockRecovery(recoveryKey)
       if (!supported) {
-        if (stockMounted.current) setRecoveryError('Safe stock updates require browser Web Locks. Use Inventory or a supported browser.')
+        if (stockMounted.current) setRecoveryError('Safe stock updates require browser Web Locks. Use a supported browser.')
         return
       }
       const locked = await withStockRecoveryLock(recoveryKey, variant.id, async () => {
@@ -245,7 +266,8 @@ export function ProductsPage({ profile, navigate, productId }) {
         setPendingStock(readStockRecovery(recoveryKey))
         if (!result.ok) { setFeedback({kind:'error', message:result.message}); return }
         setDetailState(current => current.kind === 'ready' ? {...current, product:{...current.product, variants:current.product.variants.map(item => item.id === variant.id ? result.variant : item)}} : current)
-        setFeedback({kind:'success', message:`Stock saved. ${variant.color || ''} / ${variant.size || ''}: ${result.variant.currentStock} pieces.`})
+        setAuditVersion(value => value + 1)
+        setFeedback({kind:'success', message:`Stock count updated. ${variant.color || ''} / ${variant.size || ''}: ${result.variant.currentStock} pieces.`})
       })
       if (!locked.acquired && stockMounted.current) setFeedback({kind:'error', message:'Another page is confirming this option. Wait for it to finish before retrying.'})
     } catch {
@@ -287,7 +309,7 @@ export function ProductsPage({ profile, navigate, productId }) {
       : createVariant({ supabase, productId: selectedId, draft: variantEdit.draft, role }))
     if (!result?.ok) return
     setVariantEdit(null); refreshDetail(); refreshList()
-    setFeedback({ kind: 'success', message: editing ? 'Variant updated.' : role === 'OWNER' ? 'Color / size saved. Use + or - to adjust stock by one piece.' : 'Color / size saved. An owner can now set the price and add stock.' })
+    setFeedback({ kind: 'success', message: editing ? 'Variant updated.' : role === 'OWNER' ? 'Color / size saved. Open Restock to receive a delivery.' : 'Color / size saved. An owner can now set the price and add stock.' })
   }
 
   async function confirmStatus() {
@@ -348,10 +370,11 @@ export function ProductsPage({ profile, navigate, productId }) {
   const pageCount = listState.kind === 'ready' ? Math.max(1, Math.ceil(listState.total / listState.limit)) : 1
 
   return <section className="business-page products-page">
-    {!productId && <header className="business-page-heading product-page-heading"><div><h1>Products</h1><p>Manage your catalog, colors, sizes and pricing.</p></div>
-      <button type="button" disabled={Boolean(busy)} onClick={() => { navigate('/app/inventory?new=1') }}><span aria-hidden="true">+ </span>Add product</button></header>}
+    {!productId && <header className="business-page-heading product-page-heading"><div><span className="eyebrow">Product catalog</span><h1>Products</h1><p>Manage products, stock, restocking and movement history.</p></div>
+      <button type="button" disabled={Boolean(busy)} onClick={() => { navigate('/app/inventory') }}><span aria-hidden="true">+ </span>Add product</button></header>}
     {!currency && <p className="product-feedback error-message" role="alert">Account currency is unavailable. Monetary values cannot be displayed safely.</p>}
     {recoveryError && <p role="alert" className="product-feedback error-message">{recoveryError}</p>}
+    {pendingStock.length > 0 && section !== 'count' && <p className="product-feedback" role="status">A count correction is awaiting confirmation. <button type="button" className="text-button" onClick={() => selectSection('count')}>Open Count Check</button></p>}
     {feedback && <p id="products-feedback" className={`product-feedback ${feedback.kind}-message`} role={feedback.kind === 'error' ? 'alert' : 'status'}>{feedback.message}</p>}
     <div className="product-catalog-layout">{!productId && <div className="product-list-column" ref={resultsPanel} tabIndex={-1} aria-label="Product catalog">
       <form className="product-filter-panel" onSubmit={(event) => { event.preventDefault(); applyFilters({ search: searchDraft.trim(), ...filterDraft, page: 1 }); setFiltersOpen(false) }}>
@@ -364,14 +387,16 @@ export function ProductsPage({ profile, navigate, productId }) {
       {categoryState.kind === 'error' && <p className="product-inline-error" role="alert">Categories unavailable. {categoryState.message} <button className="text-button" type="button" onClick={() => setCategoryAttempt((n) => n + 1)}>Retry</button></p>}
       {listState.kind === 'loading' && <div className="product-state"><div className="spinner" aria-label="Loading products" /><p>Loading products...</p></div>}
       {listState.kind === 'error' && <div className="product-state"><h2>Products unavailable</h2><p className="error-message" role="alert">{listState.message}</p><button type="button" onClick={refreshList}>Try again</button></div>}
-      {listState.kind === 'ready' && listState.products.length === 0 && <div className="product-state"><h2>{filters.search || filters.categoryId || filters.isActive !== 'true' ? 'No matching products' : 'No products yet'}</h2><p>{filters.search || filters.categoryId || filters.isActive !== 'true' ? 'Try changing your search or filters.' : 'Add your first product to start building your catalog.'}</p>{!filters.search && !filters.categoryId && filters.isActive === 'true' && <button type="button" onClick={() => navigate('/app/inventory?new=1')}>Add product</button>}</div>}
-      {listState.kind === 'ready' && listState.products.length > 0 && <><div className="product-list-summary"><span>{listState.total} product{listState.total === 1 ? '' : 's'}</span><button className="text-button" type="button" onClick={() => { refreshList(); if (selectedId) refreshDetail() }}>Refresh images</button></div>
+      {listState.kind === 'ready' && listState.products.length === 0 && <div className="product-state"><h2>{filters.search || filters.categoryId || filters.isActive !== 'true' ? 'No matching products' : 'No products yet'}</h2><p>{filters.search || filters.categoryId || filters.isActive !== 'true' ? 'Try changing your search or filters.' : 'Add your first product to start building your catalog.'}</p>{!filters.search && !filters.categoryId && filters.isActive === 'true' && <button type="button" onClick={() => navigate('/app/inventory')}>Add product</button>}</div>}
+      {listState.kind === 'ready' && listState.products.length > 0 && <><div className="product-list-summary"><span>{listState.total} product{listState.total === 1 ? '' : 's'}</span><button className="text-button" type="button" onClick={() => { refreshList(); if (selectedId) refreshDetail() }}>Refresh products</button></div>
         <div className="product-results"><div className="product-table-heading" aria-hidden="true"><span>Product</span><span>Category</span><span>Variants</span><span>Stock</span><span>Selling price</span><span>Status</span><span>Action</span></div><div className="product-card-list">{listState.products.map((product) => <ProductCatalogCard key={product.id} product={product} currency={currency} selected={selectedId === product.id} select={() => selectProduct(product.id)} listVersion={listVersion} imageRevision={imageRevision} />)}</div></div><nav className="product-pagination" aria-label="Product pages"><button type="button" className="secondary-action" disabled={filters.page <= 1} onClick={() => applyFilters({ ...filters, page: filters.page - 1 })}>Previous</button><span>Page {listState.page} of {pageCount}</span><button type="button" className="secondary-action" disabled={filters.page >= pageCount} onClick={() => applyFilters({ ...filters, page: filters.page + 1 })}>Next</button></nav></>}
     </div>}<div ref={detailPanel} className={`product-detail-column ${selectedId ? 'has-selection' : ''}`} tabIndex={-1} aria-label="Selected product details">
       {selectedId && <div className="product-detail-navigation"><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { if (confirmDiscardChanges()) navigate('/app/products') }}>Back to products</button><span>Product details</span></div>}
       {detailState.kind === 'loading' && selectedId && <div className="product-state"><div className="spinner" aria-label="Loading product details" /><p>Loading product details...</p></div>}
       {detailState.kind === 'error' && selectedId && <div className="product-state"><h2>Product unavailable</h2><p className="error-message" role="alert">{detailState.message}</p><button type="button" onClick={() => { setDetailState({ kind: 'loading' }); refreshDetail() }}>Try again</button></div>}
       {detail && selectedId && <div className="product-detail-stack">
+        <nav className="product-section-nav" aria-label="Product management sections">{[['overview','Overview'],['stock','Stock'],...(role === 'OWNER' ? [['restock','Restock']] : []),['movements','Movement History'],['count','Count Check'],['receipts','Receipt History']].map(([key,label]) => <button type="button" key={key} id={`product-section-${key}`} aria-controls={`product-panel-${key}`} aria-current={section === key ? 'page' : undefined} className={section === key ? 'is-current' : ''} onClick={() => selectSection(key)}>{label}</button>)}</nav>
+        <div id="product-panel-overview" className="product-detail-stack" hidden={section !== 'overview'} role="region" aria-labelledby="product-section-overview">
         <section className="product-panel product-overview">
           <div className="product-overview-summary"><ProductImage key={`${detail.imageUrl || detail.id}-${detailVersion}-${imageRevision}`} url={detail.imageUrl} status={detail.imageStatus} name={detail.name} revision={imageRevision} /><div className="product-overview-identity"><h2>{detail.name}</h2><div className="product-overview-meta"><span>{detail.category.name}</span><span>{detail.variants.length} option{detail.variants.length === 1 ? '' : 's'}</span><span className={`product-status ${detail.isActive ? '' : 'is-inactive'}`}>{detail.isActive ? 'Active' : 'Inactive'}</span></div>{canShowProductMargin(role, detail) && detail.profitMarginOverride != null && <p>Margin override: {detail.profitMarginOverride}</p>}</div></div>
           <div className="product-actions"><button type="button" className="secondary-action" disabled={Boolean(busy)} onClick={() => { if (productDirty && !confirmDiscardChanges()) return; setFeedback(null); setEditDraft({ name: detail.name, categoryId: detail.category.id, profitMarginOverride: detail.profitMarginOverride ?? '' }); setConfirmation(null) }} aria-label="Edit product">Edit</button><button type="button" className={detail.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'product', next: !detail.isActive, label: detail.name }) }}>{detail.isActive ? 'Deactivate product' : 'Reactivate product'}</button></div>
@@ -381,8 +406,8 @@ export function ProductsPage({ profile, navigate, productId }) {
             {stockBusy.size > 0 && <p id="product-photo-stock-wait" role="status">Waiting for stock update to finish.</p>}<div className="product-actions"><button type="submit" disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-disabled={!file || Boolean(busy) || stockBusy.size > 0} aria-describedby={stockBusy.size > 0 ? 'product-photo-stock-wait' : undefined}>{busy === 'image-upload' ? 'Uploading...' : hasAttachedImage ? 'Replace image' : 'Upload image'}</button>{hasAttachedImage && <button type="button" className="product-danger-button" disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'image', label: detail.name }) }}>Remove image</button>}</div></form>
         </details>
         </section>
-        {role === 'OWNER' && <button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.size > 0 || !detail.isActive} onClick={()=>{if(confirmDiscardChanges())navigate(`/app/inventory?productId=${encodeURIComponent(detail.id)}`)}}>Receive stock in Inventory</button>}
-        <section className="product-panel product-options-panel"><div className="product-section-heading"><div><h2>Colors & sizes</h2><p>Stock and price by size. + / − are one-piece count corrections; receive purchases in Inventory.</p></div><div className="product-section-actions">{role === 'OWNER' && <button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.size > 0 || !detail.isActive} onClick={() => { if (priceDraft) return; setPriceDraft({sellingPrice:'',variantIds:detail.variants.filter(v=>v.isActive).slice(0,200).map(v=>v.id)});setPriceReview(false) }}>Apply price to variants</button>}<button type="button" className="secondary-action" disabled={Boolean(busy) || !detail.isActive} onClick={() => { if (!variantDirty || confirmDiscardChanges()) setVariantEdit({ id: null, draft: newVariantDraft() }) }}>Add color / size</button></div></div>
+
+        <section className="product-panel product-options-panel"><div className="product-section-heading"><div><h2>Colors & sizes</h2><p>Catalog options and selling prices. Open Stock to inspect quantities, or Restock to record a delivery.</p></div><div className="product-section-actions">{role === 'OWNER' && <button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.size > 0 || !detail.isActive} onClick={() => { if (priceDraft) return; setPriceDraft({sellingPrice:'',variantIds:detail.variants.filter(v=>v.isActive).slice(0,200).map(v=>v.id)});setPriceReview(false) }}>Apply price to variants</button>}<button type="button" className="secondary-action" disabled={Boolean(busy) || !detail.isActive} onClick={() => { if (!variantDirty || confirmDiscardChanges()) setVariantEdit({ id: null, draft: newVariantDraft() }) }}>Add color / size</button></div></div>
         {role === 'OWNER' && <div className="product-bulk-price">{priceDraft && <form className="product-form" onSubmit={submitPrices}><label htmlFor="product-common-price">Selling price ({currency})</label><input id="product-common-price" required inputMode="decimal" pattern="(?:0|[1-9][0-9]{0,15})(?:\.[0-9]{1,2})?" value={priceDraft.sellingPrice} disabled={Boolean(busy)} onChange={event=>{setPriceDraft({...priceDraft,sellingPrice:event.target.value});setPriceReview(false)}} />
         <details className="product-price-selection"><summary>Choose options ({priceDraft.variantIds.length} selected)</summary><div className="product-price-targets">{detail.variants.filter(v=>v.isActive).map(v=><label key={v.id}><input type="checkbox" checked={priceDraft.variantIds.includes(v.id)} disabled={Boolean(busy)} onChange={event=>{setPriceDraft({...priceDraft,variantIds:event.target.checked?[...priceDraft.variantIds,v.id]:priceDraft.variantIds.filter(id=>id!==v.id)});setPriceReview(false)}} />{v.color || 'No color'} / {v.size || 'No size'} ? {v.sellingPrice == null?'Not set':formatMoney(v.sellingPrice,currency)}</label>)}</div></details>
         <p>{priceDraft.variantIds.length} selected options (up to 200 per update). {priceReview ? `Confirm replacing their existing prices with ${priceDraft.sellingPrice} ${currency}. Unselected options stay unchanged.` : 'Review existing prices above before confirming.'}</p>
@@ -392,12 +417,11 @@ export function ProductsPage({ profile, navigate, productId }) {
           {detail.variants.length === 0 ? <p className="product-muted">Add your first color and size.</p> : <div className="product-color-stock-grid">{variantGroups.map(([color, variants]) => <section className="product-color-stock-card" style={{'--variant-count':variants.length}} key={variants[0].id} aria-label={`${color} sizes and stock`}>
             <header className="product-color-stock-header"><h3><ColorSwatch name={color} />{color}</h3><span>{variants.length} sizes / {variants.filter(v=>detail.isActive&&v.isActive).reduce((total, variant) => total + variant.currentStock, 0)} available / {variants.filter(v=>!detail.isActive||!v.isActive).reduce((sum,v)=>sum+v.currentStock,0)} inactive pieces</span></header>
             {variants.map((variant) => <article className="product-stock-row" key={variant.id} aria-label={`${color} / ${variant.size || 'No size'}`}>
-              <div className="product-option-state"><span className={`product-readiness ${operationalState(detail, variant, role) === 'Sellable' ? 'is-sellable' : ''}`}>{operationalState(detail, variant, role)}</span>{role === 'OWNER' && variant.lastPurchaseCost === null && <a className="product-cost-pending" href="/app/inventory" title="Set purchase cost in Inventory; historical sales remain unchanged">Cost pending: Inventory</a>}</div>
+              <div className="product-option-state"><span className={`product-readiness ${operationalState(detail, variant, role) === 'Sellable' ? 'is-sellable' : ''}`}>{operationalState(detail, variant, role)}</span>{role === 'OWNER' && variant.lastPurchaseCost === null && <button type="button" className="text-button product-cost-pending" onClick={() => selectSection('stock')}>Cost pending: set in Stock</button>}</div>
               <strong className="product-stock-size">{variant.size || '?'}{!variant.isActive && <small>Inactive</small>}</strong>
               <span className={`product-stock-quantity ${variant.currentStock === 0 ? 'is-empty' : ''}`}><small className="product-stock-label">Stock</small>{variant.currentStock}</span>
               <span className="product-stock-price"><small className="product-stock-label">Price</small>{variant.sellingPrice == null ? 'Not set' : formatMoney(variant.sellingPrice, currency)}</span>
-              <div className="product-stock-actions">{canRestock(role, detail, variant) && <><button type="button" className="secondary-action stock-step" aria-label="Remove stock" title="Adjustment: remove one piece for a count correction" disabled={Boolean(busy) || stockBusy.has(variant.id) || pendingStock.some(r=>r.variantId===variant.id) || Boolean(recoveryError) || variant.currentStock === 0} onClick={() => changeStock(variant, -1)}>&minus;</button><button type="button" className="secondary-action stock-step" aria-label="Add stock" title="Adjustment: add one piece for a count correction" disabled={Boolean(busy) || stockBusy.has(variant.id) || pendingStock.some(r=>r.variantId===variant.id) || Boolean(recoveryError)} onClick={() => changeStock(variant, 1)}>+</button></>}<button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.has(variant.id)} onClick={() => { if (variantDirty && !confirmDiscardChanges()) return; setVariantEdit({ id: variant.id, draft: { sku: variant.sku, barcode: variant.barcode ?? '', color: variant.color ?? '', size: variant.size ?? '', sellingPrice: variant.sellingPrice ?? '' } }); setConfirmation(null) }}>Edit</button></div>
-              {stockBusy.has(variant.id) ? <p className="product-stock-recovery" role="status">Updating...</p> : pendingStock.find(r=>r.variantId===variant.id) && <div className="product-stock-recovery"><p>Stock update awaiting confirmation</p>{pendingStock.find(r=>r.variantId===variant.id)?.requiresReview && <p>Older update: review Inventory before retrying this original request.</p>}<button type="button" className="secondary-action" disabled={Boolean(busy)||Boolean(recoveryError)} onClick={()=>changeStock(variant, pendingStock.find(r=>r.variantId===variant.id).delta, true)}>Retry same update</button></div>}
+              <div className="product-stock-actions"><button type="button" className="secondary-action" disabled={Boolean(busy) || stockBusy.has(variant.id)} onClick={() => { if (variantDirty && !confirmDiscardChanges()) return; setVariantEdit({ id: variant.id, draft: { sku: variant.sku, barcode: variant.barcode ?? '', color: variant.color ?? '', size: variant.size ?? '', sellingPrice: variant.sellingPrice ?? '' } }); setConfirmation(null) }}>Edit</button></div>
               <details className="product-stock-more product-optional"><summary aria-label={`Details and options for ${color} / ${variant.size || 'No size'}`}>More</summary><div className="product-stock-extra">
                 <dl><div><dt>SKU</dt><dd>{variant.sku}</dd></div></dl>
                 <button type="button" className={variant.isActive ? 'product-danger-button' : 'secondary-action'} disabled={Boolean(busy) || stockBusy.size > 0} onClick={() => { setFeedback(null); setConfirmation({ kind: 'variant', id: variant.id, next: !variant.isActive, label: `${detail.name} / ${[variant.color, variant.size].filter(Boolean).join(' / ') || variant.sku}` }) }}>{variant.isActive ? 'Deactivate variant' : 'Reactivate variant'}</button>
@@ -407,7 +431,13 @@ export function ProductsPage({ profile, navigate, productId }) {
           </section>)}</div>}
 
         </section>
-        {confirmation && <CatalogConfirmation target={confirmation} busy={Boolean(busy)} error={feedback?.kind === 'error' ? feedback.message : null} onConfirm={confirmation.kind === 'image' ? confirmImageRemove : confirmStatus} onClose={() => setConfirmation(null)} />}
+        </div>
+        {visited.stock && <div id="product-panel-stock" hidden={section !== 'stock'} role="region" aria-labelledby="product-section-stock"><ProductStock product={detail} role={role} currency={currency} onSaved={() => { refreshDetail(); setFeedback({kind:'success',message:'Purchase cost saved. Quantity and historical sale costs are unchanged.'}) }} /></div>}
+        {visited.restock && role === 'OWNER' && <div id="product-panel-restock" hidden={section !== 'restock'} role="region" aria-labelledby="product-section-restock"><ProductRestock profile={profile} product={detail} onSaved={() => { refreshDetail(); setAuditVersion(value => value + 1) }} onCancel={selectSection} /></div>}
+        {visited.movements && <div id="product-panel-movements" hidden={section !== 'movements'} role="region" aria-labelledby="product-section-movements"><InventoryHistory active={section === 'movements'} role={role} currency={currency} products={[detail]} productId={detail.id} refreshVersion={auditVersion} /></div>}
+        {visited.count && <div id="product-panel-count" hidden={section !== 'count'} role="region" aria-labelledby="product-section-count"><ProductCountCheck product={detail} role={role} busy={Boolean(busy)} stockBusy={stockBusy} pendingStock={pendingStock} recoveryError={recoveryError} onRetry={(variant, delta) => changeStock(variant, delta, true)} onCorrect={(variant, delta) => { setFeedback(null); setConfirmation({kind:'count',variant,delta,label:`${detail.name} / ${variant.color || 'No color'} / ${variant.size || 'No size'}`}) }} /><InventoryReconciliation active={section === 'count'} productId={detail.id} products={[detail]} refreshVersion={auditVersion} /></div>}
+        {visited.receipts && <div id="product-panel-receipts" hidden={section !== 'receipts'} role="region" aria-labelledby="product-section-receipts"><ReceiptHistory active={section === 'receipts'} role={role} currency={currency} refreshVersion={auditVersion} /></div>}
+        {confirmation && <CatalogConfirmation target={confirmation} busy={Boolean(busy) || (confirmation.kind === 'count' && stockBusy.has(confirmation.variant.id))} error={feedback?.kind === 'error' ? feedback.message : null} onConfirm={confirmation.kind === 'count' ? () => { const target = confirmation; setConfirmation(null); void changeStock(target.variant, target.delta) } : confirmation.kind === 'image' ? confirmImageRemove : confirmStatus} onClose={() => setConfirmation(null)} />}
       </div>}
     </div></div>
 

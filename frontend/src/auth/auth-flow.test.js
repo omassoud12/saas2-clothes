@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import {
   completeAuthCallback,
+  exchangePasswordSetupCode,
   inspectAuthCallbackUrl,
   RECOVERY_REQUEST_MESSAGE,
   requestPasswordRecovery,
@@ -135,6 +136,100 @@ async function establishInvitation(storage, client, callback = { kind: 'invite',
 }
 
 describe('invitation callback', () => {
+  test('recognizes a code-only callback without exposing the code', () => {
+    assert.deepEqual(inspectAuthCallbackUrl('https://app.example/auth/callback?code=private-code'), {
+      kind: null, hasError: false, hasCode: true,
+    })
+    assert.deepEqual(inspectAuthCallbackUrl('https://app.example/auth/callback?type=signup&code=private-code'), {
+      kind: null, hasError: false,
+    })
+  })
+
+  for (const kind of ['invite', 'recovery']) {
+    test(`exchanges a code-only ${kind} through the SDK before allowing password setup`, async () => {
+      const { client } = createSupabase()
+      const calls = []
+      client.auth.exchangeCodeForSession = async (...args) => {
+        calls.push(args)
+        return {
+          data: {
+            redirectType: kind === 'recovery' ? 'recovery' : null,
+            session: { user: { id: userId, invited_at: kind === 'invite' ? '2026-09-14' : null, email_confirmed_at: '2026-09-14' } },
+          },
+          error: null,
+        }
+      }
+      const storage = new MemoryStorage()
+      const result = await completeAuthCallback({
+        supabase: client,
+        callback: inspectAuthCallbackUrl('https://app.example/auth/callback?code=private-code'),
+        exchangeCode: () => exchangePasswordSetupCode({ supabase: client, code: 'private-code', flowId: 'flow-id' }),
+        storage, now, navigate() {}, clearUrl() {},
+      })
+      assert.deepEqual(calls, [['private-code', { flowId: 'flow-id' }]])
+      assert.deepEqual(result, { ok: true, redirectTo: '/set-password' })
+      assert.equal((await verifyPasswordSetupSession({ supabase: client, storage, now })).ok, true)
+      assert.doesNotMatch(JSON.stringify(result) + JSON.stringify([...storage.values]), /private-code/)
+    })
+  }
+
+  test('a failed code exchange never falls back to an existing signed-in session', async () => {
+    const { client, calls } = createSupabase()
+    client.auth.exchangeCodeForSession = async () => ({ data: null, error: new Error('private code detail') })
+    const storage = new MemoryStorage()
+    await establishInvitation(storage, client)
+    calls.getSession = 0
+    let cleaned = false
+    const result = await completeAuthCallback({
+      supabase: client, callback: { kind: null, hasError: false, hasCode: true },
+      exchangeCode: () => exchangePasswordSetupCode({ supabase: client, code: 'expired-code' }),
+      storage, now, navigate() { assert.fail('must not navigate') }, clearUrl() { cleaned = true },
+    })
+    assert.equal(result.code, 'INVITATION_INVALID')
+    assert.equal(calls.getSession, 0)
+    assert.equal(storage.values.size, 0)
+    assert.equal(cleaned, true)
+  })
+
+  test('does not allow a signup or OAuth code to establish a password setup session', async () => {
+    const { client } = createSupabase()
+    client.auth.exchangeCodeForSession = async () => ({
+      data: { redirectType: null, session: { user: { id: userId, email_confirmed_at: '2026-09-14' } } }, error: null,
+    })
+    assert.equal((await exchangePasswordSetupCode({ supabase: client, code: 'signup-code' })).ok, false)
+  })
+
+  test('rejects a code callback if the active identity differs from the exchanged identity', async () => {
+    const { client } = createSupabase()
+    const storage = new MemoryStorage()
+    const result = await completeAuthCallback({
+      supabase: client, callback: { kind: null, hasError: false, hasCode: true },
+      exchangeCode: async () => ({ ok: true, kind: 'recovery', userId: 'another-user' }),
+      storage, now, navigate() { assert.fail('must not navigate') }, clearUrl() {},
+    })
+    assert.equal(result.code, 'INVITATION_SESSION_MISSING')
+    assert.equal(storage.values.size, 0)
+  })
+
+  test('rejects conflicting callback intent and never exchanges a callback containing an error', async () => {
+    const { client } = createSupabase()
+    for (const callback of [
+      { kind: 'invite', hasCode: true, hasError: false },
+      { kind: null, hasCode: true, hasError: true },
+    ]) {
+      let exchanged = false
+      const storage = new MemoryStorage()
+      const result = await completeAuthCallback({
+        supabase: client, callback, storage, now, clearUrl() {},
+        navigate() { assert.fail('must not navigate') },
+        exchangeCode: async () => { exchanged = true; return { ok: true, kind: 'recovery', userId } },
+      })
+      assert.equal(result.code, 'INVITATION_INVALID')
+      assert.equal(exchanged, !callback.hasError)
+      assert.equal(storage.values.size, 0)
+    }
+  })
+
   test('recognizes invite and recovery callback intent without returning tokens', () => {
     assert.deepEqual(
       inspectAuthCallbackUrl('https://app.example/auth/callback#type=invite&access_token=hidden'),
@@ -142,7 +237,7 @@ describe('invitation callback', () => {
     )
     assert.deepEqual(
       inspectAuthCallbackUrl('https://app.example/auth/callback?type=recovery&code=hidden'),
-      { kind: 'recovery', hasError: false },
+      { kind: 'recovery', hasError: false, hasCode: true },
     )
   })
 

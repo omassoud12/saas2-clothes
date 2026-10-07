@@ -8,6 +8,8 @@ import { AppHeader } from './AppHeader.jsx'
 import { AppSidebar } from './AppSidebar.jsx'
 import { LoadingState } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
+import { NotFoundPage } from '../pages/NotFoundPage.jsx'
+import { ROUTES } from './routes.js'
 
 function lazyNamed(loader, exportName) {
   return lazy(() => loader().then((module) => ({ default: module[exportName] })))
@@ -32,7 +34,7 @@ export function AppLayout({ pathname, navigate, profile }) {
   const menuTrigger = useRef(null)
   const identity = getBusinessShellIdentity(profile)
   const resolvedRoute = resolveAppRoute(pathname, identity.role)
-  const Page = pageComponents[resolvedRoute.route.key]
+  const Page = pageComponents[resolvedRoute.route?.key] || NotFoundPage
 
   useEffect(() => {
     if (resolvedRoute.redirectTo) {
@@ -124,7 +126,7 @@ export function AppLayout({ pathname, navigate, profile }) {
             </p>
           )}
           <Suspense fallback={<LoadingState label="Loading page" />}>
-            <Page key={resolvedRoute.productId || resolvedRoute.route.key} profile={profile} navigate={navigate} productId={resolvedRoute.productId} />
+            <Page key={resolvedRoute.productId || resolvedRoute.route?.key || 'not-found'} profile={profile} navigate={navigate} productId={resolvedRoute.productId} homePath={ROUTES.dashboard} />
           </Suspense>
         </main>
       </div>

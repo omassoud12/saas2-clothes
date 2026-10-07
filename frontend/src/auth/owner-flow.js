@@ -233,6 +233,16 @@ export async function verifyAuthenticatedSession({ supabase }) {
   return result.ok ? Object.freeze({ ok: true }) : result
 }
 
+export async function loadOwnerOnboarding({ supabase, fetchImpl = globalThis.fetch }) {
+  const result = await fetchCurrentApplicationUser({ supabase, fetchImpl })
+  if (!result.ok) {
+    return result.status === 403 && result.code === 'APPLICATION_USER_NOT_FOUND'
+      ? Object.freeze({ ok: true })
+      : result
+  }
+  return getApplicationDestination(result.profile)
+}
+
 function readRequiredText(input, field, maxLength) {
   const value = input?.[field]
   if (typeof value !== 'string' || !value.trim()) {
@@ -311,9 +321,13 @@ export async function authenticatedApiRequest({
   requestBody,
   headers,
   fallbackMessage,
+  signal,
 }) {
   const sessionResult = await readAuthenticatedSession(supabase)
   if (!sessionResult.ok) return sessionResult
+  if (signal?.aborted) {
+    return Object.freeze({ ok: false, code: 'REQUEST_ABORTED', message: '', aborted: true })
+  }
 
   return apiRequest({
     accessToken: sessionResult.session.access_token,
@@ -324,6 +338,7 @@ export async function authenticatedApiRequest({
     path,
     payload,
     requestBody,
+    signal,
   })
 }
 
@@ -439,6 +454,10 @@ export function getApplicationAuthState(profile) {
 export function getPendingAccountView(profile) {
   const state = getApplicationAuthState(profile)
   if (!state.ok) return state
+
+  if (state.state === APPLICATION_AUTH_STATE.SUPER_ADMIN) {
+    return getApplicationDestination(profile)
+  }
 
   const status = profile.account.status
   if (status === 'PENDING') {

@@ -1,140 +1,30 @@
-// Offline browser verification. No application/API/auth network is allowed.
-// QA_PLAYWRIGHT_MODULE points to an external Playwright installation; no app dependency.
-// Run: node --test scripts/products-ui.test.mjs
-import { test, before, after } from 'node:test'
+// Offline browser regressions. All application requests are synthetic fixtures.
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { resolve, join } from 'node:path'
-import { pathToFileURL } from 'node:url'
-import { createServer } from 'vite'
-import react from '@vitejs/plugin-react'
-import { summarizeProductCatalog, decimalToMinorUnits, minorUnitsToDecimal } from '../frontend/src/lib/money.js'
+import { join } from 'node:path'
+import { open, noOverflow, catId, screenshots, origin } from './products-ui-fixture.mjs'
+async function selectSection(page, name) {
+  await page.getByRole('navigation', { name: 'Product management sections' }).getByRole('button', { name, exact: true }).click()
+}
+async function openDetail(page) {
+  if (!new URL(page.url()).pathname.startsWith('/app/products/')) await page.getByRole('button', { name: /^View product:/ }).first().click()
+  await page.locator('.product-section-nav').waitFor()
+}
+async function openRestock(page) { await openDetail(page); await selectSection(page, 'Restock') }
+async function openEntry(page) {
+  if (await page.locator('.entry-page').count()) return
+  if (new URL(page.url()).pathname.startsWith('/app/products/')) await page.getByRole('button', { name: 'Back to products', exact: true }).click()
+  await page.getByRole('button', { name: /Add product/i }).first().click()
+  await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
+}
+async function correctStock(page, index = 0, delta = 1) {
+  await selectSection(page, 'Count Check')
+  await page.getByRole('button', {name:delta > 0 ? /^Add one piece:/ : /^Remove one piece:/}).nth(index).click()
+  await page.getByRole('dialog').getByRole('button',{name:'Confirm correction',exact:true}).click()
+}
 
-const qaDir = join(tmpdir(), 'saas2-products-qa')
-const { chromium } = await import(pathToFileURL(process.env.QA_PLAYWRIGHT_MODULE || join(qaDir, 'node_modules/playwright/index.mjs')).href)
-const screenshots = join(qaDir, 'screenshots')
-const catId = '11111111-1111-4111-8111-111111111111'
-const category = { id: catId, name: 'T-shirts', createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z' }
-const picture = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" fill="#edf0eb"/><path d="M32 18 18 28 25 43 33 39 33 77 63 77 63 39 71 43 78 28 64 18 57 23 39 23Z" fill="#3d5367"/><path d="M39 22Q48 34 57 22" fill="none" stroke="#a9b6bf" stroke-width="3"/></svg>')
-function product(index, owner = true) {
-  return { id: `22222222-2222-4222-8222-${String(index).padStart(12, '0')}`, name: ['Essential cotton T-shirt', 'Relaxed linen shirt', 'Everyday straight-leg jeans'][index - 1] || 'New product', category, isActive: true, imageUrl: index === 2 ? null : picture,
-    ...(owner ? { profitMarginOverride: null } : {}),
-    variants: ['S', 'M', 'L'].map((size, i) => ({ id: `33333333-3333-4333-8333-${String(index * 10 + i).padStart(12, '0')}`, sku: `ITEM-${index}-${size}`, barcode: null, color: 'Navy', size, sellingPrice: index === 3 ? '42.50' : '15.00', currentStock: index === 2 ? 0 : (i + 1) * 4, isActive: true, ...(owner ? { lastPurchaseCost: '8.0000' } : {}) })) }
-}
-let server, browser, origin
-before(async () => {
-  await mkdir(screenshots, { recursive: true })
-  const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import '/src/index.css'; import {AppLayout} from '/src/app/AppLayout.jsx'; const role = new URLSearchParams(location.search).get('role') || 'OWNER'; function Root(){const [path,setPath]=React.useState(location.pathname.startsWith('/app/')?location.pathname:new URLSearchParams(location.search).get('page')==='inventory'?'/app/inventory':new URLSearchParams(location.search).get('page')==='reports'?'/app/reports':'/app/products');React.useEffect(()=>{const onPop=()=>setPath(location.pathname);window.addEventListener('popstate',onPop);return()=>window.removeEventListener('popstate',onPop)},[]);return React.createElement(AppLayout,{pathname:path,navigate:(next)=>{history.pushState(null,'',next);setPath(next.split('?')[0])},profile:{user:{id:'qa-user',firstName:'Store',lastName:'Team',role},account:{id:'qa-account',name:'Sample clothing store',baseCurrency:'USD',status:'ACTIVE'}}})} createRoot(document.getElementById('root')).render(React.createElement(Root));`
-  server = await createServer({ configFile: false, root: resolve('frontend'), envDir: false,
-    plugins: [{ name: 'products-offline-fixture', enforce: 'pre',
-      resolveId(id) { if (id === '/qa-entry.jsx') return '\0products-qa-entry.jsx' },
-      load(id) {
-        if (id === '\0products-qa-entry.jsx') return entry
-        if (id.replaceAll('\\', '/').endsWith('/src/lib/supabase.js')) return `export const supabase = { auth: {getSession:async()=>({data:{session:{access_token:'offline-fixture',user:{id:'qa-user'}}}})}};`
-      },
-      configureServer(vite) { vite.middlewares.use(async (req, res, next) => {
-        if (!['/qa','/login','/pending-approval'].includes(req.url.split('?')[0]) && !req.url.startsWith('/app/')) return next()
-        res.setHeader('Content-Type', 'text/html')
-        res.end(await vite.transformIndexHtml('/qa', '<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/qa-entry.jsx"></script></body></html>'))
-      }) },
-    }, react()], server: { host: '127.0.0.1', port: 0, strictPort: false },
-  })
-  await server.listen()
-  origin = `http://127.0.0.1:${server.httpServer.address().port}`
-  browser = await chromium.launch({ executablePath: process.env.QA_CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--disable-background-networking'] })
-})
-after(async () => { await browser?.close(); await server?.close() })
-
-async function open(width, height, role = 'OWNER', mode = 'normal', shared = false) {
-  const context = shared ? await browser.newContext({ viewport: { width, height } }) : null
-  const page = context ? await context.newPage() : await browser.newPage({ viewport: { width, height } })
-  const calls = [], errors = [], stockKeys = new Set(), receiptKeys = new Map()
-  const records = [1, 2, 3].map((id) => product(id, role === 'OWNER'))
-  if (mode === 'dense' || mode === 'inventory-dense') { records[0].variants = (mode === 'inventory-dense' ? ['Black', 'White', 'Midnight blue with a long custom name', 'Burgundy'] : ['Black', 'White']).flatMap((color, c) => ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'].map((size, i) => ({ ...records[0].variants[0], id: `dense-${c}-${i}`, color, size, currentStock: 1 }))) }
-  if (mode === 'inventory-dense') { records[0].name = 'Essential cotton T-shirt with a longer seasonal product name'; records[0].category = {...category, name: 'T-shirts and longer category names'} }
-  if (mode === 'photo-unavailable') { records[0].imageUrl=null; records[0].imageStatus='unavailable' }
-  if (mode === 'mixed-color') { records[0].variants[0].color='Black'; records[0].variants[1].color='black'; records[0].variants[2].color=' Black ' }
-  if (mode === 'pending-cost') records[0].variants.forEach(variant=>{variant.lastPurchaseCost=null})
-  if (mode === 'inventory') { records[0].variants[0].currentStock = 1; records[0].variants[0].lastPurchaseCost = null }
-  page.on('pageerror', (error) => errors.push(error.message))
-  await (context || page).route('**/*', async (route) => {
-    const url = new URL(route.request().url())
-    if (url.origin !== origin) { errors.push(`Blocked external URL: ${url.origin}`); return route.abort() }
-    if (!url.pathname.startsWith('/api/')) return route.continue()
-    const method = route.request().method()
-    const body = method !== 'GET' && !url.pathname.endsWith('/image') ? route.request().postDataJSON() : null
-    calls.push({ path: url.pathname, query: url.search, method, body, operationId: route.request().headers()['idempotency-key'] })
-    const reply = (json, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(json) })
-    if (url.pathname === '/api/inventory/receipts' && method === 'POST') {
-      const key=route.request().headers()['idempotency-key']
-      if(mode==='inventory-receipt-auth')return reply({error:{code:'SESSION_REQUIRED'}},401)
-      if(mode==='inventory-receipt-product-not-found')return reply({error:{code:'PRODUCT_NOT_FOUND'}},404)
-      if(mode==='inventory-receipt-variant-not-found')return reply({error:{code:'VARIANT_NOT_FOUND'}},404)
-      if(mode==='inventory-receipt-conflict')return reply({error:{code:'RECEIPT_IDEMPOTENCY_CONFLICT'}},409)
-      if(receiptKeys.has(key))return reply({...receiptKeys.get(key),idempotentReplay:true})
-      const target=records.find(p=>p.id===body.productId)
-      for(const item of body.items){const variant=target.variants.find(v=>v.id===item.variantId);variant.currentStock+=item.quantity;variant.lastPurchaseCost=body.unitCost}
-      const totalQuantity=body.items.reduce((sum,item)=>sum+item.quantity,0)
-      const result={productId:target.id,idempotentReplay:false,receipt:{id:'receipt-fixture',totalQuantity,totalCost:minorUnitsToDecimal(decimalToMinorUnits(body.unitCost,4)*BigInt(totalQuantity),4)}}
-      receiptKeys.set(key,result)
-      if(mode==='receipt-uncertain'||mode==='inventory-receipt-uncertain')return route.abort()
-      return reply(result,201)
-    }
-    if (url.pathname.startsWith('/api/inventory/receipts/by-operation/') && method === 'GET') {
-      const key=decodeURIComponent(url.pathname.split('/').at(-1))
-      if(mode==='inventory-receipt-conflict')return reply({error:{code:'RECEIPT_NOT_FOUND'}},404)
-      const result=receiptKeys.get(key)
-      return result?reply({...result,idempotentReplay:true}):reply({error:{code:'RECEIPT_NOT_FOUND'}},404)
-    }
-    if (url.pathname === '/api/inventory/movements') return reply({ movements: [], nextCursor: null })
-    if (url.pathname === '/api/inventory/reconciliation') return reply({ variants: [], nextCursor: null })
-    if (url.pathname === '/api/reports/daily') return reply({report:{reportDate:url.searchParams.get('date'),currency:'USD',salesCount:1,totalUnitsSold:2,grossRevenue:'50.00',returnedRevenue:'0.00',voidedRevenue:'0.00',netRevenue:'50.00',operatingExpenses:'3.00',costStatus:'INCOMPLETE',grossCOGS:null,returnedCOGS:null,voidedCOGS:null,netCOGS:null,grossProfit:null,netProfit:null,stockValue:null}})
-    if (url.pathname === '/api/inventory/receipts' && method === 'GET') return reply({receipts:[],hasMore:false,page:1})
-    if (url.pathname === '/api/inventory/product-setups' && method === 'POST') {
-      const key=route.request().headers()['idempotency-key']
-      if(mode==='inventory-save-rejected')return reply({error:{code:'INVALID_RECEIVING_SETUP'}},422)
-      if(receiptKeys.has(key))return reply({...receiptKeys.get(key),idempotentReplay:true})
-      const added={...product(4,role==='OWNER'),name:body.product.name,variants:body.variants.map((option,i)=>({...product(1,role==='OWNER').variants[0],...option,id:'setup-'+i,currentStock:0,lastPurchaseCost:null}))};records.push(added)
-      const result={productId:added.id,receipt:null,idempotentReplay:false};receiptKeys.set(key,result)
-      if(mode==='inventory-save-uncertain')return route.abort()
-      return reply(result,201)
-    }
-    if (url.pathname === '/api/categories') return reply({ categories: [category] })
-    if (url.pathname === '/api/inventory/movements') return reply({ movements: [], nextCursor: null })
-    if (url.pathname === '/api/inventory/reconciliation') return reply({ variants: [], nextCursor: null })
-    if (url.pathname === '/api/products' && method === 'GET') return reply({ products: mode === 'empty' || url.searchParams.get('search') === 'missing' ? [] : url.searchParams.get('view') === 'summary' ? records.map(item => {const summary=summarizeProductCatalog(item,'USD'); const prices=item.variants.filter(v=>item.isActive&&v.isActive&&v.sellingPrice!==null).map(v=>v.sellingPrice).sort((a,b)=>Number(a)-Number(b));return {id:item.id,name:item.name,category:item.category,isActive:item.isActive,imageUrl:item.imageUrl,...(item.imageStatus ? {imageStatus:item.imageStatus} : {}),catalogSummary:{availableStock:summary.stock,inactiveStock:summary.inactiveStock,activeVariantCount:item.variants.filter(v=>item.isActive&&v.isActive).length,inactiveVariantCount:item.variants.filter(v=>!item.isActive||!v.isActive).length,priceMin:prices[0]??null,priceMax:prices.at(-1)??null}}}) : records, total: mode === 'empty' || url.searchParams.get('search') === 'missing' ? 0 : 25, page: Number(url.searchParams.get('page') || 1), limit: 12 })
-    if (url.pathname === '/api/products/setup' && method === 'POST') { const added = { ...product(4, role === 'OWNER'), name: body.product.name, variants: body.variants.map((option,i) => ({ ...product(1, role === 'OWNER').variants[0], ...option, id:`setup-${i}`, currentStock: option.openingStock ? 1 : 0, ...(role === 'OWNER' ? { lastPurchaseCost: null } : {}) })) }; records.push(added); return reply({ product: added }, 201) }
-    if (url.pathname === '/api/products' && method === 'POST') { const added = { ...product(4, role === 'OWNER'), name: body.name, variants: [] }; records.push(added); return reply({ product: added }, 201) }
-    const record = records.find((item) => url.pathname.includes(item.id))
-    if (!record) return reply({ error: { code: 'PRODUCT_NOT_FOUND' } }, 404)
-    if (url.pathname.endsWith('/variant-prices')) { for (const variant of record.variants) if (body.variantIds.includes(variant.id)) variant.sellingPrice=body.sellingPrice; return reply({product:record}) }
-    if (url.pathname.endsWith('/stock-adjustment') && method === 'POST') { const variant = record.variants.find(item => url.pathname.includes(item.id)); const key = route.request().headers()['idempotency-key']; const first = !stockKeys.has(key); if (first) { variant.currentStock += route.request().postDataJSON().delta ?? 1; stockKeys.add(key) } if (mode === 'quick-slow') await new Promise(resolve=>setTimeout(resolve,600)); if ((mode === 'quick-all-uncertain' && first) || (mode === 'quick-uncertain' && first && stockKeys.size === 1)) return route.abort(); return reply({ variant }) }
-    if (url.pathname.endsWith('/opening-cost') && method === 'PUT') { const variant = record.variants.find(item => url.pathname.includes(item.id)); variant.lastPurchaseCost = body.unitCost; return reply({ variant }) }
-    if (url.pathname.endsWith('/image')) {
-      if(method==='POST' && mode==='image-upload-failure' && calls.filter(c=>c.method==='POST'&&c.path.endsWith('/image')).length===1)return reply({error:{code:'PRODUCT_IMAGE_UPLOAD_FAILED'}},503)
-      if (method === 'DELETE') { record.imageUrl = null; record.imageStatus = 'none'; if (mode === 'image-cleanup-failure') return reply({error:{code:'PRODUCT_IMAGE_DELETE_FAILED'}},502); return route.fulfill({ status: 204 }) }
-      record.imageUrl = picture; return reply({ product: record })
-    }
-    if (url.pathname.endsWith('/variants') && method === 'POST') { const variant = { ...product(1, role === 'OWNER').variants[0], ...body, id: `variant-${record.variants.length}`, currentStock: body.openingStock ? 1 : 0, lastPurchaseCost: null }; record.variants.push(variant); return reply({ variant }, 201) }
-    if (url.pathname.includes('/variants/') && method === 'PATCH') { const variant = record.variants.find((item) => url.pathname.endsWith(item.id)); Object.assign(variant, body); return reply({ variant }) }
-    if (method === 'PATCH') Object.assign(record, body)
-    return reply({ product: record })
-  })
-  await page.goto(`${origin}/qa?role=${role}${mode.startsWith('inventory') ? '&page=inventory' : mode==='incomplete-report'?'&page=reports':''}`)
-  await page.getByRole('heading', { name: mode.startsWith('inventory') ? 'Inventory' : mode==='incomplete-report'?'Financial reports': mode === 'empty' ? 'No products yet' : 'Products', exact: true }).waitFor()
-  if (mode !== 'empty' && !mode.startsWith('inventory') && mode !== 'incomplete-report') await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).waitFor()
-  return { page, calls, errors }
-}
-async function noOverflow(page) {
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Page has horizontal overflow')
-  const overflowing = await page.locator('.products-page input:not([type=file]), .products-page select, .product-card').evaluateAll((nodes) => nodes.filter((node) => {
-    const rect = node.getBoundingClientRect(); return rect.width > 0 && (rect.right > innerWidth + 1 || rect.left < -1)
-  }).map((node) => node.className || node.id))
-  assert.deepEqual(overflowing, [], 'Visible controls overflow')
-}
 async function confirmInventoryReceipt(page) {
-  await page.getByRole('button',{name:'Receive stock',exact:true}).first().click()
+  await openRestock(page)
   await page.getByLabel('Receiving now: Navy / S',{exact:true}).fill('2')
   await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).fill('4')
   await page.getByRole('button',{name:'Review receipt',exact:true}).click()
@@ -143,10 +33,10 @@ async function confirmInventoryReceipt(page) {
 async function receiptRecoveryRecords(page) {
   return page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('saas2:receiving:v1:')&&key.includes(':operation:')).map(key=>JSON.parse(localStorage.getItem(key))))
 }
-test('Inventory receives 40 pieces by matrix in one atomic request with common cost',async()=>{
+test('Products Restock receives 40 pieces by matrix in one atomic request with common cost',async()=>{
   const {page,calls,errors}=await open(390,844,'OWNER','inventory')
   try{
-    await page.getByRole('button',{name:'Receive stock',exact:true}).first().click()
+    await openRestock(page)
     await page.getByLabel('Receiving now: Navy / S',{exact:true}).fill('17')
     await page.getByLabel('Receiving now: Navy / M',{exact:true}).fill('23')
     await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).fill('1.2345')
@@ -167,9 +57,8 @@ test('Inventory receives 40 pieces by matrix in one atomic request with common c
 test('receiving lost response survives reload and reuses the exact original payload and key',async()=>{
   const {page,calls}=await open(768,1024,'OWNER','receipt-uncertain')
   try{
-    await page.getByRole('button',{name:'Open navigation',exact:true}).click()
-    await page.getByRole('link',{name:'Inventory',exact:true}).click()
-    await page.getByRole('button',{name:'Receive stock',exact:true}).first().click()
+    await openRestock(page)
+    await openRestock(page)
     await page.getByLabel('Receiving now: Navy / S',{exact:true}).fill('2')
     await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).fill('4')
     await page.getByRole('button',{name:'Review receipt',exact:true}).click()
@@ -196,16 +85,16 @@ test('Phase 4: expired receipt session preserves the original operation before a
   }finally{await page.close()}
 })
 for(const [mode,message] of [
-  ['inventory-receipt-product-not-found','This product is no longer available. Return to Inventory and refresh before starting again.'],
+  ['inventory-receipt-product-not-found','This product is no longer available. Return to Products and refresh before starting again.'],
   ['inventory-receipt-variant-not-found','One or more color / size options are no longer available. Refresh the product before starting again.'],
-]) test(`Phase 4: ${mode} releases recovery and restores Inventory actions`,async()=>{
+]) test(`Phase 4: ${mode} releases recovery and restores Products actions`,async()=>{
   const {page,calls}=await open(768,900,'OWNER',mode)
   try{
     await confirmInventoryReceipt(page)
     await page.getByText(message,{exact:true}).waitFor()
     assert.equal((await receiptRecoveryRecords(page)).length,0)
-    assert.equal(await page.getByRole('button',{name:'New product',exact:true}).isEnabled(),true)
-    assert.equal(await page.getByRole('button',{name:'Receive stock',exact:true}).first().isEnabled(),true)
+    assert.equal(await page.getByRole('button',{name:'Back to products',exact:true}).isEnabled(),true)
+    assert.equal(await page.getByRole('button',{name:'Review receipt',exact:true}).isEnabled(),true)
     assert.equal(calls.filter(call=>call.path==='/api/inventory/receipts'&&call.method==='POST').length,1)
   }finally{await page.close()}
 })
@@ -227,7 +116,7 @@ test('Phase 4: idempotency conflict presents review and never loops the conflict
 test('Phase 4: save-only uncertainty uses product-save language and exact replay',async()=>{
   const {page,calls}=await open(768,900,'OWNER','inventory-save-uncertain')
   try{
-    await page.getByRole('button',{name:'New product',exact:true}).click()
+    await openEntry(page)
     await page.getByLabel('Product name',{exact:true}).fill('Recovery product')
     await page.getByLabel('Category',{exact:true}).first().selectOption(catId)
     await page.getByLabel('Colors',{exact:true}).selectOption('Black')
@@ -241,7 +130,7 @@ test('Phase 4: save-only uncertainty uses product-save language and exact replay
     assert.doesNotMatch(await banner.textContent(),/receipt/i)
     await page.reload()
     await page.getByRole('button',{name:'Retry original product save',exact:true}).click()
-    await page.getByRole('heading',{name:'Product saved',exact:true}).waitFor()
+    await page.getByRole('heading',{name:'Product created successfully',exact:true}).waitFor()
     const writes=calls.filter(call=>call.path==='/api/inventory/product-setups'&&call.method==='POST')
     assert.equal(writes.length,2);assert.equal(writes[0].operationId,writes[1].operationId);assert.deepEqual(writes[0].body,writes[1].body)
   }finally{await page.close()}
@@ -249,7 +138,7 @@ test('Phase 4: save-only uncertainty uses product-save language and exact replay
 test('Phase 4: rejected save-only operation releases recovery without receipt wording',async()=>{
   const {page}=await open(768,900,'OWNER','inventory-save-rejected')
   try{
-    await page.getByRole('button',{name:'New product',exact:true}).click()
+    await openEntry(page)
     await page.getByLabel('Product name',{exact:true}).fill('Rejected product')
     await page.getByLabel('Category',{exact:true}).first().selectOption(catId)
     await page.getByLabel('Colors',{exact:true}).selectOption('Black')
@@ -288,21 +177,16 @@ for (const [width, height] of [[390, 844], [768, 1024], [1024, 768], [1366, 768]
       await page.getByRole('button', { name: 'Cancel', exact: true }).last().click()
       await page.getByRole('button', { name: 'Back to products', exact: true }).click()
       await page.getByRole('button', { name: 'Add product', exact: false }).first().click()
-      await page.getByRole('heading', { name: 'New product', exact: true }).waitFor()
+      await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
       await page.getByLabel('Product name', { exact: true }).fill('Cotton T-shirt')
       await page.getByLabel('Category', { exact: true }).first().selectOption(catId)
       await page.getByLabel('Colors', { exact: true }).selectOption('Black')
       await page.getByRole('button', { name: 'M', exact: true }).click()
       await noOverflow(page)
       const fieldHeight = await page.getByLabel('Product name', { exact: true }).evaluate((el) => el.getBoundingClientRect().height)
-      assert.equal(fieldHeight, 40)
+      assert.ok(fieldHeight >= 44)
       const gridColumns = await page.locator('.product-info-fields .product-form-grid').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)
-      assert.equal(gridColumns, 2)
-      const fits = await page.locator('.product-create-panel').evaluate(el => {
-        const rect = el.getBoundingClientRect()
-        return rect.height + rect.top <= innerHeight && window.scrollY === 0
-      })
-      assert.ok(fits, `Basic create form fits ${width} without scrolling`)
+      assert.equal(gridColumns, width <= 600 ? 1 : 2)
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.screenshot({ path: join(screenshots, `create-${width}.png`), fullPage: true })
       assert.deepEqual(errors, [])
@@ -360,11 +244,13 @@ test('OWNER edit and mobile confirmation dialog preserve mutation behavior and f
     assert.ok(calls.some((call) => call.method === 'PATCH' && call.body.name === 'Updated cotton T-shirt'))
     assert.equal(await page.getByRole('heading', { name: 'Colors & sizes', exact: true }).count(), 1)
     await page.getByRole('button', { name: 'Edit product', exact: true }).click()
-    const stockBefore = await page.locator('.product-stock-quantity').first().innerText()
-    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click()
-    await page.getByText(/Stock saved\./).waitFor()
-    assert.equal(Number(await page.locator('.product-stock-quantity').first().innerText().then(text => text.replace('Stock', '').trim())), Number(stockBefore.replace('Stock', '').trim()) + 1)
+    await selectSection(page, 'Count Check')
+    const stockBefore = await page.locator('.count-check-quantity').first().innerText()
+    await correctStock(page, 0, 1)
+    await page.getByText(/Stock count updated\./).waitFor()
+    assert.equal(Number(await page.locator('.count-check-quantity').first().innerText().then(text => text.replace('System stock', '').trim())), Number(stockBefore.replace('System stock', '').trim()) + 1)
     assert.equal(await page.getByLabel('Quantity to add', { exact: true }).count(), 0)
+    await selectSection(page, 'Overview')
     await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
     await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().click()
     await page.getByRole('dialog', { name: 'Deactivate color / size?', exact: true }).waitFor()
@@ -372,9 +258,11 @@ test('OWNER edit and mobile confirmation dialog preserve mutation behavior and f
     assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden')
     await page.keyboard.press('Escape')
     assert.equal(await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().evaluate((el) => el === document.activeElement), true)
+    await selectSection(page, 'Overview')
     await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
     await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().click()
     await page.getByRole('button', { name: 'Deactivate color / size', exact: true }).click()
+    await selectSection(page, 'Overview')
     await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
     await page.getByRole('button', { name: 'Reactivate variant', exact: true }).waitFor()
     assert.ok(calls.some((call) => call.method === 'PATCH' && call.path.includes('/variants/') && call.body.isActive === false))
@@ -388,7 +276,7 @@ test('WAREHOUSE retains catalog creation but never renders private cost or edita
     await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
     await page.getByRole('heading', { name: 'Essential cotton T-shirt', exact: true }).waitFor()
     assert.equal(await page.getByText('Last purchase cost', { exact: true }).count(), 0)
-    assert.equal(await page.getByRole('button', { name: 'Add stock', exact: true }).count(), 0)
+    assert.equal(await page.getByRole('button', { name: /^Add one piece:/ }).count(), 0)
     await page.getByRole('button', { name: 'Back to products', exact: true }).click()
     await page.getByRole('button', { name: 'Add product', exact: false }).first().click()
     await page.getByLabel('Product name', { exact: true }).fill('Warehouse shirt')
@@ -400,8 +288,8 @@ test('WAREHOUSE retains catalog creation but never renders private cost or edita
     assert.equal(await page.locator('.receipt-steps [aria-current="step"]').textContent(), '2Product review')
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
     await page.getByRole('button',{name:'Confirm product only',exact:true}).click()
-    await page.getByRole('heading', { name: 'Product saved', exact: true }).waitFor()
-    await page.getByText('The product was created with zero stock.',{exact:true}).waitFor()
+    await page.getByRole('heading', { name: 'Product created successfully', exact: true }).waitFor()
+    await page.getByText('Saved with zero stock.',{exact:true}).waitFor()
     assert.equal(await page.getByText('Purchase total:',{exact:false}).count(),0)
     const createdVariant = calls.find((call) => call.method === 'POST' && call.path.endsWith('/product-setups'))
     assert.ok(createdVariant)
@@ -429,7 +317,7 @@ test('optional image preview, removal and upload use existing image endpoint', a
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
     await page.getByRole('button',{name:'Confirm product only',exact:true}).click()
-    await page.getByRole('heading', { name: 'Product saved', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Product created successfully', exact: true }).waitFor()
     assert.equal(calls.filter((call) => call.method === 'POST' && call.path.endsWith('/image')).length, 1)
     await page.getByRole('button',{name:'Open navigation',exact:true}).click()
     await page.getByRole('link',{name:'Products',exact:true}).click()
@@ -459,7 +347,7 @@ test('OWNER product-only creation sends zero initial stock for every option', as
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
     await page.getByRole('button',{name:'Confirm product only',exact:true}).click()
-    await page.getByRole('heading', { name: 'Product saved', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Product created successfully', exact: true }).waitFor()
     const setups = calls.filter(c => c.method === 'POST' && c.path.endsWith('/product-setups'))
     assert.equal(setups.length, 1)
     assert.equal(setups[0].body.variants.length, 2)
@@ -482,19 +370,49 @@ test('receiving creation image failure retries only photo without recreating def
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
     await page.getByRole('button',{name:'Confirm product only',exact:true}).click()
     await page.getByRole('button',{name:'Retry photo only',exact:true}).click()
-    await page.getByRole('heading',{name:'Product saved',exact:true}).waitFor()
+    await page.getByRole('heading',{name:'Product created successfully',exact:true}).waitFor()
     assert.equal(calls.filter(c=>c.method==='POST'&&c.path==='/api/inventory/product-setups').length,1)
     assert.equal(calls.filter(c=>c.method==='POST'&&c.path.endsWith('/image')).length,2)
   }finally{await page.close()}
 })
-test('Inventory initializes purchase cost of the existing piece without restocking', async () => {
+test('Products histories load on demand, retain sections and support explicit refresh', async () => {
+ const {page,calls,errors}=await open(1366,900,'OWNER','inventory')
+ try {
+ const count=path=>calls.filter(call=>call.method==='GET'&&call.path===path).length
+ assert.equal(count('/api/products'),1)
+ for(const path of ['/api/inventory/receipts','/api/inventory/movements','/api/inventory/reconciliation'])assert.equal(count(path),0)
+ await openDetail(page);await selectSection(page,'Receipt History')
+ await page.getByRole('heading',{name:'No receipts yet'}).waitFor();assert.equal(count('/api/inventory/receipts'),1)
+ await selectSection(page,'Overview');await selectSection(page,'Receipt History')
+ assert.equal(count('/api/inventory/receipts'),1)
+ await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByRole('heading',{name:'No receipts yet'}).waitFor()
+ assert.equal(count('/api/inventory/receipts'),2)
+ await selectSection(page,'Movement History');await page.getByText('No movements match these filters yet.').waitFor();assert.equal(count('/api/inventory/movements'),1)
+ await selectSection(page,'Count Check');await page.getByText('No variants match these filters.').waitFor();assert.equal(count('/api/inventory/reconciliation'),1)
+ assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
+
+test('Legacy Inventory productId bookmark redirects to Products receiving', async () => {
+ const {page,calls,errors}=await open(1366,900,'OWNER','inventory-deep-link')
+ try {
+ await page.getByRole('heading',{name:'Restock',exact:true}).waitFor()
+ await page.getByLabel('Receiving now: Navy / S',{exact:true}).waitFor()
+ assert.equal(calls.filter(call=>call.method==='GET'&&call.path.includes('/api/products/')).length,1)
+ assert.equal(calls.filter(call=>call.path==='/api/products').length,0)
+ assert.equal(calls.filter(call=>call.path.startsWith('/api/inventory/')).length,0)
+ assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
+
+test('Products Stock initializes purchase cost of the existing piece without restocking', async () => {
   const { page, calls, errors } = await open(390, 844, 'OWNER', 'inventory')
   try {
-    await page.getByText('Stock details & other actions').first().click()
+    await openDetail(page); await selectSection(page, 'Stock')
     await page.getByRole('button', { name: 'Set cost', exact: true }).click()
     await page.getByLabel('Purchase cost per piece (USD)', { exact: true }).fill('8.1234')
     await page.getByRole('button', { name: 'Save cost', exact: true }).click()
-    await page.getByText('Purchase cost saved. Stock quantity is unchanged.', { exact: true }).waitFor()
+    await page.getByText('Purchase cost saved. Quantity and historical sale costs are unchanged.', { exact: true }).waitFor()
     const saved = calls.find(c => c.method === 'PUT' && c.path.endsWith('/opening-cost'))
     assert.deepEqual(saved.body, { unitCost: '8.1234' })
     assert.equal(calls.filter(c => c.path.endsWith('/restocks')).length, 0)
@@ -502,43 +420,36 @@ test('Inventory initializes purchase cost of the existing piece without restocki
   } finally { await page.close() }
 })
 
-for (const width of [390, 430, 768, 1280, 1366, 1440]) {
-  test(`Inventory picker and views stay contained at ${width}px`, async () => {
-    const { page, errors } = await open(width, 900, 'OWNER', 'inventory')
-    try {
-      await noOverflow(page)
-      assert.equal(await page.locator('.inventory-picker-row').count(), 3)
-      assert.equal(await page.locator('.inventory-option-row:visible').count(), 0, 'Variant tools begin collapsed')
-      assert.equal(await page.getByRole('button', { name: 'Receive stock', exact: true }).count(), 3)
-      await page.screenshot({ path: join(screenshots, `inventory-picker-${width}.png`), fullPage: true })
-      await page.getByLabel('Search products, SKU, or barcode').fill('shirt')
-      await page.getByRole('button', { name: 'Receipt history', exact: true }).click()
-      await page.getByRole('heading', { name: 'No receipts yet' }).waitFor()
-      assert.equal(await page.getByRole('button', { name: 'Previous receipts' }).count(), 0)
-      await page.getByRole('button', { name: 'Stock & receiving', exact: true }).click()
-      assert.equal(await page.getByLabel('Search products, SKU, or barcode').inputValue(), 'shirt')
-      assert.deepEqual(errors, [])
-    } finally { await page.close() }
-  })
-}
+for (const width of [390, 430, 768, 1280, 1366, 1440]) test(`Products catalog and history stay contained at ${width}px`,async()=>{
+ const {page,errors}=await open(width,900,'OWNER','inventory')
+ try {
+ await noOverflow(page);assert.equal(await page.locator('.product-card').count(),3)
+ await page.getByLabel('Search',{exact:true}).fill('shirt')
+ await openDetail(page);await selectSection(page,'Receipt History')
+ await page.getByRole('heading',{name:'No receipts yet'}).waitFor()
+ assert.equal(await page.getByRole('button',{name:'Previous receipts'}).count(),0)
+ await noOverflow(page);await page.screenshot({path:join(screenshots,`product-history-${width}.png`),fullPage:true})
+ assert.deepEqual(errors,[])
+ }finally{await page.close()}
+})
 
 for (const width of [390, 430, 768, 1366]) {
-  test(`Dense receiving keeps horizontal scrolling inside the matrix at ${width}px`, async () => {
+  test(`Dense receiving uses mobile lists and contained desktop matrices at ${width}px`, async () => {
     const { page, errors } = await open(width, 900, 'OWNER', 'inventory-dense')
     try {
-      await page.getByRole('button', { name: 'Receive stock', exact: true }).first().click()
+      await openRestock(page)
       await page.getByLabel('Receiving now: Black / XS', { exact: true }).fill('2')
       await page.getByLabel('Purchase cost per piece (USD)', { exact: true }).fill('1.2345')
       await noOverflow(page)
-      const widths = await page.locator('.receipt-matrix').evaluate(el => ({ client: el.clientWidth, scroll: el.scrollWidth, page: document.documentElement.scrollWidth, viewport: innerWidth }))
-      assert.ok(widths.page <= widths.viewport)
-      if (width <= 768) assert.ok(widths.scroll > widths.client, 'Dense size table scrolls locally')
-      assert.equal(await page.locator('.receipt-matrix th').first().evaluate(el => getComputedStyle(el).position), 'sticky')
-      if (width <= 768) {
-        await page.locator('.receipt-matrix').focus()
-        await page.keyboard.press('ArrowRight')
-        await page.waitForTimeout(80)
-        assert.ok(await page.locator('.receipt-matrix').evaluate(el => el.scrollLeft) > 0, 'Keyboard scroll reaches later sizes')
+      if(width<=600) {
+        assert.equal(await page.locator('.receipt-mobile-color').count(),4)
+        assert.equal(await page.locator('.receipt-matrix').count(),0)
+      } else {
+        const widths=await page.locator('.receipt-matrix').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}))
+        assert.ok(widths.scroll>widths.client)
+        assert.equal(await page.locator('.receipt-matrix th').first().evaluate(el=>getComputedStyle(el).position),'sticky')
+        await page.locator('.receipt-matrix').focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(80)
+        assert.ok(await page.locator('.receipt-matrix').evaluate(el=>el.scrollLeft)>0)
       }
       await page.screenshot({ path: join(screenshots, `inventory-dense-${width}.png`), fullPage: true })
       await page.getByRole('button', { name: 'Review receipt', exact: true }).click()
@@ -550,10 +461,10 @@ for (const width of [390, 430, 768, 1366]) {
   })
 }
 
-test('Inventory step back preserves product definition, quantities and exact cost preview', async () => {
+test('Entry step back preserves product definition, quantities and exact cost preview', async () => {
   const { page, calls } = await open(390, 844, 'OWNER', 'inventory')
   try {
-    await page.getByRole('button', { name: 'New product', exact: true }).click()
+    await openEntry(page)
     await page.getByLabel('Product name', { exact: true }).fill('Draft shirt')
     await page.getByLabel('Category', { exact: true }).selectOption(catId)
     await page.getByLabel('Colors', { exact: true }).selectOption('Black')
@@ -575,7 +486,7 @@ test('Inventory step back preserves product definition, quantities and exact cos
 test('Receipt validation errors use an alert before any request', async () => {
   const { page, calls } = await open(430, 900, 'OWNER', 'inventory')
   try {
-    await page.getByRole('button', { name: 'Receive stock', exact: true }).first().click()
+    await openRestock(page)
     await page.getByRole('button', { name: 'Review receipt', exact: true }).click()
     await page.locator('.receipt-form .inventory-feedback.is-error[role="alert"]').waitFor()
     assert.equal(calls.filter(c => c.method === 'POST' && c.path === '/api/inventory/receipts').length, 0)
@@ -587,7 +498,7 @@ test('Receipt validation errors use an alert before any request', async () => {
 test('Leaving the returned product step prompts once for both unsaved forms', async () => {
   const { page } = await open(390, 844, 'OWNER', 'inventory')
   try {
-    await page.getByRole('button', { name: 'New product', exact: true }).click()
+    await openEntry(page)
     await page.getByLabel('Product name', { exact: true }).fill('Draft shirt')
     await page.getByLabel('Category', { exact: true }).selectOption(catId)
     await page.getByLabel('Colors', { exact: true }).selectOption('Black')
@@ -598,7 +509,8 @@ test('Leaving the returned product step prompts once for both unsaved forms', as
     let prompts = 0
     page.on('dialog', async (dialog) => { prompts += 1; await dialog.accept() })
     await page.locator('.product-create-form').getByRole('button', { name: 'Cancel', exact: true }).click()
-    await page.locator('.inventory-picker').waitFor()
+    await page.getByLabel('Product name', {exact:true}).waitFor()
+    assert.equal(await page.getByLabel('Product name', {exact:true}).inputValue(),'')
     assert.equal(prompts, 1)
   } finally { await page.close() }
 })
@@ -651,12 +563,12 @@ test('quick Add stock retries an uncertain piece with the same key; next click i
   const { page, calls, errors } = await open(1366, 768, 'OWNER', 'quick-uncertain')
   try {
     await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
-    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click()
+    await correctStock(page, 0, 1)
     await page.locator('#products-feedback[role=alert]').waitFor()
     await page.getByRole('button', { name: 'Retry same update', exact: true }).first().click()
-    await page.getByText(/Stock saved\./).waitFor()
-    assert.equal(await page.locator('.product-stock-quantity').first().innerText().then(text => text.replace('Stock', '').trim()), '5')
-    await page.getByRole('button', { name: 'Add stock', exact: true }).first().click()
+    await page.getByText(/Stock count updated\./).waitFor()
+    assert.equal(await page.locator('.count-check-quantity').first().innerText().then(text => text.replace('System stock', '').trim()), '5')
+    await correctStock(page, 0, 1)
     await page.getByText(/6 pieces\./).waitFor()
     const requests = calls.filter(c => c.path.endsWith('/stock-adjustment'))
     assert.equal(requests.length, 3)
@@ -672,14 +584,14 @@ test('minus corrects stock by one and is disabled at zero', async () => {
  try {
   await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
   for (let stock = 3; stock >= 0; stock--) {
-   await page.getByRole('button', { name: 'Remove stock', exact: true }).first().click()
+   await correctStock(page, 0, -1)
    await page.getByText(new RegExp(`${stock} pieces\\.`)).waitFor()
   }
-  assert.equal(await page.getByRole('button', { name: 'Remove stock', exact: true }).first().isDisabled(), true)
+  assert.equal(await page.getByRole('button', { name: /^Remove one piece:/ }).first().isDisabled(), true)
   assert.equal(calls.find(c => c.path.endsWith('/stock-adjustment')).body.delta, -1)
-  await page.getByRole('button', { name: 'Add stock', exact: true }).first().click()
+  await correctStock(page, 0, 1)
   await page.getByText(/1 pieces\./).waitFor()
-  assert.equal(await page.getByRole('button', { name: 'Remove stock', exact: true }).first().isEnabled(), true)
+  assert.equal(await page.getByRole('button', { name: /^Remove one piece:/ }).first().isEnabled(), true)
  } finally { await page.close() }
 })
 
@@ -687,16 +599,16 @@ test('reload exposes deliberate stock recovery with the same UUID and no extra p
  const {page,calls}=await open(1366,768,'OWNER','quick-uncertain')
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
- await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
+ await correctStock(page, 0, 1)
  await page.locator('#products-feedback[role=alert]').waitFor()
  await page.reload()
- assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
+ assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).first().isDisabled(),true)
  assert.equal(calls.filter(c=>c.path.endsWith('/stock-adjustment')).length,1)
  await page.getByRole('button',{name:'Retry same update',exact:true}).click()
  await page.getByText(/5 pieces\./).waitFor()
  const requests=calls.filter(c=>c.path.endsWith('/stock-adjustment'))
  assert.equal(requests[0].operationId,requests[1].operationId)
- assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).first().isEnabled(),true)
+ assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).first().isEnabled(),true)
  } finally {await page.close()}
 })
 for(const width of [390,768,1024,1366,1440]) test(`bulk pricing, cost pending and duplicate feedback at ${width}`,async()=>{
@@ -743,11 +655,11 @@ test('stock progress disables only the affected stock option',async()=>{
  const {page}=await open(1366,768,'OWNER','quick-slow')
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
- await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
- await page.getByText('Updating...',{exact:true}).waitFor()
- assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
- assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).nth(1).isEnabled(),true)
- await page.getByText(/Stock saved\./).waitFor()
+ await correctStock(page, 0, 1)
+ await page.getByText('Confirming correction...',{exact:true}).waitFor()
+ assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).first().isDisabled(),true)
+ assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).nth(1).isEnabled(),true)
+ await page.getByText(/Stock count updated\./).waitFor()
  }finally{await page.close()}
 })
 test('browser Back preserves dirty drafts and reload displays a beforeunload warning',async()=>{
@@ -758,8 +670,9 @@ test('browser Back preserves dirty drafts and reload displays a beforeunload war
  await page.getByLabel('Product name',{exact:true}).fill('Unsaved draft')
  let confirmations=0
  page.on('dialog',async dialog=>{confirmations++;await dialog.dismiss()})
- await page.evaluate(()=>history.back())
- await page.waitForTimeout(150)
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+ await Promise.all([page.waitForEvent('dialog'),page.evaluate(()=>history.back())])
+ await page.waitForTimeout(50)
  assert.equal(confirmations,1)
  assert.equal(await page.getByLabel('Product name',{exact:true}).inputValue(),'Unsaved draft')
  await page.evaluate(()=>{setTimeout(()=>location.reload(),0)})
@@ -773,8 +686,9 @@ test('Warehouse detail exposes operational readiness and no financial completene
  const {page}=await open(390,844,'WAREHOUSE')
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
+ await page.getByText('Sellable',{exact:true}).first().waitFor()
  assert.equal(await page.getByText('Sellable',{exact:true}).count(),3)
- assert.equal(await page.getByText('Cost pending: Inventory',{exact:true}).count(),0)
+ assert.equal(await page.getByText('Cost pending: set in Stock',{exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Apply price to variants',exact:true}).count(),0)
  }finally{await page.close()}
 })
@@ -783,7 +697,8 @@ for(const width of [390,768,1024,1366,1440]) test(`owner cost pending is indepen
  const {page}=await open(width,width===390?844:900,'OWNER','pending-cost')
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
- assert.equal(await page.getByText('Cost pending: Inventory',{exact:true}).count(),3)
+ await page.getByText('Cost pending: set in Stock',{exact:true}).first().waitFor()
+ assert.equal(await page.getByText('Cost pending: set in Stock',{exact:true}).count(),3)
  assert.equal(await page.locator('.product-option-state').filter({hasText:'Sellable'}).count(),3)
  await noOverflow(page)
  await page.screenshot({path:join(screenshots,`cost-pending-${width}.png`),fullPage:true})
@@ -883,8 +798,8 @@ test('phase 1: pending stock disables price and photo saves with accessible wait
  await page.locator('.product-photo-action summary').click();
  await page.locator('#product-image-file').setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF9sAAAAASUVORK5CYII=','base64')});
  await page.route('**/stock-adjustment',async route=>{await gate;await route.fallback()});
- await page.locator('.product-stock-row').first().getByRole('button',{name:'Add stock',exact:true}).click();
- await page.locator('.product-stock-row').first().getByRole('status').waitFor();
+ await correctStock(page);await selectSection(page,'Overview');
+ await page.locator('.count-check-row [role=status]').first().waitFor({state:'attached'});
  const confirm=page.getByRole('button',{name:'Confirm price update',exact:true});
  const photo=page.getByRole('button',{name:'Replace image',exact:true});
  assert.equal(await confirm.isDisabled(),true);
@@ -895,9 +810,9 @@ test('phase 1: pending stock disables price and photo saves with accessible wait
  assert.equal(await page.locator('#'+id).textContent(),'Waiting for stock update to finish.');
  assert.equal(await page.locator('#'+id).isVisible(),true);
  }
- assert.equal(await page.locator('.product-stock-row').nth(1).getByRole('button',{name:'Add stock',exact:true}).isEnabled(),true);
+ await selectSection(page,'Count Check');assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).nth(1).isEnabled(),true);await selectSection(page,'Overview');
  release();
- await page.locator('.product-stock-row').first().getByRole('status').waitFor({state:'hidden'});
+ await page.locator('.count-check-row').first().getByRole('status').waitFor({state:'hidden'});
  assert.equal(await confirm.isEnabled(),true);assert.equal(await photo.isEnabled(),true);
  assert.equal(await page.getByText('Waiting for stock update to finish.',{exact:true}).count(),0);
  assert.equal(calls.filter(call=>call.path.endsWith('/variant-prices')||call.path.endsWith('/image')).length,0);
@@ -998,10 +913,10 @@ test('phase 2: two tabs retain separate unresolved operations across reload and 
  const context=page.context();const other=await context.newPage()
  try {
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await other.goto(page.url());await other.locator('.product-stock-row').first().waitFor()
-  await page.getByRole('button',{name:'Add stock',exact:true}).nth(0).click()
+  await selectSection(page,'Count Check');await other.goto(page.url());await other.locator('.count-check-row').first().waitFor()
+  await correctStock(page, 0, 1)
   await page.locator('#products-feedback[role=alert]').waitFor()
-  await other.getByRole('button',{name:'Add stock',exact:true}).nth(1).click()
+  await correctStock(other, 1, 1)
   await other.locator('#products-feedback[role=alert]').waitFor()
   assert.equal((await stockKeysOn(page)).length,2)
   await page.reload();await other.reload()
@@ -1025,11 +940,11 @@ test('phase 2: cross-tab same-variant retry is blocked while original request ho
  let release;const gate=new Promise(resolve=>{release=resolve})
  try {
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await other.goto(page.url());await other.locator('.product-stock-row').first().waitFor()
+  await selectSection(page,'Count Check');await other.goto(page.url());await other.locator('.count-check-row').first().waitFor()
   await page.route('**/stock-adjustment',async route=>{await gate;await route.fallback()})
-  await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
+  await correctStock(page, 0, 1)
   await other.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
-  assert.equal(await other.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
+  assert.equal(await other.getByRole('button',{name:/^Add one piece:/}).first().isDisabled(),true)
   await other.getByRole('button',{name:'Retry same update',exact:true}).click()
   await other.getByText('Another page is confirming this option. Wait for it to finish before retrying.').waitFor()
   release();await page.getByText(/5 pieces\./).waitFor()
@@ -1046,12 +961,12 @@ test('phase 2: late response after navigation clears only its own operation',asy
    if(route.request().url().includes('000000000010')){await gate;await route.fallback()}
    else await route.abort()
   })
-  await page.getByRole('button',{name:'Add stock',exact:true}).first().click()
-  await page.locator('.product-stock-row').first().getByRole('status').waitFor()
-  await page.getByRole('button',{name:'Back to products',exact:true}).click()
+  await correctStock(page, 0, 1)
+  await page.locator('.count-check-row').first().getByRole('status').waitFor()
+  await page.evaluate(()=>{history.pushState(null,'','/app/products');window.dispatchEvent(new PopStateEvent('popstate'))})
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
-  await page.getByRole('button',{name:'Add stock',exact:true}).nth(1).click()
+  await selectSection(page,'Count Check');await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
+  await correctStock(page, 1, 1)
   await page.locator('#products-feedback[role=alert]').waitFor()
   assert.equal((await stockKeysOn(page)).length,2)
   release()
@@ -1068,8 +983,8 @@ test('phase 2: unsupported Web Locks preserves pending data and sends no stock r
   await page.addInitScript(()=>Object.defineProperty(navigator,'locks',{value:undefined}))
   await page.reload()
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await page.getByText(/Safe stock updates require browser Web Locks/).waitFor()
-  assert.equal(await page.getByRole('button',{name:'Add stock',exact:true}).first().isDisabled(),true)
+  await selectSection(page,'Count Check');await page.getByText(/Safe stock updates require browser Web Locks/).waitFor()
+  assert.equal(await page.getByRole('button',{name:/^Add one piece:/}).first().isDisabled(),true)
   assert.equal(calls.filter(call=>call.path.endsWith('/stock-adjustment')).length,0)
   assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('saas2:quick-stock:v1:')).length),1)
  }finally{await page.context().close()}
@@ -1082,7 +997,7 @@ test('phase 2: browser migrates legacy recovery once and keeps explicit retry UU
  try {
   await page.evaluate(({key,id})=>localStorage.setItem(key,JSON.stringify([{operationId:id,variantId:'33333333-3333-4333-8333-000000000010',delta:-1,createdAt:Date.now()}])),{key:legacyKey,id:operationId})
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
+  await selectSection(page,'Count Check');await page.getByRole('button',{name:'Retry same update',exact:true}).waitFor()
   await page.waitForFunction(key=>localStorage.getItem(key)===null,legacyKey)
   assert.equal((await stockKeysOn(page)).length,1)
   assert.equal(calls.filter(call=>call.path.endsWith('/stock-adjustment')).length,0)
@@ -1179,7 +1094,7 @@ test('receiving stage 1: external completion refreshes stock and preserves produ
   const other=await page.context().newPage()
   await other.goto(origin+'/qa')
   await other.evaluate(({key,variantId,operationId})=>localStorage.setItem(key,JSON.stringify({variantId,operationId,delta:1,createdAt:Date.now()})),{key,variantId,operationId})
-  await page.getByText('Stock update awaiting confirmation',{exact:true}).waitFor()
+  await page.getByText('A count correction is awaiting confirmation.',{exact:false}).waitFor()
   await other.evaluate(async ({key,variantId,operationId})=>{
    await fetch('/api/products/22222222-2222-4222-8222-000000000001/variants/'+variantId+'/stock-adjustment',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':operationId},body:JSON.stringify({delta:1})})
    localStorage.removeItem(key)
@@ -1211,35 +1126,28 @@ test('receiving stage 1: failed object cleanup refreshes detached photo and repo
  } finally {await page.close()}
 })
 
-test('receiving stage 1: inventory refresh retains history and reconciliation filters', async () => {
+test('Product section visits and history refresh retain movement and reconciliation filters',async()=>{
  const {page}=await open(1366,900,'OWNER','inventory')
  try {
-  await page.getByRole('button',{name:'Movement history',exact:true}).click()
-  await page.locator('#history-type').selectOption('SALE')
-  await page.getByRole('button',{name:'Stock check',exact:true}).click()
-  await page.locator('#reconciliation-status').selectOption('MISMATCH')
-  await page.getByRole('button',{name:'Movement history',exact:true}).click()
-  await page.locator('.inventory-audit-section').first().getByRole('button',{name:'Apply filters',exact:true}).click()
-  await page.getByRole('button',{name:'Stock check',exact:true}).click()
-  await page.locator('.inventory-audit-section').last().getByRole('button',{name:'Apply filters',exact:true}).click()
-  await page.getByRole('button',{name:'Stock & receiving',exact:true}).click()
-  await page.getByRole('button',{name:'Refresh stock',exact:true}).click()
-  await page.locator('.inventory-picker-row').first().waitFor()
-  assert.equal(await page.locator('#history-type').inputValue(),'SALE')
-  assert.equal(await page.locator('#reconciliation-status').inputValue(),'MISMATCH')
- } finally {await page.close()}
+ await openDetail(page);await selectSection(page,'Movement History');await page.locator('#history-type').selectOption('SALE')
+ await selectSection(page,'Count Check');await page.locator('#reconciliation-status').selectOption('MISMATCH')
+ await selectSection(page,'Movement History');await page.getByRole('button',{name:'Apply filters',exact:true}).click()
+ await selectSection(page,'Count Check');await page.getByRole('button',{name:'Apply filters',exact:true}).click()
+ await selectSection(page,'Overview');await selectSection(page,'Movement History');await page.getByRole('button',{name:'Refresh',exact:true}).click()
+ assert.equal(await page.locator('#history-type').inputValue(),'SALE')
+ assert.equal(await page.locator('#reconciliation-status').inputValue(),'MISMATCH')
+ }finally{await page.close()}
 })
 
-test('receiving stage 1: inventory refresh cannot discard an unsaved purchase cost silently', async () => {
+test('Unsaved purchase cost blocks leaving Products and survives section navigation',async()=>{
  const {page}=await open(1366,900,'OWNER','inventory')
  try {
-  await page.getByText('Stock details & other actions').first().click()
-  await page.getByRole('button',{name:'Set cost',exact:true}).click()
-  await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).fill('8.1234')
-  let warned=false
-  page.on('dialog',async dialog=>{warned=true;await dialog.dismiss()})
-  await page.getByRole('button',{name:'Refresh stock',exact:true}).click()
-  assert.equal(warned,true)
-  assert.equal(await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).inputValue(),'8.1234')
- } finally {await page.close()}
+ await openDetail(page);await selectSection(page,'Stock');await page.getByRole('button',{name:'Set cost',exact:true}).click()
+ await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).fill('8.1234')
+ await selectSection(page,'Overview');await selectSection(page,'Stock')
+ let warned=false;page.on('dialog',async dialog=>{warned=true;await dialog.dismiss()})
+ await page.getByRole('button',{name:'Back to products',exact:true}).click()
+ assert.equal(warned,true)
+ assert.equal(await page.getByLabel('Purchase cost per piece (USD)',{exact:true}).inputValue(),'8.1234')
+ }finally{await page.close()}
 })

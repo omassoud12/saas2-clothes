@@ -19,17 +19,17 @@ export const APP_NAVIGATION = Object.freeze([
     roles: tenantRoles,
   }),
   Object.freeze({
+    key: 'inventory',
+    label: 'Entry',
+    path: ROUTES.inventory,
+    icon: 'entry',
+    roles: tenantRoles,
+  }),
+  Object.freeze({
     key: 'categories',
     label: 'Categories',
     path: ROUTES.categories,
     icon: 'categories',
-    roles: tenantRoles,
-  }),
-  Object.freeze({
-    key: 'inventory',
-    label: 'Inventory',
-    path: ROUTES.inventory,
-    icon: 'inventory',
     roles: tenantRoles,
   }),
   Object.freeze({
@@ -88,5 +88,9 @@ export function resolveAppRoute(pathname, role) {
     return Object.freeze({ route, redirectTo: null, ...(productMatch ? { productId: productMatch[1].toLowerCase() } : {}) })
   }
 
-  return Object.freeze({ route: dashboardRoute, redirectTo: dashboardRoute.path })
+  if (pathname === ROUTES.app || APP_NAVIGATION.some((item) => item.path === pathname)) {
+    return Object.freeze({ route: dashboardRoute, redirectTo: dashboardRoute.path })
+  }
+
+  return Object.freeze({ route: null, redirectTo: null })
 }

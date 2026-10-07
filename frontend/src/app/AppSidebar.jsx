@@ -8,7 +8,7 @@ function NavigationIcon({ name }) {
     dashboard: <><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></>,
     products: <><path d="M7 4h10l2 4-7 12L5 8l2-4Z" /><path d="M9 8h6" /></>,
     categories: <><path d="M4 7h7v5H4zM13 7h7v5h-7zM4 14h7v5H4zM13 14h7v5h-7z" /></>,
-    inventory: <><path d="m4 8 8-4 8 4-8 4-8-4Z" /><path d="m4 8 8 4 8-4v8l-8 4-8-4V8Z" /></>,
+    entry: <><path d="M4 13v7h16v-7M12 3v11m-4-4 4 4 4-4" /><path d="M4 13h4l2 3h4l2-3h4" /></>,
     sales: <><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5M8 16h3" /></>,
     returns: <><path d="M9 7 5 11l4 4" /><path d="M5 11h9a5 5 0 0 1 5 5" /></>,
     exchanges: <><path d="m7 7-3 3 3 3" /><path d="M4 10h13" /><path d="m17 17 3-3-3-3" /><path d="M20 14H7" /></>,

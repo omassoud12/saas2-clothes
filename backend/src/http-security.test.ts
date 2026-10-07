@@ -65,8 +65,25 @@ describe('HTTP CORS policy', () => {
       const response = await fetch(`${baseUrl}/api/value`, { method: 'OPTIONS', headers: { Origin: allowedOrigin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'Authorization, Content-Type, Idempotency-Key' } })
       assert.equal(response.status, 204)
       assert.equal(response.headers.get('access-control-allow-origin'), allowedOrigin)
-      assert.equal(response.headers.get('access-control-allow-methods'), 'GET,POST,PATCH,DELETE,OPTIONS')
+      assert.equal(response.headers.get('access-control-allow-methods'), 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
       assert.equal(response.headers.get('access-control-allow-headers'), 'Authorization,Content-Type,Idempotency-Key')
+    })
+  })
+
+  test('permits the opening-cost PUT preflight for an approved frontend', async () => {
+    await withServer(createTestApp(), async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/products/product/variants/variant/opening-cost`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: allowedOrigin,
+          'Access-Control-Request-Method': 'PUT',
+          'Access-Control-Request-Headers': 'Authorization, Content-Type',
+        },
+      })
+      assert.equal(response.status, 204)
+      assert.equal(response.headers.get('access-control-allow-origin'), allowedOrigin)
+      assert.ok(response.headers.get('access-control-allow-methods')?.split(',').includes('PUT'))
+      assert.equal(response.headers.get('access-control-allow-credentials'), null)
     })
   })
 

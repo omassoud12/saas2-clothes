@@ -107,12 +107,23 @@ Frontend foundation:
   include catalog selling price; WAREHOUSE mutations omit that OWNER-only field
   while retaining its permitted read-only display. Catalog rows adapt to
   touch-oriented cards and a compact filter sheet on mobile.
-- Inventory is the canonical frontend for defining new Products and their
-  color/size options, saving zero-stock definitions, and receiving purchased
-  stock. Products is the catalog/details workspace for browsing, editing
-  identity/options/prices/status/images, and OWNER one-piece count corrections.
-  Products links new-product and receiving actions into Inventory; it does not
-  implement a separate current creation or purchased-receiving workflow.
+- Entry (Product Entry) is the canonical new-product frontend: details,
+  color/size options, OWNER selling prices, optional image, review, and either
+  zero-stock save or OWNER initial receiving. Products Add product navigates to
+  Entry; sidebar Entry immediately opens the same form. `/app/inventory` remains
+  the Entry route for existing bookmarks. Its old `?new=1` query still opens
+  creation; `?productId=...` redirects to Products `?section=restock`.
+- Products owns existing-product management. The summary catalog opens a
+  standalone detail with Overview, Stock, OWNER Restock, Movement History,
+  Count Check and separate Receipt History sections. Overview contains catalog
+  edits, prices/status/images; Stock contains inspection and OWNER opening-cost
+  support. Restock reuses the same StockReceiptForm and recovery operations as
+  Entry, with the existing-product receipt contract. Count Check confirms OWNER
+  one-piece ADJUSTMENT corrections; reconciliation remains read-only for both
+  tenant roles. Section drafts stay mounted across navigation, and GET histories
+  load only when opened. Movements/reconciliation are fixed to the selected
+  Product. Receipt History explicitly displays store-wide pagination because
+  its existing endpoint accepts only `page`, not a Product filter.
 - The Sales frontend uses the authenticated Account currency and exact
   decimal-string/BigInt preview totals. Its cart remains local until the
   transactional Sale endpoint confirms checkout; one frozen payload and UUID
@@ -212,7 +223,7 @@ SUPER_ADMIN does not belong to an Account.
 Belongs to one Account.
 
 Can:
-- define new products in Inventory and manage their catalog details
+- define new products in Entry and manage their catalog details
 - manage variants
 - manage categories
 - view costs
@@ -234,7 +245,7 @@ Belongs to one Account.
 
 Can:
 - view products
-- define products with zero stock in Inventory
+- define products with zero stock in Entry
 - create categories
 - perform sales
 - process returns and exchanges
@@ -290,7 +301,7 @@ and scopes Product, Category, and Variant queries by Account. OWNER may see and
 edit Product `profitMarginOverride` and see Variant `lastPurchaseCost`;
 WAREHOUSE may not see or edit either field. Neither role may edit stock or
 `lastPurchaseCost` through ordinary catalog create/update payloads. The current
-canonical creation flow is Inventory's idempotent POST
+canonical creation flow is Entry's idempotent POST
 `/api/inventory/product-setups` with one client-generated UUID in the
 `Idempotency-Key` header. It accepts one Product and 1–200 color/size options,
 checks the active tenant Category under a shared row lock, and creates every
@@ -311,7 +322,7 @@ POST `/api/products/setup` remains a legacy compatibility endpoint for older
 clients. Its explicit OWNER `openingStock: true` semantics create exactly one
 physical piece per selected option, null purchase cost, and one ADJUSTMENT
 movement. The individual Product Variant creation endpoint retains the same
-explicit compatibility field. The current Inventory and Products frontends do
+explicit compatibility field. The current Entry and Products frontends do
 not request this opening-piece behavior: new definitions use zero stock, and
 purchased quantities use StockReceipt receiving. The legacy setup remains
 non-idempotent and is not the canonical new-product path. Existing opening
@@ -323,7 +334,7 @@ edits and adding options. Newly added options begin with zero stock and null
 cost unless an older client explicitly invokes the legacy opening-piece field.
 
 An OWNER can later PUT `{unitCost}` to the tenant-scoped Variant `opening-cost`
-endpoint from Inventory. It locks Product then Variant, validates positive
+endpoint from Products Stock. It locks Product then Variant, validates positive
 Decimal(18,4) cost, and requires active pending inventory, including zero remaining quantity, fully reconciled with
 opening/quick-adjustment and uncosted SALE/RETURN/SALE_VOID entries. It initializes lastPurchaseCost without changing
 quantity or rewriting the append-only movement. Repeating the same established
@@ -390,13 +401,13 @@ ProductVariant.sellingPrice remains Decimal(18,2).
 
 Inventory history must never be lost.
 
-Inventory owns the current new-product definition, zero-stock save-only,
-purchased receiving, receipt history, movement history, opening-cost support,
-and read-only stock reconciliation workflows. Products owns catalog browsing
-and details, Product/option editing, pricing/status/image management, and the
-OWNER one-piece count-correction shortcut. Products deep-links an existing
-Product to Inventory with `productId` for receiving and sends Add product to
-Inventory's new-product flow.
+Entry owns new-product definitions, zero-stock save-only, and OWNER initial
+receiving through the canonical setup contract. Products owns all existing
+product management, including purchased restock, opening-cost support, receipt
+history, movement history, OWNER count corrections, and read-only reconciliation.
+Only the frontend responsibility model changed; database/API semantics remain
+unchanged. Entry contains no existing-product editing, receiving, correction,
+history management, or deletion controls.
 
 InventoryMovement is the inventory ledger.
 
@@ -479,8 +490,9 @@ single-option receiving. It accepts one positive quantity, Decimal(18,4) cost,
 optional normalized note, and UUID idempotency key; locks Product then Variant;
 updates stock/latest cost; and appends one RESTOCK movement atomically. Its
 canonical SHA-256 fingerprint and tenant-scoped unique movement key preserve
-same-request replay. Inventory exposes this as the secondary “Legacy Restock”
-tool; batch Receive stock is the primary purchased-delivery workflow. Existing
+same-request replay. The current UI exposes only batch Restock through StockReceiptForm as the
+primary purchased-delivery workflow; the legacy API remains compatible without
+a competing visible receiving tool. Existing
 legacy history is not rewritten.
 
 Every RESTOCK movement has a positive unit cost, positive quantity,
@@ -499,7 +511,7 @@ decreases cannot cross zero, and replay verifies actor, option and direction.
 The legacy `/quick-stock` endpoint remains for older clients and retains its
 previous behavior: a +1 with known cost may write RESTOCK, while unknown-cost
 adds and removals write ADJUSTMENT. New UI work must use `stock-adjustment` for
-count corrections and Inventory receipts for purchases.
+count corrections and Products receipts for existing purchases (Entry for initial receiving).
 
 The Products browser persists unresolved count-correction metadata in
 localStorage scoped to authenticated Account, user and Product. No
@@ -527,7 +539,7 @@ ties with ID.
 Products catalog uses optional `view=summary` on the list endpoint: identity,
 image/category/status, active/inactive option counts, active available stock,
 inactive physical stock and active price min/max. It contains no variant arrays
-or financial fields. Detail remains full; POS/Inventory retain the default list
+or financial fields. Detail remains full; POS retains the default list
 contract. Summary selection reads only option status/stock/price, not costs or
 codes. Physical inactive stock is secondary; active price range excludes inactive
 options. Operational readiness is separate from OWNER-only Cost pending. Missing
@@ -1237,7 +1249,7 @@ shared/distributed rate-limit backend so limits cannot be multiplied across
 replicas.
 
 Normal `/api` traffic is limited to 300 requests per IP per five minutes by
-default. POST, PATCH, and DELETE traffic has an additional 120-per-five-minute
+default. POST, PUT, PATCH, and DELETE traffic has an additional 120-per-five-minute
 write tier. Costly read paths (financial reports, inventory audit,
 Sales/Return history, Exchange history, and Expense history) have an additional
 30-per-five-minute tier. Product image upload/replacement has an additional
@@ -1523,7 +1535,7 @@ Do not add Redis, multiple API servers, or load balancers unless measurements sh
 The backend should remain stateless so horizontal scaling can be added later.
 
 
-Product count correction: Product size cards show + / - and the current UI uses
+Product count correction: Products Count Check shows + / - and the current UI uses
 the OWNER-only `stock-adjustment` endpoint for exactly one piece in either
 direction. Every current UI correction writes ADJUSTMENT, preserves purchase
 cost, cannot cross zero, and uses transaction locks plus a durable operation ID

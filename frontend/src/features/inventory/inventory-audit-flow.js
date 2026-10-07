@@ -6,6 +6,7 @@ export const MOVEMENT_LABELS = Object.freeze({
 })
 
 function failure(result) {
+  if (result.aborted) return result
   if (result.code === 'SESSION_REQUIRED' || result.status === 401) return { ok: false, requiresLogin: true, message: 'Your session has expired. Sign in again.' }
   if (result.status === 403 && ['ACCOUNT_PENDING', 'ACCOUNT_REJECTED', 'ACCOUNT_SUSPENDED', 'ACCOUNT_NOT_ACTIVE'].includes(result.code)) {
     return { ok: false, requiresAccountReview: true, message: 'Your store is not currently active.' }
@@ -46,9 +47,9 @@ export function appendPage(existing, incoming) {
   return [...existing, ...incoming.filter((row) => !known.has(row.id ?? row.variant?.id))]
 }
 
-export async function listInventoryMovements({ supabase, fetchImpl = globalThis.fetch, filters = {} }) {
+export async function listInventoryMovements({ supabase, fetchImpl = globalThis.fetch, filters = {}, signal }) {
   const query = queryString(filters, ['productId', 'variantId', 'type', 'from', 'to', 'cursor', 'limit'])
-  const result = await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/inventory/movements?${query}`, method: 'GET', fallbackMessage: 'Inventory history is unavailable.' })
+  const result = await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/inventory/movements?${query}`, method: 'GET', fallbackMessage: 'Inventory history is unavailable.', signal })
   if (!result.ok) return failure(result)
   if (result.status !== 200 || !Array.isArray(result.data?.movements) ||
       !result.data.movements.every((row) => typeof row.id === 'string' && typeof row.quantityChange === 'number' && typeof row.type === 'string') ||
@@ -58,9 +59,9 @@ export async function listInventoryMovements({ supabase, fetchImpl = globalThis.
   return { ok: true, movements: result.data.movements, nextCursor: result.data.nextCursor }
 }
 
-export async function getInventoryReconciliation({ supabase, fetchImpl = globalThis.fetch, filters = {} }) {
+export async function getInventoryReconciliation({ supabase, fetchImpl = globalThis.fetch, filters = {}, signal }) {
   const query = queryString(filters, ['productId', 'variantId', 'status', 'cursor', 'limit'])
-  const result = await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/inventory/reconciliation?${query}`, method: 'GET', fallbackMessage: 'Stock reconciliation is unavailable.' })
+  const result = await authenticatedApiRequest({ supabase, fetchImpl, path: `/api/inventory/reconciliation?${query}`, method: 'GET', fallbackMessage: 'Stock reconciliation is unavailable.', signal })
   if (!result.ok) return failure(result)
   if (result.status !== 200 || !Array.isArray(result.data?.variants) ||
       !result.data.variants.every((row) => typeof row.variant?.id === 'string' && typeof row.storedStock === 'number' && typeof row.ledgerStock === 'number' && typeof row.difference === 'number' && ['RECONCILED', 'MISMATCH'].includes(row.status)) ||

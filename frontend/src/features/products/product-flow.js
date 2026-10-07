@@ -42,6 +42,7 @@ function error(code, message, extra = {}) {
 
 function mapFailure(result) {
   if (result.ok) return result
+  if (result.aborted) return result
   if (result.code === 'SESSION_REQUIRED' || result.status === 401) {
     return error(result.code, 'Your session has expired. Sign in again.', { requiresLogin: true })
   }
@@ -93,9 +94,9 @@ function variantResponse(result, status) {
   return { ok: true, variant: result.data.variant }
 }
 
-function request({ supabase, fetchImpl = globalThis.fetch, path, method = 'GET', payload, requestBody }) {
+function request({ supabase, fetchImpl = globalThis.fetch, path, method = 'GET', payload, requestBody, signal }) {
   return authenticatedApiRequest({
-    supabase, fetchImpl, path, method, payload, requestBody,
+    supabase, fetchImpl, path, method, payload, requestBody, signal,
     fallbackMessage: 'The catalog is unavailable. Please try again.',
   })
 }
@@ -172,13 +173,13 @@ export function validateImage(file) {
   return { ok: true }
 }
 
-export async function listProducts({ supabase, fetchImpl, filters = {}, summary = false }) {
+export async function listProducts({ supabase, fetchImpl, filters = {}, summary = false, signal }) {
   const query = new URLSearchParams({ page: String(filters.page || 1), limit: String(PRODUCT_PAGE_SIZE) })
   if (summary) query.set('view','summary')
   if (filters.isActive === 'false' || filters.isActive === 'all') query.set('isActive', filters.isActive)
   if (filters.categoryId) query.set('categoryId', filters.categoryId)
   if (filters.search?.trim()) query.set('search', filters.search.trim())
-  const result = await request({ supabase, fetchImpl, path: `/api/products?${query}` })
+  const result = await request({ supabase, fetchImpl, path: `/api/products?${query}`, signal })
   if (!result.ok) return mapFailure(result)
   const data = result.data
   if (result.status !== 200 || !Array.isArray(data?.products) || !data.products.every(summary ? validSummary : validProduct) ||
@@ -188,8 +189,8 @@ export async function listProducts({ supabase, fetchImpl, filters = {}, summary 
   return { ok: true, products: data.products, total: data.total, page: data.page, limit: data.limit }
 }
 
-export async function getProduct({ supabase, fetchImpl, productId }) {
-  return productResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}` }), 200)
+export async function getProduct({ supabase, fetchImpl, productId, signal }) {
+  return productResponse(await request({ supabase, fetchImpl, path: `/api/products/${encodeURIComponent(productId)}`, signal }), 200)
 }
 
 export async function createProduct({ supabase, fetchImpl, draft, role }) {

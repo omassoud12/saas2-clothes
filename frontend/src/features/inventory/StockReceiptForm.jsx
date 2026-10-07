@@ -57,7 +57,7 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
           if (result.requiresLogin) { window.location.replace('/login'); return }
           if (result.requiresAccountReview) { window.location.replace('/pending-approval'); return }
           if (result.outcome === RECEIPT_OUTCOME.TERMINAL_REJECTION) {
-            clearDirty(); onTerminal?.(result); return
+            setReview(null); clearDirty(); onTerminal?.(result); return
           }
           if (result.outcome === RECEIPT_OUTCOME.CORRECTABLE_REJECTION) setReview(null)
           const guidance = result.outcome === RECEIPT_OUTCOME.UNCERTAIN
@@ -72,7 +72,7 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
         setSavedResult(result); clearDirty(); await upload(result)
       })
       if (!locked.acquired) setMessage({kind:'pending',text:`Another tab is confirming this ${operationLabel}. Wait for it to finish.`})
-    } catch (error) { setMessage({kind:record?'pending':'error',text:error.message || (record ? `The original ${operationLabel} remains preserved.` : `${saveOnly?'Product save':'Receiving'} could not start.`)}) }
+    } catch { setMessage({kind:record?'pending':'error',text:(record ? `The original ${operationLabel} remains preserved.` : `${saveOnly?'Product save':'Receiving'} could not start. Resolve pending operations and check browser storage.`)}) }
     finally { running.current = false; setBusy(false) }
   }
   if (savedResult) return <section className="product-panel receipt-photo-retry"><h2>Product saved; photo needs attention</h2><InventoryFeedback kind="pending">{message?.text}</InventoryFeedback><div className="product-actions"><button disabled={busy} onClick={async () => { setBusy(true); try { await upload(savedResult) } finally { setBusy(false) } }}>Retry photo only</button><button className="secondary-action" onClick={() => { clearDirty(); onSaved(savedResult) }}>Finish without photo</button></div></section>
@@ -83,7 +83,7 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
     {message && <InventoryFeedback kind={message.kind}>{message.text}</InventoryFeedback>}
     <div className="product-actions receipt-form-actions">{owner && (!review || review.receive) && <button disabled={busy || blocked || !profile.account?.baseCurrency} onClick={() => save(true)}>{busy ? 'Saving…' : review?.receive ? 'Confirm receiving' : 'Review receipt'}</button>}
       {review && !review.receive && <button disabled={busy || blocked} onClick={() => save(false)}>{busy ? 'Saving…' : 'Confirm product only'}</button>}
-      {definition && !review && <button className="secondary-action" disabled={busy || blocked} onClick={() => save(false)}>Save product only</button>}
+      {definition && !review && <button className={owner ? "secondary-action" : ""} disabled={busy || blocked} onClick={() => save(false)}>Save product only</button>}
       {review && <button className="secondary-action" disabled={busy} onClick={() => { setReview(null); setMessage(null) }}>Back / edit quantities</button>}
       {definition && !review && onEditDefinition && <button className="secondary-action" disabled={busy} onClick={() => { setReview(null); onEditDefinition() }}>Back to product</button>}
       {!review && <button className="secondary-action" disabled={busy} onClick={() => { if (confirmDiscardChanges()) { clearDirty(); onCancel() } }}>Cancel</button>}</div>

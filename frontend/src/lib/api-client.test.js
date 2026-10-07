@@ -74,4 +74,87 @@ describe('frontend API client', () => {
     assert.equal(normalizeApiError(429, {}, 'fallback', 'private-date').retryAfterSeconds, undefined)
     assert.equal(normalizeApiError(429, {}, 'fallback', '999999').retryAfterSeconds, undefined)
   })
+
+  test('shares only equivalent in-flight GET work for the same session', async () => {
+    let calls = 0
+    let release
+    const pending = new Promise((resolve) => { release = resolve })
+    const fetchImpl = async () => {
+      calls += 1
+      await pending
+      return { ok: true, status: 200, async json() { return { value: calls } } }
+    }
+    const first = apiRequest({ accessToken: 'session-a', fetchImpl, path: '/api/example?view=one' })
+    const second = apiRequest({ accessToken: 'session-a', fetchImpl, path: '/api/example?view=one' })
+    assert.equal(calls, 1)
+    release()
+    assert.deepEqual(await first, await second)
+
+    await apiRequest({ accessToken: 'session-a', fetchImpl, path: '/api/example?view=one' })
+    assert.equal(calls, 2, 'settled reads are not cached')
+  })
+
+  test('does not share GET work across authenticated sessions', async () => {
+    let calls = 0
+    const fetchImpl = async () => {
+      calls += 1
+      return { ok: true, status: 200, async json() { return { ready: true } } }
+    }
+    await Promise.all([
+      apiRequest({ accessToken: 'session-a', fetchImpl, path: '/api/example' }),
+      apiRequest({ accessToken: 'session-b', fetchImpl, path: '/api/example' }),
+    ])
+    assert.equal(calls, 2)
+  })
+
+  test('lets one GET subscriber abort without cancelling another subscriber', async () => {
+    let calls = 0
+    let release
+    const pending = new Promise((resolve) => { release = resolve })
+    const fetchImpl = async () => {
+      calls += 1
+      await pending
+      return { ok: true, status: 200, async json() { return { ready: true } } }
+    }
+    const controller = new AbortController()
+    const first = apiRequest({ accessToken: 'session', fetchImpl, path: '/api/example', signal: controller.signal })
+    const second = apiRequest({ accessToken: 'session', fetchImpl, path: '/api/example' })
+    controller.abort()
+    assert.equal((await first).aborted, true)
+    release()
+    assert.equal((await second).ok, true)
+    assert.equal(calls, 1)
+  })
+
+  test('cancels an unobserved GET after the StrictMode grace period', async () => {
+    let underlyingAborted = false
+    const fetchImpl = async (_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => {
+        underlyingAborted = true
+        reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+      }, { once: true })
+    })
+    const controller = new AbortController()
+    const resultPromise = apiRequest({ accessToken: 'session', fetchImpl, path: '/api/example', signal: controller.signal })
+    controller.abort()
+    assert.equal((await resultPromise).aborted, true)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    assert.equal(underlyingAborted, true)
+  })
+
+  test('never deduplicates or generically aborts mutations', async () => {
+    let calls = 0
+    const fetchImpl = async (_url, options) => {
+      calls += 1
+      assert.equal(options.signal, undefined)
+      return { ok: true, status: 201, async json() { return { saved: true } } }
+    }
+    const controller = new AbortController()
+    controller.abort()
+    const request = { accessToken: 'session', fetchImpl, method: 'POST', path: '/api/example', payload: { value: 1 }, signal: controller.signal }
+    const [first, second] = await Promise.all([apiRequest(request), apiRequest(request)])
+    assert.equal(first.ok, true)
+    assert.equal(second.ok, true)
+    assert.equal(calls, 2)
+  })
 })

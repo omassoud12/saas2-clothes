@@ -5,6 +5,13 @@ import { groupVariantsByColor, compareSizes } from '../products/product-options.
 export function VariantQuantityMatrix({ variants, quantities, onChange, disabled = false }) {
   const scroller = useRef(null)
   const [scrollable, setScrollable] = useState(false)
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 600px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 600px)')
+    const update = () => setMobile(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
   const sizes = [...new Set(variants.map((variant) => variant.size || 'No size'))].sort((a, b) => compareSizes({ size: a }, { size: b }))
   useEffect(() => {
     const node = scroller.current
@@ -15,7 +22,11 @@ export function VariantQuantityMatrix({ variants, quantities, onChange, disabled
     observer.observe(node.firstElementChild)
     update()
     return () => observer.disconnect()
-  }, [variants])
+  }, [variants, mobile])
+  if (mobile) return <div className="receipt-mobile-matrix"><div className="receipt-matrix-heading"><strong>Receiving now</strong><span>Enter pieces to add, not the final stock count.</span></div>{groupVariantsByColor(variants).map(([color, options]) => <fieldset key={color} className="receipt-mobile-color"><legend><ColorSwatch name={color} />{color}</legend><div>{options.map(variant => {
+    const key = variant.id ?? variant.sku
+    return <label key={key}><span>{variant.size || 'No size'}</span><input aria-label={`Receiving now: ${color} / ${variant.size || 'No size'}`} inputMode="numeric" pattern="[0-9]*" maxLength={7} disabled={disabled || variant.isActive === false} value={quantities[key] ?? ''} placeholder="0" onChange={event => onChange(key, event.target.value)} /><small>Current: {variant.currentStock ?? 0}</small></label>
+  })}</div></fieldset>)}<p className="receipt-matrix-note">Blank or zero adds nothing. These values are added to current stock.</p></div>
   return <div className="receipt-matrix-wrap">
     <div className="receipt-matrix-heading"><strong>Receiving now</strong><span>Current stock appears below each field.</span></div>
     {scrollable && <p className="receipt-scroll-hint">Swipe or scroll this table to see more sizes.</p>}

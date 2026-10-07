@@ -6,6 +6,7 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
 import { AdminPage } from './pages/AdminPage.jsx'
 import { LandingPage } from './pages/LandingPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
+import { NotFoundPage } from './pages/NotFoundPage.jsx'
 import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
 import { PendingApprovalPage } from './pages/PendingApprovalPage.jsx'
 import { InactiveAccountPage } from './pages/InactiveAccountPage.jsx'
@@ -21,8 +22,12 @@ function App() {
   const [pathname, setPathname] = useState(readPathname)
 
   useEffect(() => {
-    function handlePopState() {
-      if (!confirmDiscardChanges()) { window.history.pushState(null, '', pathname); return }
+    function handlePopState(event) {
+      if (!confirmDiscardChanges()) {
+        window.history.pushState(null, '', pathname)
+        event.stopImmediatePropagation()
+        return
+      }
       setPathname(readPathname())
     }
 
@@ -53,7 +58,7 @@ function App() {
     return <AppRouteGuard pathname={pathname} navigate={navigate} />
   }
 
-  return <LandingPage navigate={navigate} />
+  return pathname === ROUTES.home ? <LandingPage navigate={navigate} /> : <NotFoundPage />
 }
 
 export default App

@@ -83,10 +83,30 @@ export function inspectAuthCallbackUrl(href) {
     return Object.freeze({
       kind: callbackKinds.has(kind) ? kind : null,
       hasError,
+      ...((!kind || callbackKinds.has(kind)) && url.searchParams.get('code') ? { hasCode: true } : {}),
     })
   } catch {
     return Object.freeze({ kind: null, hasError: true })
   }
+}
+
+export async function exchangePasswordSetupCode({ supabase, code, flowId }) {
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(
+      code,
+      flowId ? { flowId } : undefined,
+    )
+    const user = data?.session?.user
+    const kind = data?.redirectType === 'recovery'
+      ? 'recovery'
+      : user?.invited_at && user?.email_confirmed_at ? 'invite' : null
+    if (!error && user?.id && kind) {
+      return Object.freeze({ ok: true, kind, userId: user.id })
+    }
+  } catch {
+    // Never expose the code, session, or provider error.
+  }
+  return resultError('INVITATION_INVALID', 'This invitation link is invalid or has expired.')
 }
 
 function writePasswordSetupMarker(storage, userId, kind, now) {
@@ -169,6 +189,7 @@ export async function completeAuthCallback({
   navigate,
   clearUrl,
   now = Date.now(),
+  exchangeCode,
 }) {
   if (!supabase) {
     return resultError(
@@ -177,13 +198,31 @@ export async function completeAuthCallback({
     )
   }
 
-  if (callback.hasError || !callbackKinds.has(callback.kind)) {
+  if (callback.hasError || (!callbackKinds.has(callback.kind) && !callback.hasCode)) {
     clearPasswordSetupMarker(storage)
     clearUrl()
     return resultError(
       'INVITATION_INVALID',
       'This invitation link is invalid or has expired.',
     )
+  }
+
+  let kind = callback.kind
+  let exchangedUserId
+  if (callback.hasCode) {
+    let result
+    try {
+      result = await exchangeCode?.()
+    } catch {
+      result = null
+    }
+    if (!result?.ok || !callbackKinds.has(result.kind) || !result.userId || (kind && kind !== result.kind)) {
+      clearPasswordSetupMarker(storage)
+      clearUrl()
+      return resultError('INVITATION_INVALID', 'This invitation link is invalid or has expired.')
+    }
+    kind = result.kind
+    exchangedUserId = result.userId
   }
 
   let sessionResult
@@ -194,7 +233,7 @@ export async function completeAuthCallback({
   }
 
   const session = sessionResult.data?.session
-  if (sessionResult.error || !session?.user?.id) {
+  if (sessionResult.error || !session?.user?.id || (exchangedUserId && session.user.id !== exchangedUserId)) {
     clearPasswordSetupMarker(storage)
     clearUrl()
     return resultError(
@@ -206,7 +245,7 @@ export async function completeAuthCallback({
   writePasswordSetupMarker(
     storage,
     session.user.id,
-    callback.kind,
+    kind,
     now,
   )
   clearUrl()
