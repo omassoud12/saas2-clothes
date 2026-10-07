@@ -13,6 +13,8 @@ import {
   validateRejectionReason,
 } from '../auth/admin-flow.js'
 import { supabase } from '../lib/supabase.js'
+import { LogoutAction } from '../components/auth/LogoutAction.jsx'
+import { useDirtyState } from '../app/dirty-state.js'
 
 function isSessionFailure(result) {
   return result.code === 'SESSION_REQUIRED' || result.status === 401
@@ -30,6 +32,7 @@ export function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [message, setMessage] = useState(null)
   const [rejectionDraft, setRejectionDraft] = useState(null)
+  useDirtyState(Boolean(rejectionDraft?.reason))
 
   useEffect(() => {
     if (!initialLoadPromise.current) {
@@ -184,6 +187,7 @@ export function AdminPage() {
           <span className="eyebrow">Platform administration</span>
           <h1>Loading approvals...</h1>
           <div className="spinner" aria-label="Loading" />
+          <LogoutAction />
         </section>
       </main>
     )
@@ -201,6 +205,7 @@ export function AdminPage() {
           <a className="button-link secondary" href="/login">
             Return to sign in
           </a>
+          <LogoutAction />
         </section>
       </main>
     )
@@ -216,6 +221,7 @@ export function AdminPage() {
           <button type="button" onClick={() => window.location.reload()}>
             Try again
           </button>
+          <LogoutAction />
         </section>
       </main>
     )
@@ -230,7 +236,7 @@ export function AdminPage() {
             <h1>Account approvals</h1>
             <p>Review new stores before they receive tenant access.</p>
           </div>
-          <button
+          <div className="admin-header-actions"><button
             className="secondary-action"
             type="button"
             onClick={() => refreshPending()}
@@ -238,6 +244,7 @@ export function AdminPage() {
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
+          <LogoutAction disabled={refreshing || busyAccountIds.length > 0} /></div>
         </header>
 
         {message && (

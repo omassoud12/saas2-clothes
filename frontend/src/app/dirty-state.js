@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 const drafts = new Set()
 let approvedUntil = 0
+export function clearDiscardedChanges() {
+  for (const draft of drafts) draft.current = false
+}
 export function confirmDiscardChanges() {
   if (Date.now() < approvedUntil || ![...drafts].some(draft => draft.current)) return true
   if (!window.confirm('Discard unsaved changes?')) return false

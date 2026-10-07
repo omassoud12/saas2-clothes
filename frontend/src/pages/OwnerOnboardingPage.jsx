@@ -3,6 +3,8 @@ import { bootstrapOwnerAccount, createSubmissionGuard, loadOwnerOnboarding } fro
 import { AuthAction, AuthLayout, AuthLoading, FormMessage, Input } from '../components/auth/AuthLayout.jsx'
 import { Select } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
+import { LogoutAction } from '../components/auth/LogoutAction.jsx'
+import { useDirtyState } from '../app/dirty-state.js'
 
 const initialForm = { firstName: '', lastName: '', accountName: '', baseCurrency: 'USD', employeeCode: '' }
 
@@ -13,6 +15,7 @@ export function OwnerOnboardingPage() {
   const [form, setForm] = useState(initialForm)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const clearDirty = useDirtyState(Object.keys(initialForm).some(key => form[key] !== initialForm[key]))
   useEffect(() => {
     if (!sessionCheckPromise.current) sessionCheckPromise.current = loadOwnerOnboarding({ supabase })
     let active = true
@@ -31,7 +34,7 @@ export function OwnerOnboardingPage() {
     const guarded = await submissionGuard.run(async () => { setSubmitting(true); setMessage(''); return bootstrapOwnerAccount({ supabase, input: form }) })
     if (guarded.skipped) return
     const result = guarded.value
-    if (result.ok) { window.location.replace('/pending-approval'); return }
+    if (result.ok) { clearDirty(); window.location.replace('/pending-approval'); return }
     if (result.code === 'SESSION_REQUIRED' || result.status === 401) { window.location.replace('/login'); return }
     setMessage(result.message); setSubmitting(false)
   }
@@ -49,5 +52,6 @@ export function OwnerOnboardingPage() {
       <FormMessage>{message}</FormMessage>
       <AuthAction type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit for approval'}</AuthAction>
     </form>}
+    <LogoutAction disabled={submitting} />
   </AuthLayout>
 }

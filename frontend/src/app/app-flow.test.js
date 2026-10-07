@@ -230,6 +230,25 @@ describe('business shell profile and logout', () => {
     assert.equal(calls.signOut, 1)
     assert.deepEqual(redirects, ['/login'])
   })
+
+  test('failed signOut preserves the session page and hides private error details', async () => {
+    const { client, calls } = createSupabase({ signOutError: true })
+    const redirects = []
+    const result = await logoutBusinessApp({ supabase: client, redirect: path => redirects.push(path) })
+    assert.equal(result.ok, false)
+    assert.equal(result.code, 'SIGN_OUT_FAILED')
+    assert.equal(result.message.includes('private detail'), false)
+    assert.equal(calls.signOut, 1)
+    assert.deepEqual(redirects, [])
+  })
+
+  test('thrown signOut errors do not redirect or expose the exception', async () => {
+    const redirects = []
+    const result = await logoutBusinessApp({ supabase: { auth: { signOut: async () => { throw new Error('private detail') } } }, redirect: path => redirects.push(path) })
+    assert.equal(result.code, 'SIGN_OUT_FAILED')
+    assert.equal(result.message.includes('private detail'), false)
+    assert.deepEqual(redirects, [])
+  })
 })
 
 test('product detail URLs reuse the Products route and navigation for tenant roles', () => {

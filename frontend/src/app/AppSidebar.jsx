@@ -29,6 +29,8 @@ export function AppSidebar({
   onClose,
   onNavigate,
   pathname,
+  loggingOut,
+  onLogout,
 }) {
   const navigation = getAppNavigation(identity.role)
 
@@ -93,9 +95,13 @@ export function AppSidebar({
         })}
       </nav>
 
-      <p className="sidebar-security-note">
-        Access is scoped to your authenticated store.
-      </p>
+      <div className="sidebar-footer">
+        <button className="sidebar-logout-button" type="button" disabled={loggingOut} onClick={onLogout}>
+          <svg className="business-nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 4H4v16h5M10 12h10m-4-4 4 4-4 4" /></svg>
+          <span>{loggingOut ? 'Signing out...' : 'Logout'}</span>
+        </button>
+        <p className="sidebar-security-note">Access is scoped to your authenticated store.</p>
+      </div>
     </aside>
   )
 }

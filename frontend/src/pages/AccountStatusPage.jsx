@@ -4,6 +4,7 @@ import { logoutBusinessApp } from '../app/app-flow.js'
 import { AuthAction, AuthLayout, AuthLoading, FormMessage } from '../components/auth/AuthLayout.jsx'
 import { Button } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
+import { LogoutAction } from '../components/auth/LogoutAction.jsx'
 
 export function AccountStatusPage({ mode }) {
   const initialLoad = useRef(null)
@@ -53,7 +54,7 @@ export function AccountStatusPage({ mode }) {
   const inactive = mode === 'inactive'
   return (
     <AuthLayout eyebrow="Account access" title={inactive ? 'Store access is inactive' : 'Approval is in progress'} description={inactive ? 'This store is not currently available to its team.' : 'Your request exists and is waiting for platform approval.'}>
-      {state.kind === 'loading' && <AuthLoading label="Checking your account status" />}
+      {state.kind === 'loading' && <><AuthLoading label="Checking your account status" /><LogoutAction /></>}
       {state.kind === 'error' && <div className="auth-status-stack"><FormMessage>{state.message}</FormMessage><AuthAction onClick={checkStatus} disabled={checking}>{checking ? 'Checking…' : 'Try again'}</AuthAction><Button tone="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Signing out…' : 'Sign out'}</Button></div>}
       {state.kind === 'ready' && <div className="auth-status-stack">
         <span className={`status-chip status-${state.view.status.toLowerCase()}`}>{state.view.status}</span>

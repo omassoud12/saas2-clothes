@@ -3,6 +3,7 @@ import { loadBusinessAppProfile } from './app-flow.js'
 import { AppLayout } from './AppLayout.jsx'
 import { Button, Card, ErrorState, LoadingState } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
+import { LogoutAction } from '../components/auth/LogoutAction.jsx'
 
 export function AppRouteGuard({ pathname, navigate }) {
   const profilePromise = useRef(null)
@@ -53,6 +54,7 @@ export function AppRouteGuard({ pathname, navigate }) {
             description={state.message}
             action={<Button onClick={() => window.location.reload()}>Try again</Button>}
           />
+          <LogoutAction />
         </Card>
       </main>
     )

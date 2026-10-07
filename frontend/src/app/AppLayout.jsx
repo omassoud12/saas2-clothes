@@ -1,13 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import {
-  getBusinessShellIdentity,
-  logoutBusinessApp,
-} from './app-flow.js'
+import { getBusinessShellIdentity } from './app-flow.js'
 import { resolveAppRoute } from './app-navigation.js'
 import { AppHeader } from './AppHeader.jsx'
 import { AppSidebar } from './AppSidebar.jsx'
 import { LoadingState } from '../components/ui/index.jsx'
-import { supabase } from '../lib/supabase.js'
+import { useLogout } from './useLogout.js'
 import { NotFoundPage } from '../pages/NotFoundPage.jsx'
 import { ROUTES } from './routes.js'
 
@@ -29,8 +26,7 @@ const pageComponents = Object.freeze({
 
 export function AppLayout({ pathname, navigate, profile }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
-  const [logoutError, setLogoutError] = useState('')
+  const { loggingOut, logoutError, logout } = useLogout()
   const menuTrigger = useRef(null)
   const identity = getBusinessShellIdentity(profile)
   const resolvedRoute = resolveAppRoute(pathname, identity.role)
@@ -77,20 +73,8 @@ export function AppLayout({ pathname, navigate, profile }) {
   }, [mobileMenuOpen])
 
   async function handleLogout() {
-    if (loggingOut) return
-
-    setLoggingOut(true)
-    setLogoutError('')
-    setMobileMenuOpen(false)
-    const result = await logoutBusinessApp({
-      supabase,
-      redirect: (path) => window.location.replace(path),
-    })
-
-    if (!result.ok) {
-      setLogoutError(result.message)
-      setLoggingOut(false)
-    }
+    const result = await logout()
+    if (result) setMobileMenuOpen(false)
   }
 
   return (
@@ -101,6 +85,8 @@ export function AppLayout({ pathname, navigate, profile }) {
         pathname={pathname}
         onClose={() => setMobileMenuOpen(false)}
         onNavigate={navigate}
+        loggingOut={loggingOut}
+        onLogout={handleLogout}
       />
       {mobileMenuOpen && (
         <button

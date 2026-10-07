@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { PASSWORD_MIN_LENGTH, updateInvitedUserPassword, verifyPasswordSetupSession } from '../auth/auth-flow.js'
 import { AuthAction, AuthLayout, AuthLoading, FormMessage, PasswordField } from '../components/auth/AuthLayout.jsx'
 import { supabase } from '../lib/supabase.js'
+import { LogoutAction } from '../components/auth/LogoutAction.jsx'
+import { useDirtyState } from '../app/dirty-state.js'
 
 export function SetPasswordPage() {
   const sessionCheckPromise = useRef(null)
@@ -12,6 +14,7 @@ export function SetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const clearDirty = useDirtyState(Boolean(newPassword || confirmPassword))
   useEffect(() => {
     if (!sessionCheckPromise.current) sessionCheckPromise.current = verifyPasswordSetupSession({ supabase, storage: window.sessionStorage })
     let active = true
@@ -23,7 +26,7 @@ export function SetPasswordPage() {
     submissionLock.current = true; setSubmitting(true); setMessage('')
     const result = await updateInvitedUserPassword({ supabase, storage: window.sessionStorage, newPassword, confirmPassword })
     if (!result.ok) { setMessage(result.message); submissionLock.current = false; setSubmitting(false); return }
-    setNewPassword(''); setConfirmPassword(''); setPageState('success'); setMessage('Your password is ready. Redirecting you to sign in…')
+    clearDirty(); setNewPassword(''); setConfirmPassword(''); setPageState('success'); setMessage('Your password is ready. Redirecting you to sign in…')
     redirectTimer.current = window.setTimeout(() => window.location.replace(result.redirectTo), 1200)
   }
   const title = pageState === 'success' ? 'Password updated' : pageState === 'error' ? 'Password setup unavailable' : 'Choose your password'
@@ -36,5 +39,6 @@ export function SetPasswordPage() {
       <PasswordField id="confirm-password" label="Confirm password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={submitting} required />
       <FormMessage>{message}</FormMessage><AuthAction type="submit" disabled={submitting}>{submitting ? 'Updating…' : 'Set password'}</AuthAction>
     </form>}
+    {pageState === 'ready' && <LogoutAction disabled={submitting} />}
   </AuthLayout>
 }
