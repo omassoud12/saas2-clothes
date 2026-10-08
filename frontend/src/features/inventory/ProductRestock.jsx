@@ -9,7 +9,7 @@ export function ProductRestock({ profile, product, onSaved, onCancel }) {
   function received(result) { setSuccess(result); setFailure(''); onSaved() }
   const recovery = useReceiptRecovery(profile, received)
   return <div className="product-restock">
-    <div className="product-section-intro"><h2>Restock</h2><p>Record a purchased delivery. Positive quantities create a receipt and RESTOCK movements. Use Count Check for physical corrections.</p></div>
+    <div className="product-section-intro"><h2>Restock</h2><p>Record purchased stock.</p><small>For physical corrections, use Count Check.</small></div>
     {failure && <InventoryFeedback kind="error">{failure}</InventoryFeedback>}
     {recovery.recoveryError && <InventoryFeedback kind="error">{recovery.recoveryError}</InventoryFeedback>}
     {recovery.feedback && <InventoryFeedback kind={recovery.feedback.kind}>{recovery.feedback.message}</InventoryFeedback>}

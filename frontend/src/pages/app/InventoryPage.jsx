@@ -9,6 +9,7 @@ import { useDirtyState, confirmDiscardChanges } from '../../app/dirty-state.js'
 import { supabase } from '../../lib/supabase.js'
 import '../../features/inventory/receiving.css'
 import '../../features/products/product-workspace.css'
+import '../../features/inventory/entry-polish.css'
 
 // Preserve existing bookmarks. Existing-product receiving now belongs to Products.
 export function InventoryPage({ profile, navigate }) {
@@ -52,8 +53,8 @@ function ProductEntry({ profile, navigate }) {
     if (!confirmDiscardChanges()) return
     clearDirty(); setDefinition(null); setEditingDefinition(false); setSuccess(null); setError(''); setAttempt(value => value + 1)
   }
-  return <section className="business-page inventory-page entry-page">
-    <header className="inventory-page-header"><div className="inventory-header-copy"><span className="eyebrow">New product</span><h1>Product Entry</h1><p>{owner ? 'Add a new product. Receive its first delivery now, or save with zero stock.' : 'Add a new product definition with zero stock. An owner handles pricing and receiving.'}</p></div><button type="button" className="secondary-action" onClick={() => { if (confirmDiscardChanges()) navigate('/app/products') }}>View products</button></header>
+  return <section className="business-page inventory-page entry-page entry-polish">
+    <header className="inventory-page-header"><div className="inventory-header-copy"><span className="eyebrow">New product</span><h1>Product Entry</h1><p>{owner ? 'Create a new product for your catalog. Add first stock now or save with zero stock.' : 'Create a new product with zero stock. An owner handles pricing and receiving.'}</p></div><button type="button" className="text-button entry-view-products" aria-label="View products" onClick={() => { if (confirmDiscardChanges()) navigate('/app/products') }}>View Products <span aria-hidden="true">↗</span></button></header>
     {recovery.recoveryError && <InventoryFeedback kind="error">{recovery.recoveryError}</InventoryFeedback>}
     {recovery.pending.map(record => record.path === '/api/inventory/product-setups'
       ? <ReceiptRecoveryBanner key={record.operationId} record={record} profile={profile} products={[]} retrying={recovery.retrying} onRetry={recovery.retry} onCheck={recovery.checkOriginal} onHistory={() => navigate('/app/products')} />

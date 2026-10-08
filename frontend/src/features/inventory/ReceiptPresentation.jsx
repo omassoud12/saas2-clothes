@@ -9,8 +9,8 @@ export function InventoryFeedback({ kind = 'info', children }) {
 }
 
 export function ReceiptSteps({ owner, newProduct, current = 0 }) {
-  const labels = owner ? newProduct ? ['Product', 'Quantities & cost', 'Review'] : ['Quantities & cost', 'Review'] : ['Product details', 'Product review']
-  return <ol className="receipt-steps" aria-label="Workflow progress">{labels.map((label, index) => <li key={label} className={index === current ? 'is-current' : index < current ? 'is-complete' : ''} aria-current={index === current ? 'step' : undefined}><span aria-hidden="true">{index < current ? '✓' : index + 1}</span>{label}</li>)}</ol>
+  const labels = owner ? newProduct ? ['Product', 'Quantities & Cost', 'Review'] : ['Quantities & cost', 'Review'] : ['Product details', 'Product review']
+  return <ol className="receipt-steps" aria-label="Workflow progress">{labels.map((label, index) => <li key={label} className={index === current ? 'is-current' : index < current ? 'is-complete' : ''} aria-label={`Step ${index + 1}: ${label}, ${index === current ? 'current' : index < current ? 'completed' : 'upcoming'}`} aria-current={index === current ? 'step' : undefined}><span aria-hidden="true">{index < current ? '✓' : index + 1}</span>{label}</li>)}</ol>
 }
 
 export function ReceiptReview({ review, name, variants, currency }) {

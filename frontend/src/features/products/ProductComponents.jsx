@@ -7,7 +7,7 @@ export function ProductImage({ url, name, revision = 0, status }) {
   const [failed, setFailed] = useState(false)
   return <span className="product-image-frame">{url && !failed
     ? <img key={`${url}-${revision}`} src={url} alt={name} onError={() => setFailed(true)} />
-    : <span className="product-image-placeholder" aria-label={failed || status === 'unavailable' ? 'Photo unavailable' : 'No product image'}><span aria-hidden="true">&#9671;</span><small>{failed || status === 'unavailable' ? 'Photo unavailable' : 'No image'}</small></span>}
+    : <span className="product-image-placeholder" aria-label={failed || status === 'unavailable' ? 'Photo unavailable' : 'No product image'}><svg aria-hidden="true" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 32 32"><path d="m10 5-7 5 4 7 3-2v13h12V15l3 2 4-7-7-5-3 3h-6l-3-3Z" /></svg><small>{failed || status === 'unavailable' ? 'Photo unavailable' : 'No image'}</small></span>}
   </span>
 }
 
@@ -51,6 +51,6 @@ export function ProductCatalogCard({ product, currency, select, listVersion, ima
     <span className="product-row-price"><span className="product-cell-label">Selling price</span>{summary.price}</span>
     <span className={`product-status ${product.isActive ? '' : 'is-inactive'}`}>{product.isActive ? 'Active' : 'Inactive'}</span>
     <span className="sr-only" id={`product-summary-${product.id}`}>{product.category.name}. {optionCount} variants. {summary.stock} units in stock. {summary.price}. {product.isActive ? 'Active' : 'Inactive'}.</span>
-    <span className="product-row-open"><button type="button" className="text-button product-card-open" onClick={select} aria-label={`View product: ${product.name}`} aria-describedby={`product-summary-${product.id}`}>View product</button></span>
+    <span className="product-row-open"><button type="button" className="text-button product-card-open" onClick={select} aria-label={`View product: ${product.name}`} aria-describedby={`product-summary-${product.id}`}>View Product <span aria-hidden="true">↗</span></button></span>
   </div>
 }

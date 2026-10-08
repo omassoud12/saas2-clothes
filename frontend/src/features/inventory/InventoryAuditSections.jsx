@@ -5,6 +5,7 @@ import {
 } from './inventory-audit-flow.js'
 import { supabase } from '../../lib/supabase.js'
 import { formatMoney } from '../../lib/money.js'
+import { ProductLoading } from '../products/ProductLoading.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -75,15 +76,15 @@ export function InventoryHistory({ active, role, currency, products, productId, 
   }
 
   return <section className="product-panel inventory-audit-section" aria-labelledby="history-heading">
-    <div className="product-section-heading"><div><span className="eyebrow">Audit trail</span><h2 id="history-heading">Movement history</h2></div><button type="button" className="secondary-action" onClick={refresh}>Refresh</button></div>
-    <p className="product-muted">Signed quantities show what each movement added or removed. Incoming quantities use +; outgoing quantities use -. This history is read-only.</p>
+    <div className="product-section-heading"><div><span className="eyebrow">Audit trail</span><h2 id="history-heading">Movement history</h2></div><button type="button" className="text-button" onClick={refresh}>Refresh</button></div>
+    <p className="product-muted">Read-only stock events. + means incoming; − means outgoing.</p>
     <form className="inventory-audit-filters" onSubmit={apply}><ProductVariantFilters products={products} draft={draft} setDraft={setDraft} productId={productId} />
       <div><label htmlFor="history-type">Movement type</label><select id="history-type" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}><option value="">All types</option>{Object.entries(MOVEMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
       <div><label htmlFor="history-from">From</label><input id="history-from" type="datetime-local" step="1" value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} /></div>
       <div><label htmlFor="history-to">To</label><input id="history-to" type="datetime-local" step="1" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} /></div>
       <button type="submit">Apply filters</button></form>
     <p className="product-muted">Date and time inputs use your local timezone.</p>
-    {state.kind === 'loading' && <p role="status">Loading movement history...</p>}
+    {state.kind === 'loading' && <ProductLoading label="Loading movement history..." />}
     {state.kind === 'error' && <div><p role="alert" className="error-message">{state.message}</p><button type="button" onClick={refresh}>Try again</button></div>}
     {state.kind === 'ready' && <>{state.movements.length === 0 ? <p className="product-muted">No movements match these filters yet.</p> : <div className="inventory-audit-list">{state.movements.map((movement) => <article className="inventory-audit-card" key={movement.id}>
       <div className="inventory-audit-card-heading"><strong>{MOVEMENT_LABELS[movement.type] ?? movement.type}</strong><strong className={movement.quantityChange < 0 ? 'inventory-negative' : 'inventory-positive'}>{signedQuantity(movement.quantityChange)}</strong></div>
@@ -144,7 +145,7 @@ export function InventoryReconciliation({ active, products, productId, refreshVe
     <p className="product-muted">Compares current stock with the sum of recorded movements. Discrepancies are shown, never changed automatically.</p>
     <form className="inventory-audit-filters" onSubmit={(event) => { event.preventDefault(); generation.current += 1; setState({ kind: 'loading' }); setFilters({ productId: draft.productId, variantId: draft.variantId, status: draft.status }) }}><ProductVariantFilters products={products} draft={draft} setDraft={setDraft} productId={productId} />
       <div><label htmlFor="reconciliation-status">Status</label><select id="reconciliation-status" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="">All statuses</option><option value="RECONCILED">Reconciled</option><option value="MISMATCH">Mismatch</option></select></div><button type="submit">Apply filters</button></form>
-    {state.kind === 'loading' && <p role="status">Checking stock...</p>}
+    {state.kind === 'loading' && <ProductLoading label="Checking stock..." />}
     {state.kind === 'error' && <div><p role="alert" className="error-message">{state.message}</p><button type="button" onClick={refresh}>Try again</button></div>}
     {state.kind === 'ready' && <><p className="product-muted">Shown results: {summary.reconciled} reconciled · {summary.mismatched} mismatched{state.nextCursor ? ' (more results available)' : ''}.</p>
       {state.variants.length === 0 ? <p className="product-muted">No variants match these filters.</p> : <div className="inventory-audit-list">{state.variants.map((row) => <article className={`inventory-audit-card ${row.status === 'MISMATCH' ? 'inventory-mismatch' : ''}`} key={row.variant.id}>

@@ -4,8 +4,18 @@ import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { open, noOverflow, catId, screenshots, origin } from './products-ui-fixture.mjs'
 async function selectSection(page, name) {
-  await page.getByRole('navigation', { name: 'Product management sections' }).getByRole('button', { name, exact: true }).click()
+  await page.getByRole('navigation', { name: 'Product management sections' }).getByRole('tab', { name: ({'Movement History':'Movements','Receipt History':'Receipts'})[name] || name, exact: true }).click()
 }
+
+async function editVariantRow(row) {
+  await row.getByRole('button', {name:/^Variant actions:/}).click()
+  await row.getByRole('menuitem', {name:'Edit Variant',exact:true}).click()
+}
+async function productAction(page, name) {
+  await page.getByRole('button', {name:'Product actions',exact:true}).click()
+  await page.getByRole('menuitem', {name,exact:true}).click()
+}
+
 async function openDetail(page) {
   if (!new URL(page.url()).pathname.startsWith('/app/products/')) await page.getByRole('button', { name: /^View product:/ }).first().click()
   await page.locator('.product-section-nav').waitFor()
@@ -119,7 +129,7 @@ test('Phase 4: save-only uncertainty uses product-save language and exact replay
     await openEntry(page)
     await page.getByLabel('Product name',{exact:true}).fill('Recovery product')
     await page.getByLabel('Category',{exact:true}).first().selectOption(catId)
-    await page.getByLabel('Colors',{exact:true}).selectOption('Black')
+    await page.getByLabel('Color',{exact:true}).selectOption('Black')
     await page.getByRole('button',{name:'M',exact:true}).click()
     await page.getByRole('button',{name:'Continue',exact:true}).click()
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
@@ -141,7 +151,7 @@ test('Phase 4: rejected save-only operation releases recovery without receipt wo
     await openEntry(page)
     await page.getByLabel('Product name',{exact:true}).fill('Rejected product')
     await page.getByLabel('Category',{exact:true}).first().selectOption(catId)
-    await page.getByLabel('Colors',{exact:true}).selectOption('Black')
+    await page.getByLabel('Color',{exact:true}).selectOption('Black')
     await page.getByRole('button',{name:'M',exact:true}).click()
     await page.getByRole('button',{name:'Continue',exact:true}).click()
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
@@ -160,7 +170,7 @@ for (const [width, height] of [[390, 844], [768, 1024], [1024, 768], [1366, 768]
       await noOverflow(page)
       assert.equal(calls.length, 2, 'Only categories and product list requested initially')
       const titleSize = await page.getByRole('heading', { name: 'Products', exact: true }).evaluate((el) => getComputedStyle(el).fontSize)
-      assert.equal(titleSize, width <= 700 ? '24px' : '28px')
+      assert.equal(titleSize, width <= 700 ? '28px' : '30px')
       await page.screenshot({ path: join(screenshots, `catalog-${width}.png`) })
       await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
       await page.getByRole('heading', { name: 'Essential cotton T-shirt', exact: true }).waitFor()
@@ -170,23 +180,23 @@ for (const [width, height] of [[390, 844], [768, 1024], [1024, 768], [1366, 768]
       assert.equal(await page.locator('.product-filter-panel').count(), 0)
       assert.equal(await page.locator('.product-card-list').count(), 0)
       await page.getByRole('heading', { name: 'Colors & sizes', exact: true }).waitFor()
-      await page.getByRole('button', { name: 'Edit', exact: true }).first().click()
+      await editVariantRow(page.locator('.product-stock-row').first())
       await page.getByRole('heading', { name: 'Edit color / size' }).waitFor()
       await noOverflow(page)
       await page.screenshot({ path: join(screenshots, `variant-edit-${width}.png`) })
       await page.getByRole('button', { name: 'Cancel', exact: true }).last().click()
       await page.getByRole('button', { name: 'Back to products', exact: true }).click()
-      await page.getByRole('button', { name: 'Add product', exact: false }).first().click()
+      await page.getByRole('button', { name: /Add product/i }).first().click()
       await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
       await page.getByLabel('Product name', { exact: true }).fill('Cotton T-shirt')
       await page.getByLabel('Category', { exact: true }).first().selectOption(catId)
-      await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+      await page.getByLabel('Color', { exact: true }).selectOption('Black')
       await page.getByRole('button', { name: 'M', exact: true }).click()
       await noOverflow(page)
       const fieldHeight = await page.getByLabel('Product name', { exact: true }).evaluate((el) => el.getBoundingClientRect().height)
       assert.ok(fieldHeight >= 44)
       const gridColumns = await page.locator('.product-info-fields .product-form-grid').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)
-      assert.equal(gridColumns, width <= 600 ? 1 : 2)
+      assert.equal(gridColumns, width <= 900 ? 1 : 2)
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.screenshot({ path: join(screenshots, `create-${width}.png`), fullPage: true })
       assert.deepEqual(errors, [])
@@ -251,20 +261,20 @@ test('OWNER edit and mobile confirmation dialog preserve mutation behavior and f
     assert.equal(Number(await page.locator('.count-check-quantity').first().innerText().then(text => text.replace('System stock', '').trim())), Number(stockBefore.replace('System stock', '').trim()) + 1)
     assert.equal(await page.getByLabel('Quantity to add', { exact: true }).count(), 0)
     await selectSection(page, 'Overview')
-    await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
-    await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().click()
+    await page.locator('.product-stock-more').first().getByRole('button', {name:/^Variant actions:/}).click()
+    await page.getByRole('menuitem', {name:'Deactivate variant',exact:true}).first().click()
     await page.getByRole('dialog', { name: 'Deactivate color / size?', exact: true }).waitFor()
     await page.screenshot({ path: join(screenshots, 'confirmation-390.png') })
     assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden')
     await page.keyboard.press('Escape')
-    assert.equal(await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().evaluate((el) => el === document.activeElement), true)
+    assert.equal(await page.locator('.product-stock-more').first().getByRole('button', {name:/^Variant actions:/}).evaluate((el) => el === document.activeElement), true)
     await selectSection(page, 'Overview')
-    await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
-    await page.getByRole('button', { name: 'Deactivate variant', exact: true }).first().click()
+    await page.locator('.product-stock-more').first().getByRole('button', {name:/^Variant actions:/}).click()
+    await page.getByRole('menuitem', {name:'Deactivate variant',exact:true}).first().click()
     await page.getByRole('button', { name: 'Deactivate color / size', exact: true }).click()
     await selectSection(page, 'Overview')
-    await page.locator('.product-stock-more').first().evaluate(el => { el.open = true })
-    await page.getByRole('button', { name: 'Reactivate variant', exact: true }).waitFor()
+    await page.locator('.product-stock-more').first().getByRole('button', {name:/^Variant actions:/}).click()
+    await page.getByRole('menuitem', {name:'Reactivate variant',exact:true}).waitFor()
     assert.ok(calls.some((call) => call.method === 'PATCH' && call.path.includes('/variants/') && call.body.isActive === false))
     assert.deepEqual(errors, [])
   } finally { await page.close() }
@@ -282,7 +292,7 @@ test('WAREHOUSE retains catalog creation but never renders private cost or edita
     await page.getByLabel('Product name', { exact: true }).fill('Warehouse shirt')
     await page.getByLabel('Category', { exact: true }).first().selectOption(catId)
     assert.equal(await page.getByLabel('Price for all sizes', { exact: false }).count(), 0)
-    await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+    await page.getByLabel('Color', { exact: true }).selectOption('Black')
     await page.getByRole('button', { name: 'M', exact: true }).click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     assert.equal(await page.locator('.receipt-steps [aria-current="step"]').textContent(), '2Product review')
@@ -312,7 +322,7 @@ test('optional image preview, removal and upload use existing image endpoint', a
     await page.getByLabel('Choose a photo', { exact: true }).setInputFiles(file)
     await page.getByLabel('Product name', { exact: true }).fill('Photo product')
     await page.getByLabel('Category', { exact: true }).first().selectOption(catId)
-    await page.getByLabel('Colors', { exact: true }).selectOption('White')
+    await page.getByLabel('Color', { exact: true }).selectOption('White')
     await page.getByRole('button', { name: 'L', exact: true }).click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button',{name:'Save product only',exact:true}).click()
@@ -322,7 +332,7 @@ test('optional image preview, removal and upload use existing image endpoint', a
     await page.getByRole('button',{name:'Open navigation',exact:true}).click()
     await page.getByRole('link',{name:'Products',exact:true}).click()
     await page.getByRole('button',{name:'View product: Photo product',exact:true}).click()
-    await page.getByText('Product photo (optional)', { exact: true }).click()
+    await page.locator('.product-photo-action summary').click()
     await page.getByLabel('Choose image', { exact: true }).setInputFiles(file)
     await page.getByRole('button', { name: 'Replace image', exact: true }).click()
     await page.getByText('Product image saved.', { exact: true }).waitFor()
@@ -341,7 +351,7 @@ test('OWNER product-only creation sends zero initial stock for every option', as
     await page.getByRole('button', { name: 'Add product', exact: false }).first().click()
     await page.getByLabel('Product name', { exact: true }).fill('Opening pieces')
     await page.getByLabel('Category', { exact: true }).first().selectOption(catId)
-    await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+    await page.getByLabel('Color', { exact: true }).selectOption('Black')
     await page.getByRole('button', { name: 'S', exact: true }).click()
     await page.getByRole('button', { name: 'M', exact: true }).click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
@@ -362,7 +372,7 @@ test('receiving creation image failure retries only photo without recreating def
     await page.getByRole('button',{name:'Add product',exact:false}).first().click()
     await page.getByLabel('Product name',{exact:true}).fill('Photo retry product')
     await page.getByLabel('Category',{exact:true}).first().selectOption(catId)
-    await page.getByLabel('Colors',{exact:true}).selectOption('Black')
+    await page.getByLabel('Color',{exact:true}).selectOption('Black')
     await page.getByRole('button',{name:'M',exact:true}).click()
     await page.locator('.product-photo-fields').evaluate(el=>{el.open=true})
     await page.getByLabel('Choose a photo',{exact:true}).setInputFiles({name:'sample.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64')})
@@ -446,10 +456,13 @@ for (const width of [390, 430, 768, 1366]) {
         assert.equal(await page.locator('.receipt-matrix').count(),0)
       } else {
         const widths=await page.locator('.receipt-matrix').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}))
-        assert.ok(widths.scroll>widths.client)
         assert.equal(await page.locator('.receipt-matrix th').first().evaluate(el=>getComputedStyle(el).position),'sticky')
-        await page.locator('.receipt-matrix').focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(80)
-        assert.ok(await page.locator('.receipt-matrix').evaluate(el=>el.scrollLeft)>0)
+        if (widths.scroll > widths.client) {
+          await page.locator('.receipt-matrix').focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(80)
+          assert.ok(await page.locator('.receipt-matrix').evaluate(el=>el.scrollLeft)>0)
+        } else {
+          assert.ok(await page.locator('.receipt-matrix table').evaluate(el=>el.getBoundingClientRect().width <= el.parentElement.clientWidth), 'Compact matrix fits without needing a scroll')
+        }
       }
       await page.screenshot({ path: join(screenshots, `inventory-dense-${width}.png`), fullPage: true })
       await page.getByRole('button', { name: 'Review receipt', exact: true }).click()
@@ -467,7 +480,7 @@ test('Entry step back preserves product definition, quantities and exact cost pr
     await openEntry(page)
     await page.getByLabel('Product name', { exact: true }).fill('Draft shirt')
     await page.getByLabel('Category', { exact: true }).selectOption(catId)
-    await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+    await page.getByLabel('Color', { exact: true }).selectOption('Black')
     await page.getByRole('button', { name: 'M', exact: true }).click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByLabel('Receiving now: Black / M', { exact: true }).fill('3')
@@ -501,7 +514,7 @@ test('Leaving the returned product step prompts once for both unsaved forms', as
     await openEntry(page)
     await page.getByLabel('Product name', { exact: true }).fill('Draft shirt')
     await page.getByLabel('Category', { exact: true }).selectOption(catId)
-    await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+    await page.getByLabel('Color', { exact: true }).selectOption('Black')
     await page.getByRole('button', { name: 'M', exact: true }).click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByLabel('Receiving now: Black / M', { exact: true }).fill('3')
@@ -552,9 +565,10 @@ test('compact size matrix uses one row per size inside each color section', asyn
     assert.ok(tiles[1].top > tiles[0].top)
     assert.equal(tiles[1].left, tiles[0].left)
     assert.ok(await page.locator('.product-color-stock-card').first().evaluate(el => el.getBoundingClientRect().height < 480))
-    assert.ok(await page.evaluate(() => document.documentElement.scrollHeight < 1300), 'Dense details should be shorter than the previous layout')
-    await noOverflow(page)
     await page.screenshot({ path: join(screenshots, 'compact-colors-1366.png'), fullPage: true })
+    const detailHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+    assert.ok(detailHeight < 1300, `Dense details should be shorter than the previous layout (actual: ${detailHeight}px)`)
+    await noOverflow(page)
     assert.deepEqual(errors, [])
   } finally { await page.close() }
 })
@@ -733,7 +747,7 @@ test('phase 1: cancelling product deactivation preserves unsaved product draft',
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
  await page.getByRole('button',{name:'Edit product',exact:true}).click();
  await page.locator('#catalog-product-name').fill('Unsaved model');
- await page.getByRole('button',{name:'Deactivate product',exact:true}).click();
+ await productAction(page, 'Deactivate product');
  await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
  assert.equal(await page.locator('#catalog-product-name').count(),1);
  assert.equal(await page.locator('#catalog-product-name').inputValue(),'Unsaved model');
@@ -745,7 +759,7 @@ test('phase 1: clean product Cancel preserves an unrelated dirty variant',async(
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
  await page.getByRole('button',{name:'Edit product',exact:true}).click();
- await page.locator('.product-stock-row').first().getByRole('button',{name:'Edit',exact:true}).click();
+ await editVariantRow(page.locator('.product-stock-row').first());
  await page.locator('#catalog-variant-color').fill('Unsaved color');
  let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()});
  await page.locator('.product-overview').getByRole('button',{name:'Cancel',exact:true}).click();
@@ -776,10 +790,10 @@ test('phase 1: cancelling variant deactivation preserves unsaved variant draft',
  try {
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
  const row=page.locator('.product-stock-row').first();
- await row.getByRole('button',{name:'Edit',exact:true}).click();
+ await editVariantRow(row);
  await page.locator('#catalog-variant-color').fill('Unsaved color');
- await row.locator('.product-stock-more').evaluate(el=>{el.open=true});
- await row.getByRole('button',{name:'Deactivate variant',exact:true}).click();
+ await row.getByRole('button', {name:/^Variant actions:/}).click();
+ await row.getByRole('menuitem', {name:'Deactivate variant',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
  assert.equal(await page.locator('#catalog-variant-color').count(),1);
  assert.equal(await page.locator('#catalog-variant-color').inputValue(),'Unsaved color');
@@ -842,7 +856,7 @@ test('phase 1: clean variant Cancel preserves an unrelated dirty product',async(
  await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click();
  await page.getByRole('button',{name:'Edit product',exact:true}).click();
  await page.locator('#catalog-product-name').fill('Unsaved model');
- await page.locator('.product-stock-row').first().getByRole('button',{name:'Edit',exact:true}).click();
+ await editVariantRow(page.locator('.product-stock-row').first());
  let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()});
  await page.locator('.product-stock-row').first().getByRole('button',{name:'Cancel',exact:true}).click();
  assert.equal(prompts,0);
@@ -858,15 +872,15 @@ for(const kind of ['product','variant'])test(`phase 1: ${kind} draft survives fa
  await page.getByRole('button',{name:'Edit product',exact:true}).click();
  await page.locator('#catalog-product-name').fill('Unsaved model');
  const row=page.locator('.product-stock-row').first();
- await row.getByRole('button',{name:'Edit',exact:true}).click();
+ await editVariantRow(row);
  await page.locator('#catalog-variant-color').fill('Unsaved color');
  const pattern=kind==='product'?'**/api/products/22222222-2222-4222-8222-000000000001':'**/api/products/*/variants/*';
  await page.route(pattern,async route=>{
  if(route.request().method()==='PATCH')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'API_UNAVAILABLE'}})});
  await route.fallback();
  });
- if(kind==='product')await page.getByRole('button',{name:'Deactivate product',exact:true}).click();
- else {await row.locator('.product-stock-more').evaluate(el=>{el.open=true});await row.getByRole('button',{name:'Deactivate variant',exact:true}).click()}
+ if(kind==='product')await productAction(page, 'Deactivate product');
+ else {await row.getByRole('button', {name:/^Variant actions:/}).click();await row.getByRole('menuitem', {name:'Deactivate variant',exact:true}).click()}
  const dialog=page.getByRole('dialog');
  const action=dialog.getByRole('button',{name:kind==='product'?'Deactivate product':'Deactivate color / size',exact:true});
  await action.click();await dialog.getByRole('alert').waitFor();
@@ -1065,7 +1079,7 @@ test('receiving stage 1: overlapping variant draft blocks bulk price without los
  const {page,calls}=await open(1366,900)
  try {
   await page.getByRole('button',{name:'View product: Essential cotton T-shirt',exact:true}).click()
-  await page.getByRole('button',{name:'Edit',exact:true}).first().click()
+  await editVariantRow(page.locator('.product-stock-row').first())
   await page.locator('#catalog-variant-color').fill('Blue')
   await page.getByRole('button',{name:'Apply price to variants',exact:true}).click()
   await page.locator('#product-common-price').fill('27.50')

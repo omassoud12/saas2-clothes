@@ -8,13 +8,13 @@ async function detail(page) {
   await page.getByRole('button', { name: 'View product: Essential cotton T-shirt', exact: true }).click()
   await page.getByRole('heading', { name: 'Essential cotton T-shirt', exact: true }).waitFor()
 }
-async function section(page, name) { await page.getByRole('navigation', { name: 'Product management sections' }).getByRole('button', { name, exact: true }).click() }
+async function section(page, name) { await page.getByRole('navigation', { name: 'Product management sections' }).getByRole('tab', { name: ({'Movement History':'Movements','Receipt History':'Receipts'})[name] || name, exact: true }).click() }
 async function entry(page, name = 'New shirt') {
   await page.getByRole('button', { name: /Add product/i }).first().click()
   await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
   await page.getByLabel('Product name', { exact: true }).fill(name)
   await page.getByLabel('Category', { exact: true }).selectOption(catId)
-  await page.getByLabel('Colors', { exact: true }).selectOption('Black')
+  await page.getByLabel('Color', { exact: true }).selectOption('Black')
   await page.getByRole('button', { name: 'M', exact: true }).click()
 }
 async function receive(page, quantity = '2') {
@@ -141,7 +141,7 @@ test('Warehouse retains zero-stock creation and operational reads without financ
   const { page, calls } = await open(390, 844, 'WAREHOUSE')
   try {
     await detail(page)
-    assert.equal(await page.getByRole('button', { name: 'Restock', exact: true }).count(), 0)
+    assert.equal(await page.getByRole('tab', { name: 'Restock', exact: true }).count(), 0)
     for (const name of ['Stock', 'Count Check', 'Receipt History', 'Movement History']) {
       await section(page, name)
       assert.equal(await page.getByText('Current purchase cost', { exact: true }).count(), 0)
