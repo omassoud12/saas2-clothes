@@ -17,6 +17,50 @@ async function define(page) {
 }
 const writes = calls => calls.filter(call => call.method !== 'GET')
 
+for (const [width, role] of [[390, 'OWNER'], [1280, 'WAREHOUSE']]) test(`All selects each color's sizes without replacing codes or duplicating options at ${width}px (${role})`, async () => {
+  const { page, calls } = await open(width, 900, role)
+  try {
+    await entry(page)
+    await page.getByLabel('Color', { exact: true }).selectOption('Cream')
+    await page.getByLabel('Color', { exact: true }).selectOption('Navy')
+    const cream = page.getByRole('group', { name: 'Cream', exact: true })
+    const navy = page.getByRole('group', { name: 'Navy', exact: true })
+    const all = cream.getByRole('button', { name: 'Select all sizes for Cream', exact: true })
+    await cream.getByRole('button', { name: 'M', exact: true }).click()
+    await cream.locator('.product-size-codes > summary').click()
+    await cream.getByText('Code & barcode for M', { exact: true }).click()
+    await cream.getByLabel('Product code (auto-filled)', { exact: true }).fill('CREAM-M')
+    await cream.getByLabel('Barcode', { exact: true }).fill('CREAM-M-BARCODE')
+    await cream.getByText('Custom size', { exact: true }).click()
+    await cream.getByLabel('Other size', { exact: true }).fill('38')
+    await cream.getByRole('button', { name: 'Add size', exact: true }).click()
+    await cream.getByRole('button', { name: '38', exact: true }).click()
+    await cream.getByRole('button', { name: 'M', exact: true }).click()
+    await all.focus(); await page.keyboard.press('Enter')
+    assert.equal(await cream.locator('.product-size-buttons button[aria-pressed=true]').count(), 9)
+    assert.equal(await navy.locator('.product-size-buttons button[aria-pressed=true]').count(), 0)
+    assert.equal(await all.isDisabled(), true)
+    await cream.getByText('Code & barcode for M', { exact: true }).click()
+    assert.equal(await cream.getByLabel('Product code (auto-filled)', { exact: true }).first().inputValue(), 'CREAM-M')
+    assert.equal(await cream.getByLabel('Barcode', { exact: true }).first().inputValue(), 'CREAM-M-BARCODE')
+    await cream.getByRole('button', { name: 'XS', exact: true }).click()
+    assert.equal(await all.isEnabled(), true)
+    await all.click()
+    assert.equal(await cream.locator('.product-size-row').count(), 9, 'Repeated selection does not duplicate sizes')
+    await navy.getByRole('button', { name: 'Select all sizes for Navy', exact: true }).click()
+    assert.equal(await navy.locator('.product-size-buttons button[aria-pressed=true]').count(), 8)
+    assert.equal(await cream.locator('.product-size-buttons button[aria-pressed=true]').count(), 9)
+    assert.ok(await all.evaluate(node => node.getBoundingClientRect().width >= 44 && node.getBoundingClientRect().height >= 44))
+    assert.equal(await all.evaluate(node => {
+      const title = node.closest('.product-color-heading').querySelector('strong').getBoundingClientRect(), button = node.getBoundingClientRect()
+      return title.top >= button.top && title.bottom <= button.bottom
+    }), true, 'All fits alongside the color heading on mobile')
+    await noOverflow(page)
+    await page.screenshot({ path: join(screenshots, `entry-all-sizes-${width}.png`), fullPage: true })
+    assert.equal(writes(calls).length, 0, 'Selecting sizes does not save or submit stock')
+  } finally { await page.close() }
+})
+
 for (const width of [390, 768, 1280, 1440]) test(`Entry header, centered workflow, consistent fields and actions fit ${width}px`, async () => {
   const { page, calls, errors } = await open(width, 900)
   try {
@@ -47,6 +91,9 @@ for (const width of [390, 768, 1280, 1440]) test(`Entry header, centered workflo
     await page.screenshot({ path: join(screenshots, `entry-polish-empty-${width}.png`), fullPage: true })
     await define(page)
     await page.getByLabel('Price for all sizes (USD)', { exact: true }).fill('15.00')
+    assert.equal(await page.getByLabel('Choose a photo', { exact: true }).isVisible(), true)
+    assert.equal(await page.locator('.product-photo-fields summary').count(), 0)
+    assert.equal(await page.locator('.product-photo-fields').evaluate(node => node.getBoundingClientRect().bottom <= document.querySelector('.product-color-fields').getBoundingClientRect().top), true, 'Photo is a visible field before variants')
     await page.getByRole('button', { name: 'Continue', exact: true }).scrollIntoViewIfNeeded()
     const footer = await page.locator('.product-create-footer').evaluate(node => {
       const rect = node.getBoundingClientRect()

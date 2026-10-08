@@ -80,6 +80,12 @@ for (const role of ['OWNER', 'WAREHOUSE']) test(`${role} can logout from the mob
   const { page, calls } = await open('store', 390, role)
   try {
     await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
+    const header = page.locator('.business-header')
+    assert.equal(await header.getByRole('button', { name: 'Logout', exact: true }).count(), 0)
+    assert.equal(await header.getByText('Current store', { exact: true }).count(), 0)
+    assert.equal(await header.getByText('Your boutique', { exact: true }).count(), 0)
+    assert.equal(await header.getByText('Sample store', { exact: true }).isVisible(), true)
+    assert.equal((await header.innerText()).trim(), 'Sample store', 'Mobile header shows only the store name')
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
     await page.locator('#business-sidebar').getByRole('button', { name: 'Logout', exact: true }).click()
     await page.waitForURL(`${origin}/login`)
@@ -87,12 +93,13 @@ for (const role of ['OWNER', 'WAREHOUSE']) test(`${role} can logout from the mob
   } finally { await page.close() }
 })
 
-test('Header logout remains available and two triggers share one pending operation', async () => {
+test('Header keeps the store identity and repeated sidebar logout starts only one operation', async () => {
   const { page, calls } = await open('store', 1440)
   try {
     await page.getByRole('heading', { name: 'Product Entry', exact: true }).waitFor()
+    assert.equal(await page.locator('.business-header').getByRole('button', { name: 'Logout', exact: true }).count(), 0)
     await page.evaluate(() => {
-      document.querySelector('.business-logout-button').click()
+      document.querySelector('.sidebar-logout-button').click()
       document.querySelector('.sidebar-logout-button').click()
     })
     await page.waitForURL(`${origin}/login`)

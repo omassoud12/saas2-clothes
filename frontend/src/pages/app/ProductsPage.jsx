@@ -14,6 +14,7 @@ import { readStockRecovery, persistStockOperation, resolveStockOperation, migrat
 import { useDirtyState, confirmDiscardChanges } from '../../app/dirty-state.js'
 import '../../features/products/products.css'
 import '../../features/products/product-polish.css'
+import '../../features/products/product-catalog.css'
 import { useEffect, useRef, useState } from 'react'
 import { loadCategories } from '../../features/categories/category-flow.js'
 import { CatalogConfirmation } from '../../features/products/CatalogConfirmation.jsx'
@@ -389,7 +390,7 @@ export function ProductsPage({ profile, navigate, productId }) {
     {recoveryError && <p role="alert" className="product-feedback error-message">{recoveryError}</p>}
     {pendingStock.length > 0 && section !== 'count' && <p className="product-feedback" role="status">A count correction is awaiting confirmation. <button type="button" className="text-button" onClick={() => selectSection('count')}>Open Count Check</button></p>}
     {feedback && <p id="products-feedback" className={`product-feedback ${feedback.kind}-message`} role={feedback.kind === 'error' ? 'alert' : 'status'}>{feedback.message}</p>}
-    <div className="product-catalog-layout">{!productId && <div className="product-list-column" ref={resultsPanel} tabIndex={-1} aria-label="Product catalog">
+    <div className="product-catalog-layout">{!productId && <div className="product-list-column product-catalog-list" ref={resultsPanel} tabIndex={-1} aria-label="Product catalog">
       <form className="product-filter-panel" onSubmit={(event) => { event.preventDefault(); applyFilters({ search: searchDraft.trim(), ...filterDraft, page: 1 }); setFiltersOpen(false) }}>
         <div className="product-search-row"><div><label htmlFor="product-search">Search</label><input id="product-search" type="search" maxLength={100} value={searchDraft} placeholder="Product name, SKU or barcode" onChange={(event) => setSearchDraft(event.target.value)} /></div><button ref={filterToggle} type="button" className="secondary-action product-filter-toggle" aria-expanded={filtersOpen} aria-controls="product-filter-options" onClick={() => setFiltersOpen((open) => !open)}>Filters</button></div>
         {filtersOpen && <button className="product-filter-backdrop" type="button" aria-label="Close filters" onClick={() => setFiltersOpen(false)} />}

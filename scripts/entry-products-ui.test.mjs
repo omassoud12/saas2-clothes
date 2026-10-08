@@ -218,7 +218,10 @@ test('Count correction requires confirmation, records delta only, retries its UU
 test('Restock uncertainty survives reload and replays the exact request without showing operation UUIDs', async () => {
   const { page, calls } = await open(768, 900, 'OWNER', 'receipt-uncertain')
   try {
+    // Recovery metadata renders before submission; wait for the mocked lost response.
+    const lostResponse = page.waitForEvent('requestfailed', { predicate: request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/inventory/receipts' })
     await detail(page); await section(page, 'Restock'); await receive(page)
+    await lostResponse
     await page.getByRole('button', { name: 'Retry original receiving request', exact: true }).waitFor()
     const original = writes(calls)[0]
     assert.equal(await page.getByText(original.operationId, { exact: false }).count(), 0)

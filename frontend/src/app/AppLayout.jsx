@@ -100,9 +100,7 @@ export function AppLayout({ pathname, navigate, profile }) {
       <div className="business-workspace">
         <AppHeader
           identity={identity}
-          loggingOut={loggingOut}
           mobileMenuOpen={mobileMenuOpen}
-          onLogout={handleLogout}
           onOpenMenu={() => setMobileMenuOpen(true)}
         />
         <main className="business-content">

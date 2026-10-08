@@ -106,6 +106,8 @@
 .products-page .product-create-option { padding: 16px; border-radius: var(--radius-sm); border-color: var(--color-border); background: var(--color-surface); }
 .products-page .product-color-heading { align-items: center; gap: 12px; }
 .products-page .product-color-heading strong { font-size: 13px; font-weight: 500; }
+.product-color-heading > .product-color-heading-actions { display: flex; width: auto; align-items: center; flex-wrap: wrap; gap: 8px; }
+.product-create-form .product-color-heading .product-color-heading-actions button.text-button { min-width: 44px; min-height: 44px; }
 .products-page .product-size-picker { margin: 8px 0; }
 .products-page .product-size-picker p { margin: 0 0 8px; font-size: 13px; }
 .products-page .product-size-buttons { gap: 8px; }

@@ -8,9 +8,7 @@ function MenuIcon() {
 
 export function AppHeader({
   identity,
-  loggingOut,
   mobileMenuOpen,
-  onLogout,
   onOpenMenu,
 }) {
   return (
@@ -26,9 +24,8 @@ export function AppHeader({
         >
           <MenuIcon />
         </button>
-        <div>
-          <span>Current store</span>
-          <strong>{identity.storeName}</strong>
+        <div className="business-store-identity">
+          <strong className="business-store-name" title={identity.storeName}><bdi>{identity.storeName}</bdi></strong>
         </div>
       </div>
 
@@ -37,14 +34,6 @@ export function AppHeader({
           <strong>{identity.userName}</strong>
           <span>{identity.role}</span>
         </div>
-        <button
-          className="business-logout-button"
-          type="button"
-          onClick={onLogout}
-          disabled={loggingOut}
-        >
-          {loggingOut ? 'Signing out...' : 'Logout'}
-        </button>
       </div>
     </header>
   )

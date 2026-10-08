@@ -44,13 +44,13 @@ export function ProductCatalogCard({ product, currency, select, listVersion, ima
   const summary = aggregate ? {stock:aggregate.availableStock,inactiveStock:aggregate.inactiveStock,price:aggregate.priceMin===null?'Price unavailable':aggregate.priceMin===aggregate.priceMax?formatMoney(aggregate.priceMin,currency):`${formatMoney(aggregate.priceMin,currency)} - ${formatMoney(aggregate.priceMax,currency)}`} : summarizeProductCatalog(product, currency)
   const optionCount = aggregate ? aggregate.activeVariantCount + aggregate.inactiveVariantCount : product.variants.length
   return <div className="product-card">
-    <span className="product-row-identity"><ProductImage key={`${product.imageUrl || product.id}-${listVersion}`} url={product.imageUrl} status={product.imageStatus} name={product.name} revision={imageRevision} /><strong>{product.name}</strong></span>
+    <span className="product-row-identity"><ProductImage key={`${product.imageUrl || product.id}-${listVersion}`} url={product.imageUrl} status={product.imageStatus} name="" revision={imageRevision} /><span className="product-row-copy"><strong title={product.name}>{product.name}</strong><span className="product-row-inline-category" title={product.category.name}>{product.category.name}</span></span></span>
     <span className="product-row-category"><span className="product-cell-label">Category</span>{product.category.name}</span>
-    <span className="product-row-count"><span className="product-cell-label">Variants</span>{optionCount}</span>
-    <span className="product-row-stock"><span className="product-cell-label">Stock</span>{summary.stock} <small>available</small>{summary.inactiveStock !== '0' && <small>{summary.inactiveStock} inactive</small>}</span>
+    <span className="product-row-metadata"><span className="product-row-count"><span className="product-cell-label">Variants</span>{optionCount}<small className="product-row-count-suffix"> variants</small></span>
+      <span className={`product-row-stock ${summary.stock === '0' ? 'is-empty' : ''}`}><span className="product-cell-label">Stock</span>{summary.stock === '0' ? <span>Out of stock</span> : <span>{summary.stock} <small>available</small></span>}{summary.inactiveStock !== '0' && <small className="product-row-inactive-stock">{summary.inactiveStock} inactive</small>}</span></span>
     <span className="product-row-price"><span className="product-cell-label">Selling price</span>{summary.price}</span>
     <span className={`product-status ${product.isActive ? '' : 'is-inactive'}`}>{product.isActive ? 'Active' : 'Inactive'}</span>
     <span className="sr-only" id={`product-summary-${product.id}`}>{product.category.name}. {optionCount} variants. {summary.stock} units in stock. {summary.price}. {product.isActive ? 'Active' : 'Inactive'}.</span>
-    <span className="product-row-open"><button type="button" className="text-button product-card-open" onClick={select} aria-label={`View product: ${product.name}`} aria-describedby={`product-summary-${product.id}`}>View Product <span aria-hidden="true">↗</span></button></span>
+    <span className="product-row-open"><button type="button" className="text-button product-card-open" onClick={select} aria-label={`View product: ${product.name}`} aria-describedby={`product-summary-${product.id}`}>View <span aria-hidden="true">→</span></button></span>
   </div>
 }
