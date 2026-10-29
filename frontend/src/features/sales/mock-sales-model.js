@@ -1,10 +1,13 @@
+import { formatMoney, minorUnitsToDecimal } from '../../lib/money.js'
+
 export const UNCATEGORIZED_ID = 'uncategorized'
 
 export const discountOptions = Object.freeze([0, 5, 10, 20])
 
+// Same money format as the rest of the app (lib/money.js), e.g. "45.00 USD".
 export function money(cents, currency = 'USD') {
-  if (!Number.isSafeInteger(cents)) return 'Price missing'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100)
+  if (!Number.isSafeInteger(cents) || cents < 0) return 'Price missing'
+  return formatMoney(minorUnitsToDecimal(BigInt(cents)), currency)
 }
 
 export function variantKey(productId, colorId, size, variantId = '') {
@@ -23,10 +26,15 @@ export function reservedUnits(cart, productId, colorId, size, variantId = '') {
   return cart.find(line => line.key === variantKey(productId, colorId, size, variantId))?.quantity ?? 0
 }
 
+// The discount is applied to each unit price (rounded half up to the cent) because that is the price the Sale records.
+export function discountedUnitCents(unitCents, discountPercent = 0) {
+  return Math.floor((unitCents * (100 - discountPercent) + 50) / 100)
+}
+
 export function cartTotals(cart, discountPercent = 0) {
   const subtotalCents = cart.reduce((total, line) => total + line.priceCents * line.quantity, 0)
-  const discountCents = Math.round(subtotalCents * discountPercent / 100)
-  return Object.freeze({ subtotalCents, discountCents, totalCents: subtotalCents - discountCents })
+  const totalCents = cart.reduce((total, line) => total + discountedUnitCents(line.priceCents, discountPercent) * line.quantity, 0)
+  return Object.freeze({ subtotalCents, discountCents: subtotalCents - totalCents, totalCents })
 }
 
 export function addCartSelection(cart, product, color, size, quantity) {
@@ -92,24 +100,10 @@ export function deleteMockCategory(state, categoryId) {
   }
 }
 
-export function completeMockSale(state, cart, discountPercent, paymentMethod, now = new Date()) {
-  if (!cart.length) return { ok: false, message: 'The cart is empty. Add a product before completing the sale.' }
-  for (const line of cart) {
-    const product = state.products.find(row => row.id === line.productId)
-    const color = product?.colors.find(row => row.id === line.colorId)
-    const size = color?.sizes.find(row => line.variantId ? row.variantId === line.variantId : row.name === line.size)
-    if (!size || size.stock < line.quantity) return { ok: false,
-      message: `${line.productName} no longer has enough stock. Reduce its quantity and try again.` }
-  }
-  const products = state.products.map(product => ({ ...product, colors: product.colors.map(color => ({ ...color,
-    sizes: color.sizes.map(size => {
-      const line = cart.find(row => row.productId === product.id && row.colorId === color.id &&
-        (row.variantId ? row.variantId === size.variantId : row.size === size.name))
-      return line ? { ...size, stock: size.stock - line.quantity } : size
-    }),
+// Applies a confirmed sale to the loaded catalog right away; a fresh product fetch then confirms the real stock.
+export function decrementCatalogStock(products, lines) {
+  const sold = new Map(lines.map(line => [line.variantId, line.quantity]))
+  return products.map(product => ({ ...product, colors: product.colors.map(color => ({ ...color,
+    sizes: color.sizes.map(size => sold.has(size.variantId) ? { ...size, stock: Math.max(0, size.stock - sold.get(size.variantId)) } : size),
   })) }))
-  const totals = cartTotals(cart, discountPercent)
-  const receipt = { id: `receipt-${now.getTime()}`, number: String(state.receipts.length + 1).padStart(4, '0'),
-    itemCount: cartUnits(cart), paymentMethod, createdAt: now.toISOString(), ...totals }
-  return { ok: true, state: { ...state, products, receipts: [receipt, ...state.receipts] }, receipt }
 }

@@ -1,8 +1,20 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { createSeedSalesState, UNCATEGORIZED_ID } from './mock-sales-data.js'
-import { addCartSelection, cartTotals, completeMockSale, deleteMockCategory, productStock, reconcileMockCart, restoreMockCartLine, setMockCartQuantity } from './mock-sales-model.js'
+import { addCartSelection, cartTotals, decrementCatalogStock, deleteMockCategory, discountedUnitCents, money, productStock, reconcileMockCart, restoreMockCartLine, setMockCartQuantity } from './mock-sales-model.js'
 import { createMockSalesStorage } from './mock-sales-storage.js'
+import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, lineIssueText, prepareCheckout, receiptNumber, startOfLocalDayIso, summarizeSales, toSaleLines } from './pos-checkout.js'
+import { submitSale } from './sale-flow.js'
+
+const variant1 = '22222222-2222-4222-8222-222222222222'
+const variant2 = '44444444-4444-4444-8444-444444444444'
+const key1 = '33333333-3333-4333-8333-333333333333'
+const key2 = '55555555-5555-4555-8555-555555555555'
+
+function cartLine(overrides = {}) {
+  return { key: variant1, variantId: variant1, productId: 'p1', colorId: 'p1:0', productName: 'Linen shirt', colorName: 'Blue', size: 'M',
+    sku: 'LIN-M', priceCents: 2400, quantity: 2, stock: 5, ...overrides }
+}
 
 describe('local mock Sales model', () => {
   test('starts with eight products across the two default categories', () => {
@@ -26,19 +38,24 @@ describe('local mock Sales model', () => {
     assert.equal(setMockCartQuantity(second.cart, second.cart[0].key, 3)[0].quantity, 3)
   })
 
-  test('completes a discounted cash sale, decrements stock and creates a receipt', () => {
+  test('applies the discount to each unit price and keeps screen totals equal to the payload', () => {
     const state = createSeedSalesState()
     const product = state.products[0]
     const color = product.colors[0]
     const size = color.sizes[0]
     const cart = addCartSelection([], product, color, size, 2).cart
     assert.deepEqual(cartTotals(cart, 10), { subtotalCents: 4800, discountCents: 480, totalCents: 4320 })
-    const result = completeMockSale(state, cart, 10, 'Cash', new Date('2026-10-14T10:30:00Z'))
-    assert.equal(result.ok, true)
-    assert.equal(result.state.products[0].colors[0].sizes[0].stock, size.stock - 2)
-    assert.equal(result.receipt.totalCents, 4320)
-    assert.equal(result.receipt.paymentMethod, 'Cash')
-    assert.equal(state.products[0].colors[0].sizes[0].stock, size.stock, 'input stays immutable')
+    // Per-unit rounding: 3 x 19.95 with 5% off is 3 x 18.95, not 5.0% of the 59.85 sum.
+    const odd = [{ priceCents: 1995, quantity: 3 }]
+    assert.equal(discountedUnitCents(1995, 5), 1895)
+    assert.deepEqual(cartTotals(odd, 5), { subtotalCents: 5985, discountCents: 300, totalCents: 5685 })
+    assert.equal(discountedUnitCents(1, 20), 1, 'a discounted price never reaches zero')
+  })
+
+  test('money uses the same format as the rest of the app', () => {
+    assert.equal(money(4500, 'USD'), '45.00 USD')
+    assert.equal(money(5, 'USD'), '0.05 USD')
+    assert.equal(money(null, 'USD'), 'Price missing')
   })
 
   test('deleting a used category moves its products to Uncategorized', () => {
@@ -49,14 +66,11 @@ describe('local mock Sales model', () => {
     assert.ok(next.products.filter(product => topIds.includes(product.id)).every(product => product.categoryId === UNCATEGORIZED_ID))
   })
 
-  test('storage is isolated behind a replaceable adapter', () => {
-    const values = new Map()
-    const adapter = createMockSalesStorage({ getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) })
-    const state = createSeedSalesState()
-    state.receipts.push({ id: 'receipt-1' })
-    assert.equal(adapter.save(state), true)
-    assert.deepEqual(adapter.load(), { receipts: [{ id: 'receipt-1' }] })
-    assert.equal(adapter.load().products, undefined, 'catalog products never persist as local mock data')
+  test('storage is isolated behind a replaceable adapter and no longer keeps local receipts', () => {
+    const adapter = createMockSalesStorage({ getItem: () => null, setItem: () => {}, removeItem: () => {} })
+    assert.equal(adapter.load, undefined)
+    assert.equal(adapter.save, undefined)
+    assert.deepEqual(adapter.loadCart('scope'), [])
   })
 
   function memoryStorage() {
@@ -113,5 +127,138 @@ describe('local mock Sales model', () => {
     const removed = cart.filter(row => row.key !== first.key)
     assert.deepEqual(restoreMockCartLine(removed, first, 0).map(row => row.key), [first.key, second.key])
     assert.equal(restoreMockCartLine(cart, first, 0), cart, 'no duplicate when the line is already back')
+  })
+
+  test('a pending checkout record is stored per user and rejected when it was tampered with', () => {
+    const values = memoryStorage()
+    const adapter = createMockSalesStorage(values)
+    const operation = prepareCheckout({ cart: [cartLine()], role: 'OWNER', discountPercent: 10, uuidFactory: () => key1 })
+    const record = { ...operation.operation, summary: operation.summary }
+    assert.equal(adapter.saveCheckout('a:u', record), true)
+    assert.deepEqual(adapter.loadCheckout('a:u'), record)
+    assert.equal(adapter.loadCheckout('b:u'), null)
+    values.setItem('saas2.sales-checkout.v1:a:u', JSON.stringify({ ...record, payload: { items: [{ ...record.payload.items[0], quantity: 9 }] } }))
+    assert.equal(adapter.loadCheckout('a:u'), null, 'a payload that no longer matches its signature is ignored')
+    assert.equal(adapter.saveCheckout('a:u', null), true)
+    assert.equal(adapter.loadCheckout('a:u'), null)
+  })
+
+  test('maps the cart to the sale payload with the discount applied to each unit price', () => {
+    const cart = [cartLine({ priceCents: 1995, quantity: 3 }), cartLine({ key: variant2, variantId: variant2, priceCents: 5000, quantity: 1 })]
+    assert.deepEqual(toSaleLines(cart, 5), [
+      { variantId: variant1, quantity: 3, unitSoldPrice: '18.95' },
+      { variantId: variant2, quantity: 1, unitSoldPrice: '47.50' },
+    ])
+    const prepared = prepareCheckout({ cart, role: 'OWNER', discountPercent: 5, uuidFactory: () => key1 })
+    assert.equal(prepared.ok, true)
+    assert.deepEqual(prepared.operation.payload, { items: toSaleLines(cart, 5) })
+    assert.equal(prepared.summary.totalCents, cartTotals(cart, 5).totalCents, 'the sent total equals the screen total')
+    assert.equal(prepared.summary.listSubtotalCents, 10_985)
+  })
+
+  test('the screen total always equals the sent total for every discount and many prices', () => {
+    for (const percent of [0, 5, 10, 20]) {
+      for (const priceCents of [1, 99, 100, 1995, 2499, 99_999]) {
+        for (const quantity of [1, 2, 7]) {
+          const cart = [cartLine({ priceCents, quantity, stock: 10 })]
+          const prepared = prepareCheckout({ cart, role: 'OWNER', discountPercent: percent, uuidFactory: () => key1 })
+          assert.equal(prepared.ok, true, `${percent}% of ${priceCents} x ${quantity}`)
+        }
+      }
+    }
+  })
+
+  test('a WAREHOUSE user never sends a discount', () => {
+    const cart = [cartLine({ priceCents: 2400 })]
+    assert.equal(effectiveDiscount('WAREHOUSE', 20), 0)
+    const prepared = prepareCheckout({ cart, role: 'WAREHOUSE', discountPercent: 20, uuidFactory: () => key1 })
+    assert.equal(prepared.operation.payload.items[0].unitSoldPrice, '24.00')
+    assert.equal(prepared.summary.discountPercent, 0)
+  })
+
+  test('the Idempotency-Key is reused for the same cart and changes only when the cart changes', () => {
+    let calls = 0
+    const uuidFactory = () => (calls += 1) === 1 ? key1 : key2
+    const cart = [cartLine()]
+    const first = prepareCheckout({ cart, role: 'OWNER', discountPercent: 0, uuidFactory })
+    const again = prepareCheckout({ cart, role: 'OWNER', discountPercent: 0, current: first.operation, uuidFactory })
+    assert.equal(again.operation.key, key1)
+    const changed = prepareCheckout({ cart: [cartLine({ quantity: 3 })], role: 'OWNER', discountPercent: 0, current: first.operation, uuidFactory })
+    assert.equal(changed.operation.key, key2)
+    const discounted = prepareCheckout({ cart, role: 'OWNER', discountPercent: 10, current: first.operation, uuidFactory: () => key2 })
+    assert.equal(discounted.operation.key, key2, 'a different discount is a different sale')
+  })
+
+  test('rejects an invalid cart before anything is sent', () => {
+    assert.equal(prepareCheckout({ cart: [], role: 'OWNER', discountPercent: 0 }).ok, false)
+    assert.equal(prepareCheckout({ cart: [cartLine({ variantId: 'not-a-uuid' })], role: 'OWNER', discountPercent: 0 }).ok, false)
+    assert.equal(prepareCheckout({ cart: [cartLine({ priceCents: null })], role: 'OWNER', discountPercent: 0 }).ok, false)
+  })
+
+  test('a retry after a network failure sends the same Idempotency-Key and payload', async () => {
+    const seen = []
+    const supabase = { auth: { async getSession() { return { data: { session: { user: { id: 'user' }, access_token: 'synthetic-test-token' } } } } } }
+    const sale = { id: key2, status: 'COMPLETED', currency: 'USD', subtotal: '48.00', totalAmount: '43.20', createdAt: '2026-10-14T10:30:00.000Z', seller: { name: 'Owner', employeeCode: null }, items: [] }
+    const fetchImpl = async (input, init) => {
+      seen.push({ key: init.headers['Idempotency-Key'] ?? new Headers(init.headers).get('Idempotency-Key'), body: init.body })
+      if (seen.length === 1) throw new TypeError('network down')
+      return new Response(JSON.stringify({ sale, idempotentReplay: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    const prepared = prepareCheckout({ cart: [cartLine()], role: 'OWNER', discountPercent: 10, uuidFactory: () => key1 })
+    const first = await submitSale({ supabase, fetchImpl, operation: prepared.operation })
+    assert.equal(first.ok, false)
+    assert.equal(checkoutFailure(first).uncertain, true, 'a network failure must lock the cart for a safe retry')
+    const retry = await submitSale({ supabase, fetchImpl, operation: prepared.operation })
+    assert.equal(retry.ok, true)
+    assert.equal(retry.idempotentReplay, true)
+    assert.equal(seen[0].key, key1)
+    assert.equal(seen[1].key, key1)
+    assert.equal(seen[0].body, seen[1].body)
+    assert.deepEqual(JSON.parse(seen[0].body), { items: [{ variantId: variant1, quantity: 2, unitSoldPrice: '21.60' }] })
+  })
+
+  test('explains each backend failure in simple words', () => {
+    assert.equal(checkoutFailure({ ok: false, code: 'X', retryable: true, message: 'raw' }).uncertain, true)
+    assert.equal(checkoutFailure({ ok: false, code: 'INSUFFICIENT_STOCK', refreshCatalog: true, message: 'raw' }).refresh, 'stock')
+    assert.match(checkoutFailure({ ok: false, code: 'INSUFFICIENT_STOCK', message: 'raw' }).message, /Your cart was not changed/)
+    assert.equal(checkoutFailure({ ok: false, code: 'SALE_PRICE_CHANGED', refreshCatalog: true, message: 'raw' }).refresh, 'prices')
+    assert.equal(checkoutFailure({ ok: false, code: 'SALE_VARIANT_UNAVAILABLE', refreshCatalog: true, message: 'Gone' }).refresh, 'stock')
+    assert.equal(checkoutFailure({ ok: false, code: 'SESSION_REQUIRED', requiresLogin: true, message: 'Sign in' }).requiresLogin, true)
+    const validation = checkoutFailure({ ok: false, code: 'INVALID_SALE_PRICE', message: 'Every cart item needs a valid selling price.' })
+    assert.equal(validation.uncertain, false)
+    assert.equal(validation.message, 'Every cart item needs a valid selling price.')
+  })
+
+  test('shows which items are short after a stock failure without touching the quantities', () => {
+    const cart = [cartLine({ quantity: 3, stock: 5 }), cartLine({ key: variant2, variantId: variant2, productName: 'Wool coat', quantity: 1, stock: 4 })]
+    const live = [{ name: 'Linen shirt', priceCents: 2400, colors: [{ name: 'Blue', sizes: [{ variantId: variant1, name: 'M', stock: 2, priceCents: 2400 }, { variantId: variant2, name: 'M', stock: 0, priceCents: 2400 }] }] }]
+    const analysis = analyzeCart(cart, live)
+    assert.deepEqual(analysis.cart.map(line => [line.quantity, line.stock]), [[3, 2], [1, 0]])
+    assert.deepEqual(analysis.issues.map(issue => [issue.kind, issue.available]), [['short', 2], ['gone', 0]])
+    assert.match(lineIssueText(analysis.issues[0], 'USD'), /Only 2 left/)
+    assert.equal(hasBlockingIssue(analysis.cart), true)
+    assert.equal(analyzeCart(cart, [], {}).issues.every(issue => issue.kind === 'gone'), true)
+  })
+
+  test('refreshes prices only when asked (WAREHOUSE price mismatch)', () => {
+    const cart = [cartLine({ quantity: 1, stock: 5 })]
+    const live = [{ name: 'Linen shirt', priceCents: 2600, colors: [{ name: 'Blue', sizes: [{ variantId: variant1, name: 'M', stock: 5, priceCents: 2600 }] }] }]
+    assert.equal(analyzeCart(cart, live).cart[0].priceCents, 2400)
+    const refreshed = analyzeCart(cart, live, { prices: true })
+    assert.equal(refreshed.cart[0].priceCents, 2600)
+    assert.match(lineIssueText(refreshed.issues[0], 'USD'), /24\.00 USD to 26\.00 USD/)
+  })
+
+  test('applies a confirmed sale to the loaded stock and summarizes today from server sales', () => {
+    const product = { id: 'p1', colors: [{ sizes: [{ variantId: variant1, stock: 5 }, { variantId: variant2, stock: 1 }] }] }
+    const next = decrementCatalogStock([product], [{ variantId: variant1, quantity: 2 }, { variantId: variant2, quantity: 3 }])
+    assert.deepEqual(next[0].colors[0].sizes.map(size => size.stock), [3, 0])
+    assert.equal(product.colors[0].sizes[0].stock, 5, 'the input is not mutated')
+    const summary = summarizeSales([
+      { status: 'COMPLETED', totalAmount: '12.50' }, { status: 'COMPLETED', totalAmount: '25.00' }, { status: 'VOIDED', totalAmount: '99.00' },
+    ], 'USD')
+    assert.deepEqual(summary, { count: 2, total: '37.50 USD' })
+    assert.equal(receiptNumber('a1b2c3d4-0000-4000-8000-000000000000'), '#A1B2C3D4')
+    assert.match(startOfLocalDayIso(new Date(2026, 9, 14, 15, 30)), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/)
   })
 })

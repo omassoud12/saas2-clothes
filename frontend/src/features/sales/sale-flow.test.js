@@ -154,6 +154,12 @@ describe('Sales history frontend contract', () => {
     assert.equal(JSON.stringify(result).includes('unitCostAtSale'), false)
   })
 
+  test('can limit history to sales created since a given time', async () => {
+    let url
+    await loadSaleHistory({ supabase, limit: 100, from: '2026-10-14T00:00:00.000Z', fetchImpl: async (input) => { url = new URL(input, 'https://local.test'); return json(200, { sales: [], nextCursor: null }) } })
+    assert.equal(url.searchParams.get('from'), '2026-10-14T00:00:00.000Z')
+  })
+
   test('supports a smaller bounded history page for Dashboard reuse', async () => {
     let url
     await loadSaleHistory({ supabase, limit: 6, fetchImpl: async (input) => { url = new URL(input, 'https://local.test'); return json(200, { sales: [], nextCursor: null }) } })

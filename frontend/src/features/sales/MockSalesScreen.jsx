@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createCategory, deleteCategory as deleteRealCategory, renameCategory as renameRealCategory } from '../categories/category-flow.js'
-import { updateProduct } from '../products/product-flow.js'
-import { addCartSelection, cartTotals, cartUnits, completeMockSale, money, productStock, reconcileMockCart,
+import { getProduct, updateProduct } from '../products/product-flow.js'
+import { addCartSelection, cartTotals, cartUnits, decrementCatalogStock, money, productStock, reconcileMockCart,
   restoreMockCartLine, setMockCartQuantity, UNCATEGORIZED_ID } from './mock-sales-model.js'
+import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, prepareCheckout, startOfLocalDayIso, summarizeSales } from './pos-checkout.js'
+import { createCheckoutGuard, loadSaleHistory, submitSale } from './sale-flow.js'
 import { browserMockSalesStorage } from './mock-sales-storage.js'
 import { loadSalesCatalog, mapCatalogProduct, searchLoadedCatalogByVoice, voiceCatalogSelection } from './sales-catalog.js'
 import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
-import { CartSheet, CategoryManagerSheet, ProductCategorySheet, ProductPickerSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
+import { CartSheet, CategoryManagerSheet, ProductCategorySheet, ProductPickerSheet, SaleCompletedSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
 import './mock-sales.css'
 
 const SALES_VOICE_SEARCH_LANGUAGE = 'ar-LB'
+const RESTORED_CHECKOUT_MESSAGE = 'A sale was still being confirmed when this page closed. It may have gone through. Press Try again: it will not create a duplicate.'
+const IDLE_CHECKOUT = Object.freeze({ phase: 'idle', locked: false, message: '', issues: [] })
 
 function HistoryIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68M12 8v4l2.6 1.6" /></svg>
@@ -37,6 +41,28 @@ function productPrice(product, currency) {
     : money(product.priceCents, currency)
 }
 
+// Today's sales come from the server (the same sales the Dashboard and Reports count).
+async function fetchTodaySales(supabase) {
+  const from = startOfLocalDayIso()
+  const sales = []
+  let cursor = null
+  let truncated = false
+  for (let page = 0; page < 5; page += 1) {
+    const result = await loadSaleHistory({ supabase, limit: 100, cursor, from })
+    if (!result.ok) return { kind: 'error', message: result.message, requiresLogin: result.requiresLogin === true }
+    sales.push(...result.sales)
+    cursor = result.nextCursor
+    if (!cursor) break
+    truncated = page === 4
+  }
+  return { kind: 'ready', sales, truncated }
+}
+
+function applyTodaySales(setToday, result) {
+  if (result.requiresLogin) { window.location.replace('/login'); return }
+  setToday(current => result.kind === 'error' ? { ...current, kind: 'error', message: result.message } : result)
+}
+
 function ProductRow({ product, availableStock, currency, onOpen, onEdit }) {
   const low = availableStock > 0 && availableStock <= 5
   return <article className={`mock-pos-product${availableStock === 0 ? ' is-out' : ''}`}>
@@ -57,22 +83,27 @@ function ProductRow({ product, availableStock, currency, onOpen, onEdit }) {
   </article>
 }
 
-function sameLocalDay(iso, now = new Date()) {
-  const date = new Date(iso)
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate()
-}
-
 export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', storageScope = '' }) {
   const storage = useMemo(() => browserMockSalesStorage(), [])
-  const [salesState, setSalesState] = useState(() => ({ categories: [], products: [], receipts: storage.load().receipts }))
+  const [salesState, setSalesState] = useState({ categories: [], products: [] })
   const [catalog, setCatalog] = useState({ kind: 'loading', complete: true })
   const [catalogVersion, setCatalogVersion] = useState(0)
-  const [cart, setCart] = useState(() => storage.loadCart(storageScope))
+  const [initialCart] = useState(() => storage.loadCart(storageScope))
+  const [restoredCheckout] = useState(() => {
+    const record = storage.loadCheckout(storageScope)
+    return record && initialCart.length ? record : null
+  })
+  const [cart, setCart] = useState(initialCart)
   const [query, setQuery] = useState('')
   const [categoryId, setCategoryId] = useState('all')
   const [sheet, setSheet] = useState(null)
-  const [discount, setDiscount] = useState(0)
-  const [payment, setPayment] = useState('Cash')
+  const [discount, setDiscount] = useState(restoredCheckout?.summary.discountPercent ?? 0)
+  const [checkout, setCheckout] = useState(() => restoredCheckout ? { ...IDLE_CHECKOUT, locked: true, message: RESTORED_CHECKOUT_MESSAGE } : IDLE_CHECKOUT)
+  const [completed, setCompleted] = useState(null)
+  const [today, setToday] = useState({ kind: 'loading', sales: [], truncated: false })
+  const operationRef = useRef(restoredCheckout ? { operation: { key: restoredCheckout.key, payload: restoredCheckout.payload, signature: restoredCheckout.signature }, summary: restoredCheckout.summary } : null)
+  const checkoutGuard = useRef(createCheckoutGuard())
+  const submitting = useRef(false)
   const [toast, setToast] = useState('')
   const [undo, setUndo] = useState(null)
   const cartRef = useRef(cart)
@@ -83,7 +114,6 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
   const recognition = useRef(null)
   const voiceSearchRevision = useRef(0)
 
-  useEffect(() => { storage.save({ receipts: salesState.receipts }) }, [salesState.receipts, storage])
   useEffect(() => { storage.saveCart(storageScope, cart) }, [cart, storage, storageScope])
   useEffect(() => {
     const controller = new AbortController()
@@ -96,7 +126,8 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
         return
       }
       setSalesState(current => ({ ...current, categories: result.categories, products: result.products }))
-      const reconciled = reconcileMockCart(cartRef.current, result.products)
+      // A sale that may already be on the server keeps its cart untouched so its retry stays identical.
+      const reconciled = operationRef.current ? { changed: false } : reconcileMockCart(cartRef.current, result.products)
       if (reconciled.changed) { setCart(reconciled.cart); setToast('Your saved cart was updated to match current prices and stock.') }
       setCatalog({ kind: 'ready', complete: result.complete, total: result.total, refreshing: false })
     })
@@ -113,8 +144,9 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     return () => window.clearTimeout(timer)
   }, [undo])
 
-  const todayReceipts = salesState.receipts.filter(receipt => sameLocalDay(receipt.createdAt))
-  const todayTotal = todayReceipts.reduce((sum, receipt) => sum + receipt.totalCents, 0)
+  const todaySummary = today.kind === 'ready' ? summarizeSales(today.sales, currency) : null
+  const activeDiscount = effectiveDiscount(role, discount)
+  const busy = checkout.phase === 'submitting'
   const uncategorizedVisible = salesState.products.some(product => product.categoryId === UNCATEGORIZED_ID)
   const visibleCategories = uncategorizedVisible
     ? [...salesState.categories, { id: UNCATEGORIZED_ID, name: 'Uncategorized' }] : salesState.categories
@@ -133,7 +165,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     const matchesCategory = categoryId === 'all' || product.categoryId === categoryId
     return matchesSearch && matchesCategory
   })
-  const totals = cartTotals(cart, discount)
+  const totals = cartTotals(cart, activeDiscount)
 
   async function searchVoiceCatalog(transcript) {
     const revision = ++voiceSearchRevision.current
@@ -182,6 +214,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
   }
 
   function addToCart(product, color, size, quantity) {
+    if (busy || checkout.locked) return { ok: false, message: 'Finish or cancel the sale being confirmed before adding more items.' }
     const result = addCartSelection(cart, product, color, size, quantity)
     if (result.ok) { setCart(result.cart); setToast(`${product.name} added to cart.`) }
     return result
@@ -242,11 +275,90 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     setUndo({ message: 'Cart cleared.', restore: () => setCart(current => current.length ? current : previous) })
   }
 
-  function completeSale() {
-    const result = completeMockSale(salesState, cart, discount, payment)
-    if (!result.ok) { setToast(result.message); return }
-    setSalesState(result.state); setCart([]); setDiscount(0); setPayment('Cash'); setSheet(null); setUndo(null)
-    setToast(`Sale completed · ${money(result.receipt.totalCents, currency)}`)
+  function reloadToday() { void fetchTodaySales(supabase).then(result => applyTodaySales(setToday, result)) }
+
+  useEffect(() => {
+    let active = true
+    void fetchTodaySales(supabase).then(result => { if (active) applyTodaySales(setToday, result) })
+    return () => { active = false }
+  }, [supabase])
+
+  // Loads fresh stock and prices for only the products involved in a sale.
+  async function fetchFreshProducts(productIds) {
+    const results = await Promise.all(productIds.map(productId => getProduct({ supabase, productId })))
+    const fetched = new Set()
+    const products = []
+    const removed = []
+    results.forEach((result, index) => {
+      if (!result.ok) return
+      fetched.add(productIds[index])
+      if (result.product.isActive) products.push(mapCatalogProduct(result.product))
+      else removed.push(productIds[index])
+    })
+    setSalesState(current => ({ ...current,
+      products: current.products.filter(product => !removed.includes(product.id)).map(product => products.find(fresh => fresh.id === product.id) || product) }))
+    return { fetched, products, failed: fetched.size < productIds.length }
+  }
+
+  async function refreshCartFromServer(prices) {
+    const lines = cartRef.current
+    const fresh = await fetchFreshProducts([...new Set(lines.map(line => line.productId))])
+    const analysis = analyzeCart(lines.filter(line => fresh.fetched.has(line.productId)), fresh.products, { prices })
+    const updated = new Map(analysis.cart.map(line => [line.key, line]))
+    setCart(current => current.map(line => updated.get(line.key) || line))
+    setCheckout(current => ({ ...current, issues: analysis.issues,
+      message: fresh.failed ? `${current.message} Some stock could not be refreshed.` : current.message }))
+  }
+
+  function finishSale(result, summary, soldLines) {
+    storage.saveCheckout(storageScope, null)
+    operationRef.current = null
+    // A replayed sale is already counted in the stock that was loaded; a new one is applied now and confirmed by the refresh below.
+    if (!result.idempotentReplay) setSalesState(current => ({ ...current, products: decrementCatalogStock(current.products, soldLines) }))
+    setCart([]); setDiscount(0); setUndo(null); setToast('')
+    setCheckout(IDLE_CHECKOUT)
+    setCompleted({ sale: result.sale, summary, replay: result.idempotentReplay })
+    setSheet('receipt')
+    void fetchFreshProducts([...new Set(soldLines.map(line => line.productId))])
+    reloadToday()
+  }
+
+  async function completeSale() {
+    if (submitting.current) return
+    const retrying = checkout.locked && operationRef.current
+    const prepared = retrying
+      ? { ok: true, operation: operationRef.current.operation, summary: operationRef.current.summary }
+      : prepareCheckout({ cart, role, discountPercent: discount, current: operationRef.current?.operation ?? null })
+    if (!prepared.ok) { setCheckout(current => ({ ...current, message: prepared.message })); return }
+    operationRef.current = { operation: prepared.operation, summary: prepared.summary }
+    // Saved before sending: if the page closes mid-request, the same Idempotency-Key is reused.
+    storage.saveCheckout(storageScope, { ...prepared.operation, summary: prepared.summary })
+    const soldLines = cart
+    submitting.current = true
+    setCheckout(current => ({ ...current, phase: 'submitting', message: '', issues: [] }))
+    let result
+    try {
+      const guarded = await checkoutGuard.current.run(() => submitSale({ supabase, operation: prepared.operation }))
+      result = guarded.skipped ? null : guarded.value
+    } catch {
+      result = { ok: false, retryable: true, code: 'NETWORK_ERROR' }
+    } finally {
+      submitting.current = false
+    }
+    if (!result) return
+    if (result.ok) { finishSale(result, prepared.summary, soldLines); return }
+    const failure = checkoutFailure(result)
+    if (failure.uncertain) { setCheckout({ phase: 'idle', locked: true, message: failure.message, issues: [] }); return }
+    storage.saveCheckout(storageScope, null)
+    if (failure.requiresLogin) { window.location.replace('/login'); return }
+    setCheckout({ phase: 'idle', locked: false, message: failure.message, issues: [] })
+    if (failure.refresh) await refreshCartFromServer(failure.refresh === 'prices')
+  }
+
+  function discardCheckout() {
+    storage.saveCheckout(storageScope, null)
+    operationRef.current = null
+    setCheckout(IDLE_CHECKOUT)
   }
 
   const selectedProduct = sheet && typeof sheet === 'object'
@@ -258,8 +370,9 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
         <button type="button" className="mock-pos-history-button" onClick={() => setSheet('history')}><HistoryIcon /><span>Sales history</span></button>
       </header>
 
-      <section className="mock-pos-today" aria-label="Today's sales"><div><span>Sales today</span><strong>{money(todayTotal, currency)}</strong></div>
-        <div><span>Receipts</span><strong>{todayReceipts.length}</strong></div></section>
+      <section className={`mock-pos-today${role === 'OWNER' ? '' : ' is-single'}`} aria-label="Today's sales">
+        {role === 'OWNER' && <div><span>Sales today</span><strong>{todaySummary ? todaySummary.total : '—'}</strong></div>}
+        <div><span>Receipts</span><strong>{todaySummary ? todaySummary.count : '—'}</strong></div></section>
 
       <div className="mock-pos-search"><SearchIcon /><label className="sr-only" htmlFor="mock-pos-search">Search products</label>
         <input id="mock-pos-search" type="search" value={query} placeholder="Search products" onChange={event => {
@@ -294,10 +407,13 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       </button></footer>
     </div>
 
-    {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={discount} payment={payment} onDiscount={setDiscount} onPayment={setPayment}
+    {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={activeDiscount} canDiscount={role === 'OWNER'} onDiscount={setDiscount}
+      busy={busy} locked={checkout.locked} message={checkout.message} issues={checkout.issues} blocked={hasBlockingIssue(cart)}
       onQuantity={(key, quantity) => setCart(current => setMockCartQuantity(current, key, quantity))}
-      onRemove={removeCartLine} onClear={clearCart} onComplete={completeSale} onClose={() => setSheet(null)} />}
-    {sheet === 'history' && <SalesHistorySheet receipts={todayReceipts} currency={currency} onClose={() => setSheet(null)} />}
+      onRemove={removeCartLine} onClear={clearCart} onComplete={completeSale} onDiscard={discardCheckout}
+      onHistory={() => setSheet('history')} onClose={() => { if (!busy) setSheet(null) }} />}
+    {sheet === 'history' && <SalesHistorySheet state={today} role={role} currency={currency} onRetry={reloadToday} onClose={() => setSheet(null)} />}
+    {sheet === 'receipt' && completed && <SaleCompletedSheet completed={completed} onNewSale={() => { setSheet(null); setCompleted(null) }} />}
     {sheet === 'categories' && <CategoryManagerSheet categories={salesState.categories} products={salesState.products}
       onAdd={addCategory} onRename={renameCategory} onDelete={deleteCategory} onClose={() => setSheet(null)} />}
     {sheet?.type === 'product' && selectedProduct && <ProductPickerSheet key={selectedProduct.id} product={selectedProduct} cart={cart} currency={currency}

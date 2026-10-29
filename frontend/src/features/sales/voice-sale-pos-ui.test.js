@@ -12,6 +12,9 @@ let VoiceSaleDialog
 let VoiceControls
 let ReviewCard
 let SalesPage
+let CartSheet
+let SaleCompletedSheet
+let SalesHistorySheet
 
 before(async () => {
   const authFixture = { name: 'voice-pos-auth-fixture', enforce: 'pre',
@@ -25,6 +28,8 @@ before(async () => {
   VoiceControls = voiceModule.VoiceControls
   ReviewCard = voiceModule.ReviewCard
   SalesPage = (await vite.ssrLoadModule('/src/pages/app/SalesPage.jsx')).SalesPage
+  const sheets = await vite.ssrLoadModule('/src/features/sales/MockSalesSheets.jsx')
+  ;({ CartSheet, SaleCompletedSheet, SalesHistorySheet } = sheets)
 })
 after(async () => { await vite?.close() })
 
@@ -35,7 +40,10 @@ describe('production POS voice UI', () => {
         user: { id: 'user', role, isActive: true, name: 'Employee' },
         account: { id: 'account', status: 'ACTIVE', baseCurrency: 'USD', name: 'Store' },
       } }))
-      assert.match(html, /Sales today/u)
+      // The store's daily revenue is OWNER-only (like the Dashboard); every role sees the receipt count.
+      if (role === 'OWNER') assert.match(html, /Sales today/u)
+      else assert.doesNotMatch(html, /Sales today/u)
+      assert.match(html, /Receipts/u)
       assert.match(html, /Search products/u)
       assert.match(html, />All</u)
       assert.match(html, /Loading real products/u)
@@ -117,5 +125,64 @@ describe('production POS voice UI', () => {
     const html = renderToStaticMarkup(createElement(ReviewCard, { item, decision: {}, onDecision() {} }))
     assert.match(html, /Product type<\/dt><dd>T_SHIRT<\/dd>/u)
     assert.match(html, /Catalog category<\/dt><dd>t-chirt<\/dd>/u)
+  })
+
+  const cartLine = { key: 'v1', variantId: 'v1', productId: 'p1', colorId: 'c1', productName: 'Linen shirt', colorName: 'Blue', size: 'M', priceCents: 2400, quantity: 2, stock: 5 }
+  const cartProps = { cart: [cartLine], currency: 'USD', discount: 10, canDiscount: true, onDiscount() {}, onQuantity() {}, onRemove() {}, onClear() {}, onComplete() {}, onDiscard() {}, onHistory() {}, onClose() {} }
+
+  test('the cart offers a plain Complete sale button with no payment method and shows the discount to owners only', () => {
+    const owner = renderToStaticMarkup(createElement(CartSheet, cartProps))
+    assert.match(owner, /Complete sale/u)
+    assert.match(owner, /Discount/u)
+    assert.doesNotMatch(owner, /Payment method|Cash|Card/u)
+    assert.match(owner, /43.20 USD/u)
+    const warehouse = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, canDiscount: false, discount: 0 }))
+    assert.doesNotMatch(warehouse, /<h3>Discount<\/h3>/u)
+  })
+
+  test('while submitting, the button shows a loading state and every edit control is disabled', () => {
+    const html = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, busy: true }))
+    assert.match(html, /Completing sale/u)
+    assert.match(html, /aria-busy="true"/u)
+    assert.doesNotMatch(html, /Clear cart/u)
+    assert.match(html, /class="mock-pos-remove" disabled=""/u)
+  })
+
+  test('after an unconfirmed sale the cart is locked and offers Try again, history and cancel', () => {
+    const html = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, locked: true, message: 'We could not confirm the sale.' }))
+    assert.match(html, /We could not confirm the sale/u)
+    assert.match(html, />Try again</u)
+    assert.match(html, /Check sales history/u)
+    assert.match(html, /Cancel this sale/u)
+    assert.doesNotMatch(html, /Complete sale/u)
+    assert.match(html, /class="mock-pos-remove" disabled=""/u)
+  })
+
+  test('a stock failure marks the short item and blocks Complete sale without changing the cart', () => {
+    const html = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, message: 'Some items do not have enough stock.', blocked: true,
+      cart: [{ ...cartLine, quantity: 3, stock: 2 }], issues: [{ key: 'v1', kind: 'short', available: 2, label: 'Linen shirt' }] }))
+    assert.match(html, /Only 2 left/u)
+    assert.match(html, /Some items do not have enough stock/u)
+    assert.match(html, /mock-pos-primary"[^>]*disabled/u)
+  })
+
+  test('the completed sale shows the short receipt number and total, and a New sale button', () => {
+    const sale = { id: 'a1b2c3d4-0000-4000-8000-000000000000', currency: 'USD', totalAmount: '43.20', items: [{ quantity: 2 }] }
+    const html = renderToStaticMarkup(createElement(SaleCompletedSheet, { completed: { sale, summary: {}, replay: false }, onNewSale() {} }))
+    assert.match(html, /Sale completed/u)
+    assert.match(html, /#A1B2C3D4/u)
+    assert.match(html, /43.20 USD/u)
+    assert.match(html, /New sale/u)
+  })
+
+  test('sales history reads server sales and hides amounts from non-owners', () => {
+    const state = { kind: 'ready', truncated: false, sales: [{ id: 'a1b2c3d4-0000-4000-8000-000000000000', status: 'VOIDED', currency: 'USD', totalAmount: '43.20', totalUnits: 2, createdAt: '2026-10-14T10:30:00.000Z' }] }
+    const owner = renderToStaticMarkup(createElement(SalesHistorySheet, { state, role: 'OWNER', currency: 'USD', onRetry() {}, onClose() {} }))
+    assert.match(owner, /#A1B2C3D4/u)
+    assert.match(owner, /Voided/u)
+    assert.match(owner, /43.20 USD/u)
+    const warehouse = renderToStaticMarkup(createElement(SalesHistorySheet, { state, role: 'WAREHOUSE', currency: 'USD', onRetry() {}, onClose() {} }))
+    assert.doesNotMatch(warehouse, /43.20/u)
+    assert.match(renderToStaticMarkup(createElement(SalesHistorySheet, { state: { kind: 'error', message: 'Sales are temporarily unavailable.', sales: [] }, role: 'OWNER', onRetry() {}, onClose() {} })), /Try again/u)
   })
 })

@@ -168,6 +168,19 @@
 .mock-pos-toast.has-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: start; }
 .mock-pos-toast.has-action button { flex: 0 0 auto; min-width: 64px; padding: 0 14px; border-radius: 10px; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; }
 
+.mock-pos-today.is-single { grid-template-columns: minmax(0, 1fr); }
+.mock-pos-spinner.is-inline { width: 18px; height: 18px; border-width: 2px; border-color: color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; }
+.mock-pos-primary[aria-busy="true"] { justify-content: center; gap: 10px; }
+.mock-pos-checkout-message { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: var(--pos-warn-bg); color: var(--pos-warn); font-size: 13px; font-weight: 600; }
+.mock-pos-checkout-message.is-pending { border: 1px solid var(--pos-warn); }
+.mock-pos-checkout-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 14px; }
+.mock-pos-checkout-actions button { min-width: 44px; padding: 0 12px; border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; font-weight: 700; }
+.mock-pos-checkout-actions button.is-danger { color: var(--pos-warn); }
+.mock-pos-line-issue { grid-column: 1 / -1; margin: 0; color: var(--pos-warn); font-size: 12px; font-weight: 700; }
+.mock-pos-sale-done { display: grid; justify-items: center; gap: 4px; padding: 24px 0; text-align: center; }
+.mock-pos-sale-done strong { font-size: 30px; letter-spacing: -.02em; }
+.mock-pos-sale-done p { margin: 0; color: var(--pos-muted); font-size: 13px; }
+
 @keyframes mock-pos-sheet-in { from { opacity: .7; transform: translateY(42px); } }
 @keyframes mock-pos-toast-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes mock-pos-pulse { 50% { transform: scale(.92); } }

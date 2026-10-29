@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
+import { formatMoney } from '../../lib/money.js'
 import { cartTotals, discountOptions, money, reservedUnits } from './mock-sales-model.js'
+import { lineIssueText, receiptNumber } from './pos-checkout.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
 
-function Stepper({ value, min = 1, max, onChange, label }) {
+function Stepper({ value, min = 1, max, onChange, label, disabled = false }) {
   return <div className="mock-pos-stepper" aria-label={label}>
-    <button type="button" aria-label={`Decrease ${label}`} disabled={value <= min} onClick={() => onChange(value - 1)}>−</button>
+    <button type="button" aria-label={`Decrease ${label}`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>−</button>
     <output>{value}</output>
-    <button type="button" aria-label={`Increase ${label}`} disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
+    <button type="button" aria-label={`Increase ${label}`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>+</button>
   </div>
 }
 
@@ -69,29 +71,45 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   </MockSalesSheet>
 }
 
-export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscount, onPayment, onQuantity, onRemove, onClear, onComplete, onClose }) {
+export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDiscount, busy = false, locked = false, message = '', issues = [], blocked = false,
+  onQuantity, onRemove, onClear, onComplete, onDiscard, onHistory, onClose }) {
   const totals = cartTotals(cart, discount)
   const [confirmingClear, setConfirmingClear] = useState(false)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
+  const frozen = busy || locked
+  const issueByKey = new Map(issues.map(issue => [issue.key, issue]))
   return <MockSalesSheet title="Cart" subtitle={`${cart.reduce((sum, line) => sum + line.quantity, 0)} items`} onClose={onClose}
-    className="mock-pos-cart-sheet" footer={<button type="button" className="mock-pos-primary" disabled={!cart.length} onClick={onComplete}>
-      Complete sale · {payment}
+    className="mock-pos-cart-sheet" footer={<button type="button" className="mock-pos-primary" aria-busy={busy}
+      disabled={!cart.length || busy || (!locked && blocked)} onClick={onComplete}>
+      {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />Completing sale…</> : locked ? 'Try again' : 'Complete sale'}
     </button>}>
+    {message && <p className={`mock-pos-checkout-message${locked ? ' is-pending' : ''}`} role="alert">{message}</p>}
+    {locked && !busy && <div className="mock-pos-checkout-actions">
+      <button type="button" onClick={onHistory}>Check sales history</button>
+      {!confirmingDiscard && <button type="button" className="is-danger" onClick={() => setConfirmingDiscard(true)}>Cancel this sale</button>}
+    </div>}
+    {locked && confirmingDiscard && <div className="mock-pos-delete-confirm" role="alert">
+      <p>Only cancel if Sales history does not show this sale. If it went through, selling again would charge the customer twice.</p>
+      <div><button type="button" className="is-danger" onClick={() => { setConfirmingDiscard(false); onDiscard() }}>Cancel this sale</button>
+        <button type="button" onClick={() => setConfirmingDiscard(false)}>Keep it</button></div>
+    </div>}
     {!cart.length ? <div className="mock-pos-empty"><strong>Your cart is empty</strong><p>Add a product to start a sale.</p></div>
-      : <div className="mock-pos-cart-lines">{cart.map(line => <article key={line.key} className="mock-pos-cart-line">
-        <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(line.priceCents, currency)}</span></div>
-        <Stepper value={line.quantity} max={line.stock} onChange={value => onQuantity(line.key, value)} label={`${line.productName} quantity`} />
-        <button type="button" className="mock-pos-remove" onClick={() => onRemove(line.key)}>Remove</button>
-      </article>)}</div>}
-    <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
-      {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
-    </div></section>
-    <section className="mock-pos-choice-section"><h3>Payment method</h3><div className="mock-pos-segmented is-two">
-      {['Cash', 'Card'].map(value => <button key={value} type="button" aria-pressed={payment === value} onClick={() => onPayment(value)}>{value}</button>)}
-    </div></section>
+      : <div className="mock-pos-cart-lines">{cart.map(line => {
+        const issue = issueByKey.get(line.key)
+        return <article key={line.key} className="mock-pos-cart-line">
+          <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(line.priceCents, currency)}</span></div>
+          <Stepper value={line.quantity} max={line.stock} disabled={frozen} onChange={value => onQuantity(line.key, value)} label={`${line.productName} quantity`} />
+          {issue && <p className="mock-pos-line-issue" role="alert">{lineIssueText(issue, currency)}</p>}
+          <button type="button" className="mock-pos-remove" disabled={frozen} onClick={() => onRemove(line.key)}>Remove</button>
+        </article>
+      })}</div>}
+    {canDiscount && <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
+      {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
+    </div></section>}
     <dl className="mock-pos-totals"><div><dt>Subtotal</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
       <div><dt>Discount</dt><dd>−{money(totals.discountCents, currency)}</dd></div><div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div></dl>
-    {cart.length > 0 && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
-    {cart.length > 0 && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
+    {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
+    {cart.length > 0 && !frozen && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
       <p>Remove all {cart.reduce((sum, line) => sum + line.quantity, 0)} items from the cart?</p>
       <div><button type="button" className="is-danger" onClick={onClear}>Clear cart</button>
         <button type="button" onClick={() => setConfirmingClear(false)}>Keep cart</button></div>
@@ -99,13 +117,30 @@ export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscoun
   </MockSalesSheet>
 }
 
-export function SalesHistorySheet({ receipts, currency = 'USD', onClose }) {
+export function SaleCompletedSheet({ completed, onNewSale }) {
+  const { sale, replay } = completed
+  const units = sale.items.reduce((sum, item) => sum + item.quantity, 0)
+  return <MockSalesSheet title="Sale completed" subtitle={`Receipt ${receiptNumber(sale.id)}`} onClose={onNewSale}
+    footer={<button type="button" className="mock-pos-primary" onClick={onNewSale}>New sale</button>}>
+    <div className="mock-pos-sale-done">
+      <strong>{formatMoney(sale.totalAmount, sale.currency)}</strong>
+      <p>{units} {units === 1 ? 'item' : 'items'}{replay ? ' · Confirmed from the original attempt.' : ''}</p>
+    </div>
+  </MockSalesSheet>
+}
+
+export function SalesHistorySheet({ state, role, currency = 'USD', onRetry, onClose }) {
   return <MockSalesSheet title="Sales history" subtitle="Today" onClose={onClose}>
-    {!receipts.length ? <div className="mock-pos-empty"><strong>No sales yet today</strong><p>Completed sales show up here.</p></div>
-      : <div className="mock-pos-receipts">{receipts.map(receipt => <article key={receipt.id}>
-        <div><strong>Receipt #{receipt.number}</strong><span>{receipt.itemCount} items · {receipt.paymentMethod}</span></div>
-        <div><strong>{money(receipt.totalCents, currency)}</strong><time dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
-      </article>)}</div>}
+    {state.kind === 'loading' && <div className="mock-pos-empty" role="status"><span className="mock-pos-spinner" /><p>Loading today's sales…</p></div>}
+    {state.kind === 'error' && <div className="mock-pos-empty" role="alert"><strong>Sales could not load</strong><p>{state.message}</p>
+      <button type="button" onClick={onRetry}>Try again</button></div>}
+    {state.kind === 'ready' && !state.sales.length && <div className="mock-pos-empty"><strong>No sales yet today</strong><p>Completed sales show up here.</p></div>}
+    {state.kind === 'ready' && state.sales.length > 0 && <div className="mock-pos-receipts">{state.sales.map(sale => <article key={sale.id}>
+      <div><strong>{receiptNumber(sale.id)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? ' · Voided' : ''}</span></div>
+      <div>{role === 'OWNER' && <strong>{formatMoney(sale.totalAmount, sale.currency || currency)}</strong>}
+        <time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
+    </article>)}</div>}
+    {state.kind === 'ready' && state.truncated && <p className="mock-pos-note">Showing the latest 500 sales of today.</p>}
   </MockSalesSheet>
 }
 
