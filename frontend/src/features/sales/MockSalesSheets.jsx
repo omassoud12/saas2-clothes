@@ -69,8 +69,9 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   </MockSalesSheet>
 }
 
-export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscount, onPayment, onQuantity, onClear, onComplete, onClose }) {
+export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscount, onPayment, onQuantity, onRemove, onClear, onComplete, onClose }) {
   const totals = cartTotals(cart, discount)
+  const [confirmingClear, setConfirmingClear] = useState(false)
   return <MockSalesSheet title="Cart" subtitle={`${cart.reduce((sum, line) => sum + line.quantity, 0)} items`} onClose={onClose}
     className="mock-pos-cart-sheet" footer={<button type="button" className="mock-pos-primary" disabled={!cart.length} onClick={onComplete}>
       Complete sale · {payment}
@@ -79,7 +80,7 @@ export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscoun
       : <div className="mock-pos-cart-lines">{cart.map(line => <article key={line.key} className="mock-pos-cart-line">
         <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(line.priceCents, currency)}</span></div>
         <Stepper value={line.quantity} max={line.stock} onChange={value => onQuantity(line.key, value)} label={`${line.productName} quantity`} />
-        <button type="button" className="mock-pos-remove" onClick={() => onQuantity(line.key, 0)}>Remove</button>
+        <button type="button" className="mock-pos-remove" onClick={() => onRemove(line.key)}>Remove</button>
       </article>)}</div>}
     <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
       {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
@@ -89,7 +90,12 @@ export function CartSheet({ cart, currency = 'USD', discount, payment, onDiscoun
     </div></section>
     <dl className="mock-pos-totals"><div><dt>Subtotal</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
       <div><dt>Discount</dt><dd>−{money(totals.discountCents, currency)}</dd></div><div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div></dl>
-    {cart.length > 0 && <button type="button" className="mock-pos-danger-link" onClick={onClear}>Clear cart</button>}
+    {cart.length > 0 && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
+    {cart.length > 0 && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
+      <p>Remove all {cart.reduce((sum, line) => sum + line.quantity, 0)} items from the cart?</p>
+      <div><button type="button" className="is-danger" onClick={onClear}>Clear cart</button>
+        <button type="button" onClick={() => setConfirmingClear(false)}>Keep cart</button></div>
+    </div>}
   </MockSalesSheet>
 }
 

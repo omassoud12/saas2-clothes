@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { createSeedSalesState, UNCATEGORIZED_ID } from './mock-sales-data.js'
-import { addCartSelection, cartTotals, completeMockSale, deleteMockCategory, productStock, setMockCartQuantity } from './mock-sales-model.js'
+import { addCartSelection, cartTotals, completeMockSale, deleteMockCategory, productStock, reconcileMockCart, restoreMockCartLine, setMockCartQuantity } from './mock-sales-model.js'
 import { createMockSalesStorage } from './mock-sales-storage.js'
 
 describe('local mock Sales model', () => {
@@ -57,5 +57,61 @@ describe('local mock Sales model', () => {
     assert.equal(adapter.save(state), true)
     assert.deepEqual(adapter.load(), { receipts: [{ id: 'receipt-1' }] })
     assert.equal(adapter.load().products, undefined, 'catalog products never persist as local mock data')
+  })
+
+  function memoryStorage() {
+    const values = new Map()
+    return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) }
+  }
+
+  function cartWithTwoLines() {
+    // The live catalog always supplies variant ids; the seed fixtures do not.
+    const [seed] = createSeedSalesState().products
+    const product = { ...seed, colors: seed.colors.map(row => ({ ...row, sizes: row.sizes.map(size => ({ ...size, variantId: `variant-${row.id}-${size.name}` })) })) }
+    const [color] = product.colors
+    const first = addCartSelection([], product, color, color.sizes[0], 1)
+    return { product, color, cart: addCartSelection(first.cart, product, color, color.sizes[1], 1).cart }
+  }
+
+  test('an unfinished cart persists per account and user and clears when emptied', () => {
+    const adapter = createMockSalesStorage(memoryStorage())
+    const { cart } = cartWithTwoLines()
+    assert.equal(adapter.saveCart('account-a:user-1', cart), true)
+    assert.deepEqual(adapter.loadCart('account-a:user-1'), cart)
+    assert.deepEqual(adapter.loadCart('account-b:user-1'), [], 'another store never sees this cart')
+    assert.deepEqual(adapter.loadCart(''), [])
+    assert.equal(adapter.saveCart('account-a:user-1', []), true)
+    assert.deepEqual(adapter.loadCart('account-a:user-1'), [])
+  })
+
+  test('a corrupted saved cart is ignored line by line', () => {
+    const values = memoryStorage()
+    const adapter = createMockSalesStorage(values)
+    const { cart } = cartWithTwoLines()
+    values.setItem('saas2.sales-cart.v1:scope', JSON.stringify([cart[0], { key: 'x', quantity: -1 }, null]))
+    assert.deepEqual(adapter.loadCart('scope'), [cart[0]])
+    values.setItem('saas2.sales-cart.v1:scope', '{not json')
+    assert.deepEqual(adapter.loadCart('scope'), [])
+  })
+
+  test('a restored cart is reconciled with the live catalog', () => {
+    const { product, color, cart } = cartWithTwoLines()
+    const unchanged = reconcileMockCart(cart, [product])
+    assert.equal(unchanged.changed, false)
+    const [firstSize, secondSize] = color.sizes
+    const live = { ...product, colors: [{ ...color, sizes: [{ ...firstSize, stock: 0 }, { ...secondSize, priceCents: 3100 }] }] }
+    const next = reconcileMockCart(cart, [live])
+    assert.equal(next.changed, true)
+    assert.equal(next.cart.length, 1, 'a sold-out variant is dropped')
+    assert.equal(next.cart[0].priceCents, 3100)
+    assert.equal(reconcileMockCart(cart, []).cart.length, 0)
+  })
+
+  test('undo puts a removed line back where it was, once', () => {
+    const { cart } = cartWithTwoLines()
+    const [first, second] = cart
+    const removed = cart.filter(row => row.key !== first.key)
+    assert.deepEqual(restoreMockCartLine(removed, first, 0).map(row => row.key), [first.key, second.key])
+    assert.equal(restoreMockCartLine(cart, first, 0), cart, 'no duplicate when the line is already back')
   })
 })

@@ -53,6 +53,37 @@ export function setMockCartQuantity(cart, key, quantity) {
   return cart.map(row => row.key === key ? { ...row, quantity } : row)
 }
 
+// A restored cart can be older than the catalog: refresh each line from the live catalog and drop what can no longer be sold.
+export function reconcileMockCart(cart, products) {
+  const variants = new Map()
+  for (const product of products) {
+    for (const color of product.colors) {
+      for (const size of color.sizes) variants.set(size.variantId, { product, color, size })
+    }
+  }
+  let changed = false
+  const next = []
+  for (const line of cart) {
+    const found = variants.get(line.variantId)
+    const priceCents = found && (Number.isSafeInteger(found.size.priceCents) ? found.size.priceCents : found.product.priceCents)
+    if (!found || !Number.isSafeInteger(priceCents) || found.size.stock < 1) { changed = true; continue }
+    const quantity = Math.min(line.quantity, found.size.stock)
+    const row = { ...line, productName: found.product.name, colorName: found.color.name, size: found.size.name,
+      sku: found.size.sku || found.product.sku, priceCents, quantity, stock: found.size.stock }
+    if (row.quantity !== line.quantity || row.priceCents !== line.priceCents || row.stock !== line.stock) changed = true
+    next.push(row)
+  }
+  return Object.freeze({ cart: next, changed })
+}
+
+// Restores a removed line at its old position unless it was added back in the meantime.
+export function restoreMockCartLine(cart, line, index) {
+  if (cart.some(row => row.key === line.key)) return cart
+  const next = [...cart]
+  next.splice(Math.min(index, next.length), 0, line)
+  return next
+}
+
 export function deleteMockCategory(state, categoryId) {
   return { ...state,
     categories: state.categories.filter(category => category.id !== categoryId),

@@ -165,6 +165,9 @@
 .mock-pos-category-picker button[aria-pressed="true"] { border-color: var(--pos-brand); background: var(--pos-soft); color: var(--pos-brand); font-weight: 700; }
 .mock-pos-toast { position: fixed; z-index: 1100; inset-inline: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 488px); margin-inline: auto; padding: 12px 15px; border-radius: 13px; background: var(--pos-ink); color: var(--pos-surface); box-shadow: 0 10px 30px #07100b30; font-size: 13px; font-weight: 600; text-align: center; animation: mock-pos-toast-in .18s ease-out both; }
 
+.mock-pos-toast.has-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: start; }
+.mock-pos-toast.has-action button { flex: 0 0 auto; min-width: 64px; padding: 0 14px; border-radius: 10px; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; }
+
 @keyframes mock-pos-sheet-in { from { opacity: .7; transform: translateY(42px); } }
 @keyframes mock-pos-toast-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes mock-pos-pulse { 50% { transform: scale(.92); } }

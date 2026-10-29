@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createCategory, deleteCategory as deleteRealCategory, renameCategory as renameRealCategory } from '../categories/category-flow.js'
 import { updateProduct } from '../products/product-flow.js'
-import { addCartSelection, cartTotals, cartUnits, completeMockSale, money, productStock,
-  setMockCartQuantity, UNCATEGORIZED_ID } from './mock-sales-model.js'
+import { addCartSelection, cartTotals, cartUnits, completeMockSale, money, productStock, reconcileMockCart,
+  restoreMockCartLine, setMockCartQuantity, UNCATEGORIZED_ID } from './mock-sales-model.js'
 import { browserMockSalesStorage } from './mock-sales-storage.js'
 import { loadSalesCatalog, mapCatalogProduct, searchLoadedCatalogByVoice, voiceCatalogSelection } from './sales-catalog.js'
 import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
@@ -62,18 +62,21 @@ function sameLocalDay(iso, now = new Date()) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate()
 }
 
-export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) {
+export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', storageScope = '' }) {
   const storage = useMemo(() => browserMockSalesStorage(), [])
   const [salesState, setSalesState] = useState(() => ({ categories: [], products: [], receipts: storage.load().receipts }))
   const [catalog, setCatalog] = useState({ kind: 'loading', complete: true })
   const [catalogVersion, setCatalogVersion] = useState(0)
-  const [cart, setCart] = useState([])
+  const [cart, setCart] = useState(() => storage.loadCart(storageScope))
   const [query, setQuery] = useState('')
   const [categoryId, setCategoryId] = useState('all')
   const [sheet, setSheet] = useState(null)
   const [discount, setDiscount] = useState(0)
   const [payment, setPayment] = useState('Cash')
   const [toast, setToast] = useState('')
+  const [undo, setUndo] = useState(null)
+  const cartRef = useRef(cart)
+  useEffect(() => { cartRef.current = cart }, [cart])
   const [voiceMessage, setVoiceMessage] = useState('')
   const [listening, setListening] = useState(false)
   const [voiceCatalogFilter, setVoiceCatalogFilter] = useState(null)
@@ -81,6 +84,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
   const voiceSearchRevision = useRef(0)
 
   useEffect(() => { storage.save({ receipts: salesState.receipts }) }, [salesState.receipts, storage])
+  useEffect(() => { storage.saveCart(storageScope, cart) }, [cart, storage, storageScope])
   useEffect(() => {
     const controller = new AbortController()
     void loadSalesCatalog({ supabase, signal: controller.signal }).then(result => {
@@ -92,6 +96,8 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
         return
       }
       setSalesState(current => ({ ...current, categories: result.categories, products: result.products }))
+      const reconciled = reconcileMockCart(cartRef.current, result.products)
+      if (reconciled.changed) { setCart(reconciled.cart); setToast('Your saved cart was updated to match current prices and stock.') }
       setCatalog({ kind: 'ready', complete: result.complete, total: result.total, refreshing: false })
     })
     return () => controller.abort()
@@ -101,6 +107,11 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
     const timer = window.setTimeout(() => setToast(''), 3200)
     return () => window.clearTimeout(timer)
   }, [toast])
+  useEffect(() => {
+    if (!undo) return undefined
+    const timer = window.setTimeout(() => setUndo(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [undo])
 
   const todayReceipts = salesState.receipts.filter(receipt => sameLocalDay(receipt.createdAt))
   const todayTotal = todayReceipts.reduce((sum, receipt) => sum + receipt.totalCents, 0)
@@ -216,10 +227,25 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
     return result
   }
 
+  function removeCartLine(key) {
+    const index = cart.findIndex(line => line.key === key)
+    if (index < 0) return
+    const line = cart[index]
+    setCart(current => current.filter(row => row.key !== key))
+    setToast('')
+    setUndo({ message: `${line.productName} removed from cart.`, restore: () => setCart(current => restoreMockCartLine(current, line, index)) })
+  }
+
+  function clearCart() {
+    const previous = cart
+    setCart([]); setSheet(null); setToast('')
+    setUndo({ message: 'Cart cleared.', restore: () => setCart(current => current.length ? current : previous) })
+  }
+
   function completeSale() {
     const result = completeMockSale(salesState, cart, discount, payment)
     if (!result.ok) { setToast(result.message); return }
-    setSalesState(result.state); setCart([]); setDiscount(0); setPayment('Cash'); setSheet(null)
+    setSalesState(result.state); setCart([]); setDiscount(0); setPayment('Cash'); setSheet(null); setUndo(null)
     setToast(`Sale completed · ${money(result.receipt.totalCents, currency)}`)
   }
 
@@ -270,7 +296,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
 
     {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={discount} payment={payment} onDiscount={setDiscount} onPayment={setPayment}
       onQuantity={(key, quantity) => setCart(current => setMockCartQuantity(current, key, quantity))}
-      onClear={() => { setCart([]); setSheet(null); setToast('Cart cleared.') }} onComplete={completeSale} onClose={() => setSheet(null)} />}
+      onRemove={removeCartLine} onClear={clearCart} onComplete={completeSale} onClose={() => setSheet(null)} />}
     {sheet === 'history' && <SalesHistorySheet receipts={todayReceipts} currency={currency} onClose={() => setSheet(null)} />}
     {sheet === 'categories' && <CategoryManagerSheet categories={salesState.categories} products={salesState.products}
       onAdd={addCategory} onRename={renameCategory} onDelete={deleteCategory} onClose={() => setSheet(null)} />}
@@ -278,6 +304,8 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD' }) 
       onAdd={addToCart} onClose={() => setSheet(null)} />}
     {sheet?.type === 'product-category' && selectedProduct && <ProductCategorySheet product={selectedProduct} categories={salesState.categories}
       onChange={moveProduct} onClose={() => setSheet(null)} />}
-    {toast && <div className="mock-pos-toast" role="status">{toast}</div>}
+    {undo ? <div className="mock-pos-toast has-action" role="status"><span>{undo.message}</span>
+      <button type="button" onClick={() => { undo.restore(); setUndo(null) }}>Undo</button></div>
+      : toast && <div className="mock-pos-toast" role="status">{toast}</div>}
   </section>
 }
