@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createCategory, deleteCategory as deleteRealCategory, renameCategory as renameRealCategory } from '../categories/category-flow.js'
-import { getProduct, updateProduct } from '../products/product-flow.js'
-import { addCartSelection, cartTotals, cartUnits, decrementCatalogStock, money, productStock, reconcileMockCart,
-  restoreMockCartLine, setMockCartQuantity, UNCATEGORIZED_ID } from './mock-sales-model.js'
+import { getProduct } from '../products/product-flow.js'
+import { addCartSelection, cartTotals, cartUnits, decrementCatalogStock, money, plural, productStock, reconcileMockCart,
+  restoreMockCartLine, setMockCartQuantity, stockBadge, UNCATEGORIZED_ID } from './mock-sales-model.js'
 import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, prepareCheckout, startOfLocalDayIso, summarizeSales } from './pos-checkout.js'
 import { createCheckoutGuard, loadSaleHistory, submitSale } from './sale-flow.js'
 import { browserMockSalesStorage } from './mock-sales-storage.js'
 import { loadSalesCatalog, mapCatalogProduct, searchLoadedCatalogByVoice, voiceCatalogSelection } from './sales-catalog.js'
 import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
-import { CartSheet, CategoryManagerSheet, ProductCategorySheet, ProductPickerSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
+import { CartSheet, ProductPickerSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
 import { SaleCompletedSheet } from './SaleReceipt.jsx'
 import './mock-sales.css'
 
@@ -16,8 +15,8 @@ const SALES_VOICE_SEARCH_LANGUAGE = 'ar-LB'
 const RESTORED_CHECKOUT_MESSAGE = 'A sale was still being confirmed when this page closed. It may have gone through. Press Try again: it will not create a duplicate.'
 const IDLE_CHECKOUT = Object.freeze({ phase: 'idle', locked: false, message: '', issues: [] })
 
-function HistoryIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68M12 8v4l2.6 1.6" /></svg>
+function ChevronIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
 }
 
 function SearchIcon() {
@@ -64,22 +63,17 @@ function applyTodaySales(setToday, result) {
   setToday(current => result.kind === 'error' ? { ...current, kind: 'error', message: result.message } : result)
 }
 
-function ProductRow({ product, availableStock, currency, onOpen, onEdit }) {
-  const low = availableStock > 0 && availableStock <= 5
+export function ProductRow({ product, availableStock, currency, onOpen }) {
+  const badge = stockBadge(availableStock)
   return <article className={`mock-pos-product${availableStock === 0 ? ' is-out' : ''}`}>
     <button type="button" className="mock-pos-product-main" disabled={availableStock === 0} onClick={onOpen}>
       <span className="mock-pos-product-art" style={{ '--garment': product.colors[0]?.hex || '#829182' }}>
         {product.imageUrl ? <img src={product.imageUrl} alt="" loading="lazy" /> : <GarmentIcon type={product.icon} />}
       </span>
-      <span className="mock-pos-product-copy"><strong>{product.name}</strong><small>{product.colors.length} colors</small></span>
-      <span className="mock-pos-product-price"><strong>{productPrice(product, currency)}</strong>
-        <small className={availableStock === 0 ? 'is-out' : low ? 'is-low' : ''}>
-          {availableStock === 0 ? 'Out of stock' : low ? `Low · ${availableStock} in stock` : `${availableStock} in stock`}
-        </small>
+      <span className="mock-pos-product-copy">
+        <span className="mock-pos-product-line"><strong>{product.name}</strong><b>{productPrice(product, currency)}</b></span>
+        <span className="mock-pos-product-line"><small>{plural(product.colors.length, 'color')}</small><small className={`mock-pos-stock ${badge.tone}`}>{badge.text}</small></span>
       </span>
-    </button>
-    <button type="button" className="mock-pos-product-edit" aria-label={`Change category for ${product.name}`} onClick={onEdit}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 15.6 6 4 16ZM14 7.5l2.5 2.5" /></svg>
     </button>
   </article>
 }
@@ -221,46 +215,6 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     return result
   }
 
-  async function addCategory(name) {
-    const result = await createCategory({ supabase, name })
-    if (!result.ok) return result
-    setSalesState(current => ({ ...current, categories: [...current.categories, result.category]
-      .sort((left, right) => left.name.localeCompare(right.name)) }))
-    return result
-  }
-
-  async function renameCategory(id, name) {
-    const current = salesState.categories.find(category => category.id === id)
-    const result = await renameRealCategory({ supabase, categoryId: id, currentName: current?.name || '', name })
-    if (!result.ok) return result
-    if (!result.unchanged) setSalesState(state => ({ ...state,
-      categories: state.categories.map(category => category.id === id ? result.category : category)
-        .sort((left, right) => left.name.localeCompare(right.name)),
-      products: state.products.map(product => product.categoryId === id ? { ...product, categoryName: result.category.name } : product),
-    }))
-    return result
-  }
-
-  async function deleteCategory(id) {
-    const result = await deleteRealCategory({ supabase, categoryId: id })
-    if (!result.ok) return result
-    setSalesState(current => ({ ...current, categories: current.categories.filter(category => category.id !== id) }))
-    if (categoryId === id) setCategoryId('all')
-    return result
-  }
-
-  async function moveProduct(productId, nextCategoryId) {
-    const product = salesState.products.find(item => item.id === productId)
-    if (!product) return { ok: false, message: 'This product is no longer available. Refresh and try again.' }
-    const result = await updateProduct({ supabase, productId, role, current: product.sourceProduct,
-      draft: { name: product.name, categoryId: nextCategoryId, profitMarginOverride: product.sourceProduct.profitMarginOverride } })
-    if (!result.ok) return result
-    const mapped = mapCatalogProduct(result.product)
-    setSalesState(current => ({ ...current, products: current.products.map(item => item.id === productId ? mapped : item) }))
-    setToast('Product category updated.')
-    return result
-  }
-
   function removeCartLine(key) {
     const index = cart.findIndex(line => line.key === key)
     if (index < 0) return
@@ -366,14 +320,12 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     ? salesState.products.find(product => product.id === sheet.productId) : null
   return <section className="mock-pos-page" aria-label="Sales point of sale">
     <div className="mock-pos-shell">
-      <header className="mock-pos-header"><div className="mock-pos-brand"><span className="mock-pos-logo" aria-hidden="true">S</span>
-        <div><strong>Sales</strong><span>Sell products</span></div></div>
-        <button type="button" className="mock-pos-history-button" onClick={() => setSheet('history')}><HistoryIcon /><span>Sales history</span></button>
+      <header className="mock-pos-header"><h1>Sell</h1>
+        <button type="button" className="mock-pos-today" aria-label="Today's sales: open the list" onClick={() => setSheet('history')}>
+          {role === 'OWNER' ? <><span>Sales today</span><strong>{todaySummary ? todaySummary.total : '—'}</strong><span aria-hidden="true">·</span></> : <span>Today</span>}
+          <strong>{todaySummary ? todaySummary.count : '—'}</strong><span>{todaySummary?.count === 1 ? 'receipt' : 'receipts'}</span><ChevronIcon />
+        </button>
       </header>
-
-      <section className={`mock-pos-today${role === 'OWNER' ? '' : ' is-single'}`} aria-label="Today's sales">
-        {role === 'OWNER' && <div><span>Sales today</span><strong>{todaySummary ? todaySummary.total : '—'}</strong></div>}
-        <div><span>Receipts</span><strong>{todaySummary ? todaySummary.count : '—'}</strong></div></section>
 
       <div className="mock-pos-search"><SearchIcon /><label className="sr-only" htmlFor="mock-pos-search">Search products</label>
         <input id="mock-pos-search" type="search" value={query} placeholder="Search products" onChange={event => {
@@ -388,23 +340,21 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       <nav className="mock-pos-chips" aria-label="Product categories"><button type="button" aria-pressed={categoryId === 'all'} onClick={() => setCategoryId('all')}>All</button>
         {visibleCategories.map(category => <button key={category.id} type="button" aria-pressed={categoryId === category.id}
           onClick={() => setCategoryId(category.id)}>{category.name}</button>)}
-        <button type="button" className="is-edit" onClick={() => setSheet('categories')}>+ Edit</button>
       </nav>
 
       <main className="mock-pos-products" aria-live="polite" aria-busy={catalog.kind === 'loading' || catalog.refreshing === true}>
-        <div className="mock-pos-list-heading"><h1>Products</h1><span>{catalog.kind === 'ready' ? `${products.length} products` : 'Live catalog'}</span></div>
+        <div className="mock-pos-list-heading"><h2>Products</h2><span>{catalog.kind === 'ready' ? plural(products.length, 'product') : 'Live catalog'}</span></div>
         {catalog.kind === 'loading' && <div className="mock-pos-catalog-state" role="status"><span className="mock-pos-spinner" />Loading real products…</div>}
         {catalog.kind === 'error' && <div className="mock-pos-catalog-state is-error" role="alert"><strong>Products could not load</strong><p>{catalog.message}</p>
           <button type="button" onClick={() => { setCatalog({ kind: 'loading', complete: true }); setCatalogVersion(version => version + 1) }}>Try again</button></div>}
         {catalog.kind === 'ready' && !catalog.complete && <p className="mock-pos-catalog-note">Showing the first {salesState.products.length} of {catalog.total} products. Search coverage is limited.</p>}
         {catalog.kind === 'ready' && products.length ? products.map(product => <ProductRow key={product.id} product={product} currency={currency}
-          availableStock={productAvailable(product)} onOpen={() => setSheet({ type: 'product', productId: product.id })}
-          onEdit={() => setSheet({ type: 'product-category', productId: product.id })} />)
+          availableStock={productAvailable(product)} onOpen={() => setSheet({ type: 'product', productId: product.id })} />)
           : catalog.kind === 'ready' && <div className="mock-pos-empty"><strong>No products found</strong><p>Try another name, SKU, or category.</p></div>}
       </main>
 
       <footer className="mock-pos-sticky"><button type="button" className="mock-pos-primary" disabled={!cart.length} onClick={() => setSheet('cart')}>
-        <span>{cart.length ? `View cart · ${cartUnits(cart)} items` : 'Cart is empty'}</span><strong>{cart.length ? money(totals.totalCents, currency) : money(0, currency)}</strong>
+        <span>{cart.length ? `View cart · ${plural(cartUnits(cart), 'item')}` : 'Cart is empty'}</span><strong>{cart.length ? money(totals.totalCents, currency) : money(0, currency)}</strong>
       </button></footer>
     </div>
 
@@ -415,12 +365,8 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       onHistory={() => setSheet('history')} onClose={() => { if (!busy) setSheet(null) }} />}
     {sheet === 'history' && <SalesHistorySheet state={today} role={role} currency={currency} onRetry={reloadToday} onClose={() => setSheet(null)} />}
     {sheet === 'receipt' && completed && <SaleCompletedSheet completed={completed} storeName={storeName} onNewSale={() => { setSheet(null); setCompleted(null) }} />}
-    {sheet === 'categories' && <CategoryManagerSheet categories={salesState.categories} products={salesState.products}
-      onAdd={addCategory} onRename={renameCategory} onDelete={deleteCategory} onClose={() => setSheet(null)} />}
     {sheet?.type === 'product' && selectedProduct && <ProductPickerSheet key={selectedProduct.id} product={selectedProduct} cart={cart} currency={currency}
       onAdd={addToCart} onClose={() => setSheet(null)} />}
-    {sheet?.type === 'product-category' && selectedProduct && <ProductCategorySheet product={selectedProduct} categories={salesState.categories}
-      onChange={moveProduct} onClose={() => setSheet(null)} />}
     {undo ? <div className="mock-pos-toast has-action" role="status"><span>{undo.message}</span>
       <button type="button" onClick={() => { undo.restore(); setUndo(null) }}>Undo</button></div>
       : toast && <div className="mock-pos-toast" role="status">{toast}</div>}

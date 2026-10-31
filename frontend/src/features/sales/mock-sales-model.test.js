@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { createSeedSalesState, UNCATEGORIZED_ID } from './mock-sales-data.js'
-import { addCartSelection, cartTotals, decrementCatalogStock, deleteMockCategory, discountedUnitCents, money, productStock, reconcileMockCart, restoreMockCartLine, setMockCartQuantity } from './mock-sales-model.js'
+import { addCartSelection, cartTotals, decrementCatalogStock, deleteMockCategory, discountedUnitCents, money, plural, productStock, reconcileMockCart, restoreMockCartLine, setMockCartQuantity, stockBadge } from './mock-sales-model.js'
 import { createMockSalesStorage } from './mock-sales-storage.js'
 import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, lineIssueText, prepareCheckout, receiptNumber, startOfLocalDayIso, summarizeSales, toSaleLines } from './pos-checkout.js'
 import { submitSale } from './sale-flow.js'
@@ -53,10 +53,29 @@ describe('local mock Sales model', () => {
     assert.equal(discountedUnitCents(1, 20), 1, 'a discounted price never reaches zero')
   })
 
-  test('money uses the same format as the rest of the app', () => {
-    assert.equal(money(4500, 'USD'), '45.00 USD')
-    assert.equal(money(5, 'USD'), '0.05 USD')
+  test('money uses the compact point-of-sale format', () => {
+    assert.equal(money(4500, 'USD'), '$45')
+    assert.equal(money(4550, 'USD'), '$45.50')
+    assert.equal(money(5, 'USD'), '$0.05')
+    assert.equal(money(0, 'USD'), '$0')
+    assert.equal(money(125000, 'USD'), '$1,250')
     assert.equal(money(null, 'USD'), 'Price missing')
+    assert.equal(money(-1, 'USD'), 'Price missing')
+  })
+
+  test('singular and plural labels', () => {
+    assert.deepEqual([plural(0, 'color'), plural(1, 'color'), plural(2, 'color')], ['0 colors', '1 color', '2 colors'])
+    assert.equal(plural(1, 'item'), '1 item')
+    assert.equal(plural(5, 'product'), '5 products')
+  })
+
+  test('stock badges separate normal, low and out of stock', () => {
+    assert.deepEqual(stockBadge(10), { tone: 'is-ok', text: '10 in stock' })
+    assert.deepEqual(stockBadge(6), { tone: 'is-ok', text: '6 in stock' })
+    assert.deepEqual(stockBadge(5), { tone: 'is-low', text: 'Low · 5 left' })
+    assert.deepEqual(stockBadge(1), { tone: 'is-low', text: 'Low · 1 left' })
+    assert.deepEqual(stockBadge(0), { tone: 'is-out', text: 'Out of stock' })
+    assert.equal(stockBadge(-2).tone, 'is-out', 'a cart can never push stock below zero in the list')
   })
 
   test('deleting a used category moves its products to Uncategorized', () => {
@@ -247,7 +266,7 @@ describe('local mock Sales model', () => {
     assert.equal(analyzeCart(cart, live).cart[0].priceCents, 2400)
     const refreshed = analyzeCart(cart, live, { prices: true })
     assert.equal(refreshed.cart[0].priceCents, 2600)
-    assert.match(lineIssueText(refreshed.issues[0], 'USD'), /24\.00 USD to 26\.00 USD/)
+    assert.match(lineIssueText(refreshed.issues[0], 'USD'), /\$24 to \$26/)
   })
 
   test('applies a confirmed sale to the loaded stock and summarizes today from server sales', () => {
@@ -258,7 +277,7 @@ describe('local mock Sales model', () => {
     const summary = summarizeSales([
       { status: 'COMPLETED', totalAmount: '12.50' }, { status: 'COMPLETED', totalAmount: '25.00' }, { status: 'VOIDED', totalAmount: '99.00' },
     ], 'USD')
-    assert.deepEqual(summary, { count: 2, total: '37.50 USD' })
+    assert.deepEqual(summary, { count: 2, total: '$37.50' })
     assert.equal(receiptNumber('a1b2c3d4-0000-4000-8000-000000000000'), '#A1B2C3D4')
     assert.match(startOfLocalDayIso(new Date(2026, 9, 14, 15, 30)), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/)
   })
@@ -276,8 +295,8 @@ describe('local mock Sales model', () => {
     assert.equal(receipt.number, '#A1B2C3D4')
     assert.match(receipt.dateText, /14 Oct 2026/)
     assert.match(receipt.dateText, /10:30/)
-    assert.deepEqual(receipt.lines.map(line => [line.name, line.detail, line.quantity, line.unitPrice, line.lineTotal]), [['Linen shirt', 'Blue · M', 2, '21.60 USD', '43.20 USD']])
-    assert.deepEqual([receipt.subtotal, receipt.discount, receipt.discountPercent, receipt.total, receipt.units], ['48.00 USD', '4.80 USD', 10, '43.20 USD', 2])
+    assert.deepEqual(receipt.lines.map(line => [line.name, line.detail, line.quantity, line.unitPrice, line.lineTotal]), [['Linen shirt', 'Blue · M', 2, '$21.60', '$43.20']])
+    assert.deepEqual([receipt.subtotal, receipt.discount, receipt.discountPercent, receipt.total, receipt.units], ['$48', '$4.80', 10, '$43.20', 2])
     assert.equal(JSON.stringify(receipt).includes('Cash'), false, 'no payment method is shown')
   })
 
@@ -285,8 +304,8 @@ describe('local mock Sales model', () => {
     const receipt = buildReceipt({ sale: plainSale, storeName: '', locale: 'en-GB', timeZone: 'UTC' })
     assert.equal(receipt.discount, null)
     assert.equal(receipt.discountPercent, null)
-    assert.equal(receipt.subtotal, '143.20 USD')
-    assert.equal(receipt.total, '143.20 USD')
+    assert.equal(receipt.subtotal, '$143.20')
+    assert.equal(receipt.total, '$143.20')
     assert.equal(receipt.lines[1].detail, '')
     const none = buildReceipt({ sale: discountedSale, summary: { discountPercent: 0, listSubtotalCents: 4320, totalCents: 4320 } })
     assert.equal(none.discount, null)
@@ -294,7 +313,7 @@ describe('local mock Sales model', () => {
 
   test('the WhatsApp text is a clean receipt and long carts are shortened', () => {
     const text = buildReceiptText(buildReceipt({ sale: discountedSale, summary: discountSummary, storeName: 'Mini Store', locale: 'en-GB', timeZone: 'UTC' }))
-    for (const part of ['*Mini Store*', 'Receipt #A1B2C3D4', 'Linen shirt (Blue · M)', '  2 × 21.60 USD = 43.20 USD', 'Subtotal: 48.00 USD', 'Discount (10%): -4.80 USD', '*Total: 43.20 USD*', 'Thank you!']) {
+    for (const part of ['*Mini Store*', 'Receipt #A1B2C3D4', 'Linen shirt (Blue · M)', '  2 × $21.60 = $43.20', 'Subtotal: $48', 'Discount (10%): -$4.80', '*Total: $43.20*', 'Thank you!']) {
       assert.ok(text.includes(part), part)
     }
     assert.equal(/payment|cash|card/i.test(text), false)
@@ -313,7 +332,7 @@ describe('local mock Sales model', () => {
     const opened = []
     const open = url => { opened.push(url); return { opener: 'x' } }
     assert.deepEqual(await shareReceipt(receipt, { nav: { share: async data => { shared.push(data) } }, open }), { ok: true, method: 'share' })
-    assert.ok(shared[0].text.includes('43.20 USD'))
+    assert.ok(shared[0].text.includes('$43.20'))
     assert.equal(opened.length, 0)
     const cancel = Object.assign(new Error('closed'), { name: 'AbortError' })
     assert.deepEqual(await shareReceipt(receipt, { nav: { share: async () => { throw cancel } }, open }), { ok: true, method: 'cancelled' })

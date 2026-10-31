@@ -1,13 +1,27 @@
-import { formatMoney, minorUnitsToDecimal } from '../../lib/money.js'
+import { formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
 
 export const UNCATEGORIZED_ID = 'uncategorized'
 
 export const discountOptions = Object.freeze([0, 5, 10, 20])
 
-// Same money format as the rest of the app (lib/money.js), e.g. "45.00 USD".
+// Compact point-of-sale format from lib/money.js, e.g. "$12" or "$12.50".
 export function money(cents, currency = 'USD') {
   if (!Number.isSafeInteger(cents) || cents < 0) return 'Price missing'
-  return formatMoney(minorUnitsToDecimal(BigInt(cents)), currency)
+  return formatMoneyCompact(minorUnitsToDecimal(BigInt(cents)), currency)
+}
+
+const LOW_STOCK_LIMIT = 5
+
+// What the product list shows for the stock that can still be sold: normal, low (warning) or out (red).
+export function stockBadge(available) {
+  if (available <= 0) return Object.freeze({ tone: 'is-out', text: 'Out of stock' })
+  if (available <= LOW_STOCK_LIMIT) return Object.freeze({ tone: 'is-low', text: `Low · ${available} left` })
+  return Object.freeze({ tone: 'is-ok', text: `${available} in stock` })
+}
+
+// "1 color", "2 colors" (regular nouns only).
+export function plural(count, noun) {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
 }
 
 export function variantKey(productId, colorId, size, variantId = '') {

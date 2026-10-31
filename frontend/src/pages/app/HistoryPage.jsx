@@ -7,7 +7,7 @@ export function HistoryPage({ navigate }) {
       <PageHeader eyebrow="Sales" title="Sales history" description="The full history with filters and receipts is coming next." />
       <Card className="lifecycle-route-card">
         <h2>Today's sales</h2>
-        <p>Open Sell, then tap Sales history to see today's sales and receipt numbers.</p>
+        <p>Open Sell and tap the "Sales today" line at the top to see today's sales and receipt numbers.</p>
         <div><Button onClick={() => navigate('/app/sales')}>Open Sell</Button></div>
       </Card>
     </section>

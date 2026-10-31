@@ -12,6 +12,7 @@ let VoiceSaleDialog
 let VoiceControls
 let ReviewCard
 let SalesPage
+let ProductRow
 let CartSheet
 let SaleCompletedSheet
 let SalesHistorySheet
@@ -28,6 +29,7 @@ before(async () => {
   VoiceControls = voiceModule.VoiceControls
   ReviewCard = voiceModule.ReviewCard
   SalesPage = (await vite.ssrLoadModule('/src/pages/app/SalesPage.jsx')).SalesPage
+  ProductRow = (await vite.ssrLoadModule('/src/features/sales/MockSalesScreen.jsx')).ProductRow
   const sheets = await vite.ssrLoadModule('/src/features/sales/MockSalesSheets.jsx')
   ;({ CartSheet, SalesHistorySheet } = sheets)
   SaleCompletedSheet = (await vite.ssrLoadModule('/src/features/sales/SaleReceipt.jsx')).SaleCompletedSheet
@@ -44,7 +46,9 @@ describe('production POS voice UI', () => {
       // The store's daily revenue is OWNER-only (like the Dashboard); every role sees the receipt count.
       if (role === 'OWNER') assert.match(html, /Sales today/u)
       else assert.doesNotMatch(html, /Sales today/u)
-      assert.match(html, /Receipts/u)
+      assert.match(html, /receipts/u)
+      assert.match(html, /<h1>Sell<\/h1>/u)
+      assert.doesNotMatch(html, /Sell products|mock-pos-logo|mock-pos-history-button|\+ Edit|Change category/u)
       assert.match(html, /Search products/u)
       assert.match(html, />All</u)
       assert.match(html, /Loading real products/u)
@@ -136,16 +140,16 @@ describe('production POS voice UI', () => {
     assert.match(owner, /Complete sale/u)
     assert.match(owner, /Discount/u)
     assert.doesNotMatch(owner, /Payment method|Cash|Card/u)
-    assert.match(owner, /43.20 USD/u)
+    assert.match(owner, /\$43\.20/u)
     // The total and the amount on the button stay in the sheet footer, outside the scrolling lines.
     const footer = owner.slice(owner.indexOf('mock-pos-sheet-footer'))
     assert.ok(footer.includes('Total'))
     assert.ok(footer.includes('Subtotal'))
     assert.ok(footer.includes('Discount (10%)'))
-    assert.ok(footer.includes('Complete sale · 43.20 USD'))
+    assert.ok(footer.includes('Complete sale · $43.20'))
     assert.equal(owner.slice(0, owner.indexOf('mock-pos-sheet-footer')).includes('mock-pos-totals'), false)
     const noDiscount = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, discount: 0 }))
-    assert.ok(noDiscount.includes('Complete sale · 48.00 USD'))
+    assert.ok(noDiscount.includes('Complete sale · $48'))
     assert.equal(noDiscount.includes('Discount ('), false, 'subtotal and discount rows only appear with a discount')
     assert.equal(renderToStaticMarkup(createElement(CartSheet, { ...cartProps, cart: [] })).includes('Complete sale · '), false)
     const warehouse = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, canDiscount: false, discount: 0 }))
@@ -184,8 +188,8 @@ describe('production POS voice UI', () => {
   test('the completed sale is a full receipt with share, print and a main New sale button', () => {
     const summary = { discountPercent: 10, listSubtotalCents: 4800, totalCents: 4320 }
     const html = renderToStaticMarkup(createElement(SaleCompletedSheet, { completed: { sale: receiptSale, summary, replay: false }, storeName: 'Mini Store', onNewSale() {} }))
-    for (const part of ['Sale completed', '#A1B2C3D4', 'Mini Store', 'Linen shirt', 'Blue · M', '2 × 21.60 USD', 'Subtotal', '48.00 USD', 'Discount (10%)', '4.80 USD',
-      '43.20 USD', 'Share on WhatsApp', 'Print / PDF', 'New sale', 'Thank you!', '<time']) {
+    for (const part of ['Sale completed', '#A1B2C3D4', 'Mini Store', 'Linen shirt', 'Blue · M', '2 × $21.60', 'Subtotal', '$48', 'Discount (10%)', '$4.80',
+      '$43.20', 'Share on WhatsApp', 'Print / PDF', 'New sale', 'Thank you!', '<time']) {
       assert.ok(html.includes(part), part)
     }
     assert.doesNotMatch(html, /Payment|Cash|Card/u)
@@ -205,9 +209,37 @@ describe('production POS voice UI', () => {
     const owner = renderToStaticMarkup(createElement(SalesHistorySheet, { state, role: 'OWNER', currency: 'USD', onRetry() {}, onClose() {} }))
     assert.match(owner, /#A1B2C3D4/u)
     assert.match(owner, /Voided/u)
-    assert.match(owner, /43.20 USD/u)
+    assert.match(owner, /\$43\.20/u)
     const warehouse = renderToStaticMarkup(createElement(SalesHistorySheet, { state, role: 'WAREHOUSE', currency: 'USD', onRetry() {}, onClose() {} }))
     assert.doesNotMatch(warehouse, /43.20/u)
     assert.match(renderToStaticMarkup(createElement(SalesHistorySheet, { state: { kind: 'error', message: 'Sales are temporarily unavailable.', sales: [] }, role: 'OWNER', onRetry() {}, onClose() {} })), /Try again/u)
+  })
+
+  const product = (overrides = {}) => ({ id: 'p1', name: 'Chemis seda', imageUrl: null, icon: 'shirt', priceCents: 1500, priceMaxCents: 1500,
+    colors: [{ id: 'c1', name: 'Black', hex: '#202522', sizes: [] }], ...overrides })
+  const row = (available, overrides = {}) => renderToStaticMarkup(createElement(ProductRow, { product: product(overrides), availableStock: available, currency: 'USD', onOpen() {} }))
+
+  test('a product row is compact: name, price, color count and a stock badge, with no edit button', () => {
+    const html = row(10)
+    assert.ok(html.includes('Chemis seda') && html.includes('$15') && html.includes('1 color<'))
+    assert.equal(html.includes('1 colors'), false)
+    assert.match(html, /mock-pos-stock is-ok">10 in stock/u)
+    assert.doesNotMatch(html, /mock-pos-product-edit|Change category/u)
+    assert.equal((html.match(/<button/g) || []).length, 1)
+    assert.ok(row(3, { colors: [{ id: 'a', name: 'A', hex: '#111', sizes: [] }, { id: 'b', name: 'B', hex: '#222', sizes: [] }] }).includes('2 colors<'))
+  })
+
+  test('stock badges are distinct: low is a warning, out is red and disables the row, normal is neutral', () => {
+    assert.match(row(3), /mock-pos-stock is-low">Low · 3 left/u)
+    const out = row(0)
+    assert.match(out, /mock-pos-stock is-out">Out of stock/u)
+    assert.match(out, /mock-pos-product is-out/u)
+    assert.match(out, /<button type="button" class="mock-pos-product-main" disabled=""/u)
+    assert.doesNotMatch(row(10), /is-low|is-out/u)
+  })
+
+  test('product prices use the compact money format, with a range shown as From', () => {
+    assert.ok(row(10, { priceCents: 1250, priceMaxCents: 1250 }).includes('$12.50'))
+    assert.ok(row(10, { priceCents: 1200, priceMaxCents: 1800 }).includes('From $12'))
   })
 })

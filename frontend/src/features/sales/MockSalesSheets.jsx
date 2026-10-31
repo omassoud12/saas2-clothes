@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
-import { formatMoney } from '../../lib/money.js'
-import { cartTotals, discountOptions, money, reservedUnits } from './mock-sales-model.js'
+import { useState } from 'react'
+import { formatMoneyCompact } from '../../lib/money.js'
+import { cartTotals, discountOptions, money, plural, reservedUnits } from './mock-sales-model.js'
 import { lineIssueText, receiptNumber } from './pos-checkout.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
 
@@ -78,7 +78,7 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const frozen = busy || locked
   const issueByKey = new Map(issues.map(issue => [issue.key, issue]))
-  return <MockSalesSheet title="Cart" subtitle={`${cart.reduce((sum, line) => sum + line.quantity, 0)} items`} onClose={onClose}
+  return <MockSalesSheet title="Cart" subtitle={plural(cart.reduce((sum, line) => sum + line.quantity, 0), 'item')} onClose={onClose}
     className="mock-pos-cart-sheet" footer={<>
       {cart.length > 0 && <dl className="mock-pos-totals">
         {discount > 0 && totals.discountCents > 0 && <>
@@ -118,7 +118,7 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
     </div></section>}
     {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
     {cart.length > 0 && !frozen && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
-      <p>Remove all {cart.reduce((sum, line) => sum + line.quantity, 0)} items from the cart?</p>
+      <p>Remove {cart.reduce((sum, line) => sum + line.quantity, 0) === 1 ? 'the item' : 'all items'} from the cart?</p>
       <div><button type="button" className="is-danger" onClick={onClear}>Clear cart</button>
         <button type="button" onClick={() => setConfirmingClear(false)}>Keep cart</button></div>
     </div>}
@@ -133,100 +133,9 @@ export function SalesHistorySheet({ state, role, currency = 'USD', onRetry, onCl
     {state.kind === 'ready' && !state.sales.length && <div className="mock-pos-empty"><strong>No sales yet today</strong><p>Completed sales show up here.</p></div>}
     {state.kind === 'ready' && state.sales.length > 0 && <div className="mock-pos-receipts">{state.sales.map(sale => <article key={sale.id}>
       <div><strong>{receiptNumber(sale.id)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? ' · Voided' : ''}</span></div>
-      <div>{role === 'OWNER' && <strong>{formatMoney(sale.totalAmount, sale.currency || currency)}</strong>}
+      <div>{role === 'OWNER' && <strong>{formatMoneyCompact(sale.totalAmount, sale.currency || currency)}</strong>}
         <time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
     </article>)}</div>}
     {state.kind === 'ready' && state.truncated && <p className="mock-pos-note">Showing the latest 500 sales of today.</p>}
-  </MockSalesSheet>
-}
-
-export function CategoryManagerSheet({ categories, products, onAdd, onRename, onDelete, onClose }) {
-  const [newName, setNewName] = useState('')
-  const [editing, setEditing] = useState(null)
-  const [editName, setEditName] = useState('')
-  const [pendingDelete, setPendingDelete] = useState(null)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
-  const count = id => products.filter(product => product.categoryId === id).length
-
-  function validate(name, currentId = null) {
-    const clean = name.trim()
-    if (!clean) return 'Enter a category name.'
-    if (categories.some(category => category.id !== currentId && category.name.toLocaleLowerCase() === clean.toLocaleLowerCase())) {
-      return 'That category already exists. Choose another name.'
-    }
-    return ''
-  }
-
-  async function add() {
-    const issue = validate(newName)
-    if (issue) { setError(issue); return }
-    setPending(true); setError('')
-    const result = await onAdd(newName.trim())
-    setPending(false)
-    if (!result?.ok) { setError(result?.message || 'The category could not be added. Try again.'); return }
-    setNewName('')
-  }
-
-  async function rename(id) {
-    const issue = validate(editName, id)
-    if (issue) { setError(issue); return }
-    setPending(true); setError('')
-    const result = await onRename(id, editName.trim())
-    setPending(false)
-    if (!result?.ok) { setError(result?.message || 'The category could not be renamed. Try again.'); return }
-    setEditing(null)
-  }
-
-  async function remove(id) {
-    setPending(true); setError('')
-    const result = await onDelete(id)
-    setPending(false)
-    if (!result?.ok) { setError(result?.message || 'This category could not be deleted. Reassign its products and try again.'); return }
-    setPendingDelete(null)
-  }
-
-  return <MockSalesSheet title="Categories" subtitle="Changes are saved to the store catalog" onClose={onClose}>
-    <div className="mock-pos-category-list">{categories.map(category => <article key={category.id}>
-      {editing === category.id ? <div className="mock-pos-inline-edit"><input aria-label={`Rename ${category.name}`} value={editName} maxLength={100} disabled={pending}
-        onChange={event => { setEditName(event.target.value); setError('') }} /><button type="button" disabled={pending} onClick={() => rename(category.id)}>Save</button></div>
-        : <div><strong>{category.name}</strong><span>{count(category.id)} products</span></div>}
-      <div className="mock-pos-row-actions">
-        <button type="button" disabled={pending} aria-label={`Rename ${category.name}`} onClick={() => { setEditing(category.id); setEditName(category.name); setPendingDelete(null); setError('') }}>Rename</button>
-        <button type="button" disabled={pending} className="is-danger" aria-label={`Delete ${category.name}`} onClick={() => setPendingDelete(category.id)}>Delete</button>
-      </div>
-      {pendingDelete === category.id && <div className="mock-pos-delete-confirm" role="alert">
-        <p>{count(category.id) ? 'This category has products. The server will require you to reassign them before deletion.' : 'Delete this empty category?'}</p>
-        <div><button type="button" disabled={pending || count(category.id) > 0} className="is-danger" onClick={() => remove(category.id)}>Delete category</button>
-          <button type="button" disabled={pending} onClick={() => setPendingDelete(null)}>Keep category</button></div>
-      </div>}
-    </article>)}</div>
-    <form className="mock-pos-add-category" onSubmit={event => { event.preventDefault(); void add() }}>
-      <label htmlFor="mock-new-category">Add category</label><div><input id="mock-new-category" value={newName} maxLength={100} disabled={pending} placeholder="Dresses, shoes, accessories…"
-        onChange={event => { setNewName(event.target.value); setError('') }} /><button type="submit" disabled={pending}>Add</button></div>
-    </form>
-    {error && <p className="mock-pos-error" role="alert">{error}</p>}
-  </MockSalesSheet>
-}
-
-export function ProductCategorySheet({ product, categories, onChange, onClose }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
-  const choices = useMemo(() => categories, [categories])
-
-  async function change(categoryId) {
-    setPending(true); setError('')
-    const result = await onChange(product.id, categoryId)
-    setPending(false)
-    if (!result?.ok) { setError(result?.message || 'The product category could not be changed. Try again.'); return }
-    onClose()
-  }
-
-  return <MockSalesSheet title="Change category" subtitle={product.name} onClose={onClose}>
-    <div className="mock-pos-category-picker">{choices.map(category => <button key={category.id} type="button" disabled={pending}
-      aria-pressed={product.categoryId === category.id} onClick={() => void change(category.id)}>
-      <span>{category.name}</span>{product.categoryId === category.id && <span aria-hidden="true">✓</span>}
-    </button>)}</div>
-    {error && <p className="mock-pos-error" role="alert">{error}</p>}
   </MockSalesSheet>
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { decimalToMinorUnits, formatMoney, formatSignedMoney, minorUnitsToDecimal, signedMinorUnitsToDecimal, summarizeProductCatalog } from './money.js'
+import { decimalToMinorUnits, formatMoney, formatMoneyCompact, formatSignedMoney, minorUnitsToDecimal, signedMinorUnitsToDecimal, summarizeProductCatalog } from './money.js'
 
 describe('decimal-safe money presentation', () => {
   test('uses the authoritative currency for OWNER and WAREHOUSE display', () => {
@@ -46,4 +46,31 @@ describe('decimal-safe money presentation', () => {
 
 test('inactive stock is secondary and inactive prices do not pollute range',()=>{
  assert.deepEqual(summarizeProductCatalog({isActive:true,variants:[{isActive:true,currentStock:1,sellingPrice:'15'},{isActive:false,currentStock:9,sellingPrice:'99'}]},'USD'),{stock:'1',inactiveStock:'9',price:'15.00 USD'})
+
+  test('compact money drops empty decimals and groups thousands', () => {
+    assert.equal(formatMoneyCompact('12.00', 'USD'), '$12')
+    assert.equal(formatMoneyCompact('12', 'USD'), '$12')
+    assert.equal(formatMoneyCompact('12.50', 'USD'), '$12.50')
+    assert.equal(formatMoneyCompact('12.5', 'USD'), '$12.50')
+    assert.equal(formatMoneyCompact('0.00', 'USD'), '$0')
+    assert.equal(formatMoneyCompact('0.05', 'USD'), '$0.05')
+    assert.equal(formatMoneyCompact('1250.00', 'USD'), '$1,250')
+    assert.equal(formatMoneyCompact('1234567.89', 'USD'), '$1,234,567.89')
+    assert.equal(formatMoneyCompact('9.99', 'EUR'), '€9.99')
+    assert.equal(formatMoneyCompact('7.00', 'GBP'), '£7')
+  })
+
+  test('compact money keeps the currency code when there is no symbol', () => {
+    assert.equal(formatMoneyCompact('1500000.00', 'LBP'), '1,500,000 LBP')
+    assert.equal(formatMoneyCompact('1500000.50', 'LBP'), '1,500,000.50 LBP')
+  })
+
+  test('compact money follows the requested precision and rejects what formatMoney rejects', () => {
+    assert.equal(formatMoneyCompact('12.1234', 'USD', 4), '$12.1234')
+    assert.equal(formatMoneyCompact('12.1200', 'USD', 4), '$12.12')
+    assert.equal(formatMoneyCompact('12.00', undefined), 'Unavailable')
+    assert.equal(formatMoneyCompact(12, 'USD'), 'Unavailable')
+    assert.equal(formatMoneyCompact('12.001', 'USD'), 'Unavailable')
+    assert.equal(formatMoneyCompact('-5.00', 'USD'), 'Unavailable')
+  })
 })

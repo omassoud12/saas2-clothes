@@ -1,8 +1,8 @@
-import { decimalToMinorUnits, formatMoney, minorUnitsToDecimal } from '../../lib/money.js'
+import { decimalToMinorUnits, formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
 import { receiptNumber } from './pos-checkout.js'
 
 // The receipt shown after a sale, its plain-text version for sharing, and the WhatsApp/share handoff.
-// Amounts use lib/money.js like the rest of the app. The Sale API stores neither discount nor payment method,
+// Amounts use the compact format from lib/money.js. The Sale API stores neither discount nor payment method,
 // so the discount comes from the cart that was checked out (summary), and no payment line is shown.
 
 const WHATSAPP_MAX_ITEMS = 40
@@ -15,7 +15,7 @@ function formatReceiptDate(iso, locale, timeZone) {
 
 export function buildReceipt({ sale, summary = null, storeName = '', locale, timeZone }) {
   const currency = sale.currency
-  const money = minor => formatMoney(minorUnitsToDecimal(minor), currency)
+  const money = minor => formatMoneyCompact(minorUnitsToDecimal(minor), currency)
   const totalMinor = decimalToMinorUnits(sale.totalAmount) ?? 0n
   const listMinor = summary ? BigInt(summary.listSubtotalCents) : (decimalToMinorUnits(sale.subtotal) ?? totalMinor)
   const discountMinor = listMinor > totalMinor ? listMinor - totalMinor : 0n
@@ -30,8 +30,8 @@ export function buildReceipt({ sale, summary = null, storeName = '', locale, tim
       name: item.productName,
       detail: [item.color, item.size].filter(Boolean).join(' · '),
       quantity: item.quantity,
-      unitPrice: formatMoney(item.unitSoldPrice, currency),
-      lineTotal: formatMoney(item.lineTotal, currency),
+      unitPrice: formatMoneyCompact(item.unitSoldPrice, currency),
+      lineTotal: formatMoneyCompact(item.lineTotal, currency),
     }))),
     units: sale.items.reduce((sum, item) => sum + item.quantity, 0),
     subtotal: money(listMinor),

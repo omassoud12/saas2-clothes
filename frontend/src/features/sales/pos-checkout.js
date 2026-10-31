@@ -1,4 +1,4 @@
-import { decimalToMinorUnits, formatMoney, minorUnitsToDecimal } from '../../lib/money.js'
+import { decimalToMinorUnits, formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
 import { cartTotals, discountedUnitCents, money } from './mock-sales-model.js'
 import { checkoutOperation } from './sale-flow.js'
 
@@ -106,5 +106,5 @@ export function summarizeSales(sales, currency) {
   const completed = sales.filter(sale => sale.status === 'COMPLETED')
   let total = 0n
   for (const sale of completed) total += decimalToMinorUnits(sale.totalAmount) ?? 0n
-  return Object.freeze({ count: completed.length, total: formatMoney(minorUnitsToDecimal(total), currency) })
+  return Object.freeze({ count: completed.length, total: formatMoneyCompact(minorUnitsToDecimal(total), currency) })
 }

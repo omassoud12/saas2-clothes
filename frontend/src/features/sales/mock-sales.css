@@ -19,21 +19,13 @@
 .mock-pos-page svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .mock-pos-shell { width: min(100%, 520px); min-height: calc(100dvh - 96px); margin-inline: auto; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 
-.mock-pos-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 16px; }
-.mock-pos-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.mock-pos-logo { display: grid; width: 46px; height: 46px; flex: 0 0 46px; place-items: center; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-soft); color: var(--pos-brand); font: 700 22px/1 Georgia, serif; }
-.mock-pos-brand > div { display: grid; min-width: 0; gap: 1px; }
-.mock-pos-brand strong { overflow: hidden; font-size: 18px; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-.mock-pos-brand span:last-child { color: var(--pos-muted); font-size: 12px; }
-.mock-pos-history-button { display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border: 1px solid var(--pos-line) !important; border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 12px; font-weight: 700; }
-.mock-pos-history-button:hover { border-color: color-mix(in srgb, var(--pos-brand) 45%, var(--pos-line)) !important; background: var(--pos-soft); color: var(--pos-brand); }
-.mock-pos-history-button svg { width: 18px; height: 18px; }
+.mock-pos-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 0 0 8px; }
+.mock-pos-header h1 { margin: 0; color: var(--pos-ink); font-family: inherit; font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -.02em; }
+.mock-pos-page .mock-pos-today { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; margin: 0; padding: 0 6px 0 12px; border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mock-pos-page .mock-pos-today span { color: var(--pos-muted); }
+.mock-pos-page .mock-pos-today strong { font-size: 14px; font-weight: 800; }
+.mock-pos-page .mock-pos-today svg { width: 18px; height: 18px; color: var(--pos-muted); }
 
-.mock-pos-today { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr); gap: 1px; overflow: hidden; margin-bottom: 16px; border: 1px solid color-mix(in srgb, var(--pos-hero-ink) 14%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--pos-hero-ink) 22%, transparent); color: var(--pos-hero-ink); box-shadow: 0 9px 24px #153d2912; }
-.mock-pos-today > div { display: grid; gap: 5px; padding: 16px; background: var(--pos-hero); }
-.mock-pos-today span { font-size: 12px; opacity: .78; }
-.mock-pos-today strong { font-size: 25px; line-height: 1.1; letter-spacing: -.03em; }
-.mock-pos-today > div:last-child strong { font-size: 22px; }
 
 .mock-pos-search { display: grid; grid-template-columns: 22px minmax(0, 1fr) 44px; align-items: center; gap: 8px; height: 52px; padding-inline: 14px 4px; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: 0 4px 12px #18351f08; transition: border-color .16s ease, box-shadow .16s ease; }
 .mock-pos-search:focus-within { border-color: var(--pos-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pos-brand) 18%, transparent); }
@@ -50,29 +42,28 @@
 .mock-pos-chips::-webkit-scrollbar { display: none; }
 .mock-pos-chips button { flex: 0 0 auto; min-height: 42px; padding: 8px 15px; border: 1px solid var(--pos-line); border-radius: 999px; background: var(--pos-surface); color: var(--pos-muted); font-size: 13px; font-weight: 650; }
 .mock-pos-chips button[aria-pressed="true"] { border-color: var(--pos-active); background: var(--pos-active); color: var(--pos-ink); }
-.mock-pos-chips button.is-edit { border-style: dashed; color: var(--pos-brand); }
 
 .mock-pos-products { display: grid; width: 100%; min-height: 0; align-content: start; align-items: stretch; justify-items: stretch; gap: 10px; margin: 0; padding: 6px 0 0; }
 .mock-pos-list-heading { grid-column: 1 / -1; display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 2px; padding: 0; }
-.mock-pos-list-heading h1 { max-width: none; margin: 0; color: var(--pos-ink); font-family: inherit; font-size: 19px; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; }
+.mock-pos-list-heading h2 { max-width: none; margin: 0; color: var(--pos-ink); font-family: inherit; font-size: 17px; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; }
 .mock-pos-list-heading span { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; background: var(--pos-soft); color: var(--pos-muted); font-size: 11px; font-weight: 700; }
-.mock-pos-product { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: stretch; min-width: 0; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 15px; background: var(--pos-surface); box-shadow: 0 3px 12px #17341f06; transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
-.mock-pos-product-main { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-width: 0; padding: 10px 4px 10px 10px; background: transparent; color: var(--pos-ink); text-align: start; }
+.mock-pos-product { display: block; min-width: 0; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: 0 3px 12px #17341f06; transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+.mock-pos-product-main { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 8px 10px; background: transparent; color: var(--pos-ink); text-align: start; }
 .mock-pos-product:not(.is-out):hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pos-brand) 48%, var(--pos-line)); box-shadow: 0 8px 22px #17341f0d; }
-.mock-pos-product-art { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 12px; background: color-mix(in srgb, var(--garment) 16%, var(--pos-soft)); color: var(--garment); }
+.mock-pos-product-art { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--garment) 16%, var(--pos-soft)); color: var(--garment); }
 .mock-pos-product-art img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
-.mock-pos-product-art svg { width: 40px; height: 40px; fill: currentColor; stroke: color-mix(in srgb, currentColor 80%, var(--pos-ink)); stroke-width: 1.1; }
-.mock-pos-product-copy, .mock-pos-product-price { display: grid; min-width: 0; gap: 3px; }
-.mock-pos-product-copy strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.mock-pos-product-copy small { color: var(--pos-muted); font-size: 11px; }
-.mock-pos-product-price { justify-items: end; text-align: end; }
-.mock-pos-product-price > strong { font-size: 14px; }
-.mock-pos-product-price small { padding: 3px 7px; border-radius: 999px; background: var(--pos-soft); color: var(--pos-brand); font-size: 10px; font-weight: 600; white-space: nowrap; }
-.mock-pos-product-price small.is-low, .mock-pos-product-price small.is-out { background: var(--pos-warn-bg); color: var(--pos-warn); }
-.mock-pos-product-main:disabled { opacity: .58; }
-.mock-pos-product-edit { align-self: center; display: grid; width: 40px; height: 44px; min-height: 44px; place-items: center; border-radius: 10px; background: transparent; color: var(--pos-muted); }
-.mock-pos-product-edit:hover { background: var(--pos-soft); color: var(--pos-brand); }
-.mock-pos-product-edit svg { width: 18px; height: 18px; }
+.mock-pos-product-art svg { width: 34px; height: 34px; fill: currentColor; stroke: color-mix(in srgb, currentColor 80%, var(--pos-ink)); stroke-width: 1.1; }
+.mock-pos-product-copy { display: grid; min-width: 0; gap: 3px; }
+.mock-pos-product-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.mock-pos-product-line strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.mock-pos-product-line b { flex: 0 0 auto; font-size: 14px; font-weight: 800; }
+.mock-pos-product-line small { color: var(--pos-muted); font-size: 12px; }
+.mock-pos-product-line small.mock-pos-stock { flex: 0 0 auto; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.mock-pos-stock.is-ok { background: #efebea; color: #5a5254; }
+.mock-pos-stock.is-low { background: #fdecc8; color: #7a4b00; }
+.mock-pos-stock.is-out { background: #fbe0dc; color: #a3201a; }
+.mock-pos-page .mock-pos-product-main:disabled { opacity: 1; cursor: not-allowed; }
+.mock-pos-product.is-out .mock-pos-product-art, .mock-pos-product.is-out .mock-pos-product-line strong, .mock-pos-product.is-out .mock-pos-product-line b { opacity: .55; }
 .mock-pos-catalog-state, .mock-pos-catalog-note { grid-column: 1 / -1; }
 .mock-pos-catalog-state { display: grid; min-height: 180px; place-content: center; justify-items: center; gap: 10px; padding: 24px; border: 1px dashed var(--pos-line); border-radius: 15px; color: var(--pos-muted); text-align: center; }
 .mock-pos-catalog-state p { max-width: 420px; margin: 0; font-size: 13px; }
@@ -116,7 +107,7 @@
 .mock-pos-stepper output { text-align: center; font-weight: 700; }
 .mock-pos-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--pos-warn-bg); color: var(--pos-warn); font-size: 12px; }
 
-.mock-pos-cart-lines, .mock-pos-receipts, .mock-pos-category-list { display: grid; gap: 10px; }
+.mock-pos-cart-lines, .mock-pos-receipts { display: grid; gap: 10px; }
 .mock-pos-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px; border: 1px solid var(--pos-line); border-radius: 14px; }
 .mock-pos-cart-line > div:first-child { display: grid; align-content: center; gap: 3px; min-width: 0; }
 .mock-pos-cart-line span { color: var(--pos-muted); font-size: 11px; }
@@ -144,31 +135,17 @@
 .mock-pos-receipts article > div:last-child { justify-items: end; }
 .mock-pos-receipts span, .mock-pos-receipts time { color: var(--pos-muted); font-size: 11px; }
 
-.mock-pos-category-list article { padding: 12px; border: 1px solid var(--pos-line); border-radius: 14px; }
-.mock-pos-category-list article > div:first-child:not(.mock-pos-inline-edit) { display: grid; gap: 2px; }
-.mock-pos-category-list span { color: var(--pos-muted); font-size: 11px; }
-.mock-pos-row-actions { display: flex; gap: 12px; margin-top: 8px; }
-.mock-pos-row-actions button, .mock-pos-delete-confirm button { min-width: 44px; min-height: 44px; padding: 3px 8px; background: transparent; color: var(--pos-brand); font-size: 12px; font-weight: 700; }
-.mock-pos-row-actions button.is-danger, .mock-pos-delete-confirm button.is-danger { color: var(--pos-warn); }
-.mock-pos-inline-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.mock-pos-inline-edit input, .mock-pos-add-category input { width: 100%; min-width: 0; height: 44px; padding: 10px 12px; border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); }
-.mock-pos-inline-edit button, .mock-pos-add-category button { padding: 8px 14px; border-radius: 12px; background: var(--pos-brand); color: var(--pos-brand-ink); font-weight: 700; }
+.mock-pos-delete-confirm button { min-width: 44px; min-height: 44px; padding: 3px 8px; background: transparent; color: var(--pos-brand); font-size: 12px; font-weight: 700; }
 .mock-pos-delete-confirm { margin-top: 10px; padding: 10px; border-radius: 12px; background: var(--pos-warn-bg); color: var(--pos-warn); }
+.mock-pos-delete-confirm button.is-danger { color: var(--pos-warn); }
 .mock-pos-delete-confirm p { margin: 0 0 6px; font-size: 12px; }
 .mock-pos-delete-confirm > div { display: flex; gap: 14px; }
-.mock-pos-add-category { display: grid; gap: 7px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--pos-line); }
-.mock-pos-add-category label { font-size: 13px; font-weight: 700; }
-.mock-pos-add-category > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .mock-pos-note { margin: 12px 0 0; color: var(--pos-muted); font-size: 12px; }
-.mock-pos-category-picker { display: grid; gap: 8px; }
-.mock-pos-category-picker button { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); text-align: start; }
-.mock-pos-category-picker button[aria-pressed="true"] { border-color: var(--pos-brand); background: var(--pos-soft); color: var(--pos-brand); font-weight: 700; }
 .mock-pos-toast { position: fixed; z-index: 1100; inset-inline: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 488px); margin-inline: auto; padding: 12px 15px; border-radius: 13px; background: var(--pos-ink); color: var(--pos-surface); box-shadow: 0 10px 30px #07100b30; font-size: 13px; font-weight: 600; text-align: center; animation: mock-pos-toast-in .18s ease-out both; }
 
 .mock-pos-toast.has-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: start; }
 .mock-pos-toast.has-action button { flex: 0 0 auto; min-width: 64px; padding: 0 14px; border-radius: 10px; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; }
 
-.mock-pos-today.is-single { grid-template-columns: minmax(0, 1fr); }
 .mock-pos-spinner.is-inline { width: 18px; height: 18px; border-width: 2px; border-color: color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; }
 .mock-pos-primary[aria-busy="true"] { justify-content: center; gap: 10px; }
 .mock-pos-checkout-message { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: var(--pos-warn-bg); color: var(--pos-warn); font-size: 13px; font-weight: 600; }
@@ -223,15 +200,11 @@
 @media (min-width: 780px) {
   .business-content:has(> .mock-pos-page) { padding: 28px 28px 0; }
   .mock-pos-shell { width: min(100%, 1120px); }
-  .mock-pos-header { padding-bottom: 20px; }
-  .mock-pos-today { grid-template-columns: minmax(0, 2fr) minmax(220px, .7fr); }
-  .mock-pos-today > div { padding: 20px; }
+  .mock-pos-header { padding-bottom: 12px; }
   .mock-pos-search { height: 58px; }
   .mock-pos-chips { margin-inline: 0; padding-inline: 0; }
   .mock-pos-products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 10px; }
   .mock-pos-list-heading, .mock-pos-empty { grid-column: 1 / -1; }
-  .mock-pos-product-main { min-height: 82px; padding: 12px 6px 12px 12px; }
-  .mock-pos-product-copy strong, .mock-pos-product-price > strong { font-size: 15px; }
   .mock-pos-sticky { margin-inline: 0; padding-inline: 0; }
   .mock-pos-sheet { width: min(calc(100% - 40px), 680px); margin-bottom: 20px; border-radius: 24px; }
 }
@@ -249,17 +222,9 @@
   .business-content:has(> .mock-pos-page) { min-height: calc(100dvh - 60px); padding: 8px 8px 0; }
   .mock-pos-page, .mock-pos-shell { min-height: calc(100dvh - 60px); }
   .mock-pos-shell { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
-  .mock-pos-header { padding: 0 0 8px; }
-  .mock-pos-brand { gap: 9px; }
-  .mock-pos-logo { width: 40px; height: 40px; flex-basis: 40px; border-radius: 12px; font-size: 19px; }
-  .mock-pos-brand strong { font-size: 17px; }
-  .mock-pos-brand span:last-child { font-size: 10px; }
-  .mock-pos-history-button span { display: none; }
-  .mock-pos-history-button { width: 42px; min-height: 42px; padding: 0; justify-content: center; }
-  .mock-pos-today { margin-bottom: 9px; border-radius: 14px; }
-  .mock-pos-today > div { gap: 2px; padding: 10px 12px; }
-  .mock-pos-today span { font-size: 10px; }
-  .mock-pos-today strong, .mock-pos-today > div:last-child strong { font-size: 20px; }
+  .mock-pos-header { padding: 0 0 6px; }
+  .mock-pos-header h1 { font-size: 19px; }
+  .mock-pos-page .mock-pos-today { padding-left: 10px; font-size: 12px; }
   .mock-pos-search { grid-template-columns: 20px minmax(0, 1fr) 40px; height: 48px; gap: 7px; padding-inline: 12px 4px; border-radius: 13px; }
   .mock-pos-search input { height: 44px; font-size: 14px; }
   .mock-pos-search button { width: 40px; height: 40px; min-height: 40px; }
@@ -267,15 +232,7 @@
   .mock-pos-chips button { min-height: 38px; padding: 6px 13px; font-size: 12px; }
   .mock-pos-products { gap: 8px; padding-top: 2px; }
   .mock-pos-list-heading { margin-bottom: 0; }
-  .mock-pos-list-heading h1 { font-size: 18px; }
   .mock-pos-list-heading span { padding: 4px 8px; font-size: 10px; }
-  .mock-pos-product-main { grid-template-columns: 46px minmax(0, 1fr); gap: 9px; padding: 8px 3px 8px 8px; }
-  .mock-pos-product-art { width: 46px; height: 46px; border-radius: 11px; }
-  .mock-pos-product-art svg { width: 35px; height: 35px; }
-  .mock-pos-product-price { grid-column: 2; grid-row: 2; grid-template-columns: auto auto; align-items: center; justify-content: space-between; justify-items: start; text-align: start; }
-  .mock-pos-product-copy { align-self: end; }
-  .mock-pos-product-copy strong, .mock-pos-product-price > strong { font-size: 13px; }
-  .mock-pos-product-edit { width: 40px; }
   .mock-pos-sticky { margin: 12px -8px 0; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
   .mock-pos-primary { min-height: 48px !important; padding: 11px 14px; }
 }
@@ -294,7 +251,6 @@
     --pos-active: #e8c5bd; --pos-hero: #2c2c2e; --pos-hero-ink: #fffdfc;
     --pos-warn: #9a3e35; --pos-warn-bg: #f3e3df;
   }
-  .mock-pos-today { box-shadow: none; }
   .mock-pos-product, .mock-pos-search { box-shadow: none; }
   .mock-pos-product-art { background: color-mix(in srgb, var(--garment) 20%, var(--pos-soft)); }
   .mock-pos-toast { background: #232224; color: #fffdfc; }

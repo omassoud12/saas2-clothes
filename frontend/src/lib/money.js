@@ -17,6 +17,21 @@ export function formatMoney(amount, currency, fractionDigits = 2) {
   return `${normalized} ${currency}`
 }
 
+const currencySymbols = Object.freeze({ USD: '$', EUR: '€', GBP: '£' })
+
+// Short everyday format for the point of sale: "12.00" -> "$12", "12.5" -> "$12.50", "1250.00" -> "$1,250".
+// Currencies without a symbol keep their code after the number ("1,500,000 LBP"). Uses the same validation as formatMoney.
+export function formatMoneyCompact(amount, currency, fractionDigits = 2) {
+  if (formatMoney(amount, currency, fractionDigits) === 'Unavailable') return 'Unavailable'
+  const [integer, fraction = ''] = amount.split('.')
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const trimmed = fraction.replace(/0+$/, '')
+  const decimals = trimmed ? (fractionDigits >= 2 ? trimmed.padEnd(2, '0') : trimmed) : ''
+  const number = decimals ? `${grouped}.${decimals}` : grouped
+  const symbol = currencySymbols[currency]
+  return symbol ? `${symbol}${number}` : `${number} ${currency}`
+}
+
 export function decimalToMinorUnits(amount, fractionDigits = 2) {
   if (typeof amount !== 'string' || !Number.isInteger(fractionDigits) || fractionDigits < 0 || fractionDigits > 4) return null
   const match = decimalPattern.exec(amount)
