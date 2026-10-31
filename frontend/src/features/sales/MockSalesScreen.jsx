@@ -353,9 +353,9 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
           : catalog.kind === 'ready' && <div className="mock-pos-empty"><strong>No products found</strong><p>Try another name, SKU, or category.</p></div>}
       </main>
 
-      <footer className="mock-pos-sticky"><button type="button" className="mock-pos-primary" disabled={!cart.length} onClick={() => setSheet('cart')}>
-        <span>{cart.length ? `View cart · ${plural(cartUnits(cart), 'item')}` : 'Cart is empty'}</span><strong>{cart.length ? money(totals.totalCents, currency) : money(0, currency)}</strong>
-      </button></footer>
+      {cart.length ? <footer className="mock-pos-sticky"><button type="button" className="mock-pos-primary" onClick={() => setSheet('cart')}>
+        <span>View cart · {plural(cartUnits(cart), 'item')}</span><strong>{money(totals.totalCents, currency)}</strong>
+      </button></footer> : <div className="mock-pos-end-space" aria-hidden="true" />}
     </div>
 
     {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={activeDiscount} canDiscount={role === 'OWNER'} onDiscount={setDiscount}

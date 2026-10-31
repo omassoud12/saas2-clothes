@@ -74,6 +74,7 @@
 
 .mock-pos-sticky { position: sticky; z-index: 8; bottom: 0; margin: 20px -16px 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--pos-line); background: color-mix(in srgb, var(--pos-bg) 92%, transparent); backdrop-filter: blur(14px); }
 .mock-pos-primary { display: flex; width: 100%; min-height: 52px !important; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; border-radius: 13px; background: var(--pos-brand); color: var(--pos-brand-ink); font-weight: 700; }
+.mock-pos-end-space { height: 28px; }
 .mock-pos-primary:disabled { border: 1px solid var(--pos-line); background: var(--pos-surface); color: var(--pos-muted); opacity: 1; }
 .mock-pos-primary strong { font-size: 16px; }
 

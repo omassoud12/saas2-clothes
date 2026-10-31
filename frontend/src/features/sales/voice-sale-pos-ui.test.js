@@ -53,7 +53,7 @@ describe('production POS voice UI', () => {
       assert.match(html, />All</u)
       assert.match(html, /Loading real products/u)
       assert.doesNotMatch(html, /Classic tee|Ribbed top|Straight jeans/u)
-      assert.match(html, /Cart is empty/u)
+      assert.doesNotMatch(html, /Cart is empty|View cart|mock-pos-sticky/u)
       assert.doesNotMatch(html, /Voice sale/u)
       assert.doesNotMatch(html, /Complete sale/u)
     }
