@@ -2,7 +2,7 @@
 .entry-page.entry-polish { width: 100%; max-width: 1040px; margin-inline: auto; --color-text: #17231b; --color-text-muted: #667268; --color-border: #d7dfd3; --color-primary: #2f6b3d; --color-primary-soft: #e9f1e6; }
 .business-content:has(> .entry-polish) { padding: 24px 32px 32px; background: #f6f8f3; }
 .entry-polish .inventory-page-header { align-items: center; gap: 16px; margin-bottom: 24px; }
-.entry-polish .inventory-header-copy .eyebrow { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: .1em; font-weight: 650; color: #57665a; }
+.entry-polish .inventory-header-copy .eyebrow { display: block; margin-bottom: 6px; font-size: 12px; letter-spacing: .1em; font-weight: 650; color: #57665a; }
 .entry-polish .inventory-page-header h1 { font-size: 30px; font-weight: 700; margin: 0 0 8px; }
 .entry-polish .inventory-header-copy p { max-width: 620px; color: #667268; font-size: 14px; line-height: 1.5; }
 .entry-polish .entry-view-products { display: inline-flex; gap: 8px; align-items: center; flex-shrink: 0; width: auto; min-height: 44px; padding: 8px 12px; border: 0; background: transparent; color: #526256; }

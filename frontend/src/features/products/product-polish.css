@@ -6,7 +6,7 @@
 .product-management .product-page-heading h1 { font-size: 30px; margin: 4px 0 6px; }
 .product-management .product-page-heading p { margin: 0; max-width: 560px; }
 .product-management .product-page-heading > button { display: inline-flex; align-items: center; gap: 6px; width: auto; padding-inline: 18px; flex-shrink: 0; }
-.product-management .eyebrow { color: #57665a; font-size: 11px; letter-spacing: .1em; font-weight: 650; }
+.product-management .eyebrow { color: #57665a; letter-spacing: .1em; font-weight: 650; }
 .product-management button { transition: background-color .12s, border-color .12s; }
 .product-management button:not(.secondary-action):not(.text-button):not(.product-menu-trigger):not([role=tab]):not([role=menuitem]):hover:not(:disabled) { background: #255831; }
 .product-management .secondary-action:hover:not(:disabled) { background: #f4f7f1; border-color: #b9c6b5; }

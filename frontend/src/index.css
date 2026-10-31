@@ -586,13 +586,13 @@ button:disabled { cursor: wait; opacity: .65; }
 .category-error-state button { margin-top: 1rem; }
 .category-list { overflow: hidden; border: 1px solid #d4ddd1; border-radius: 18px; background: #fff; box-shadow: 0 12px 34px rgba(31, 51, 37, .05); }
 .category-list-heading, .category-row { display: grid; grid-template-columns: minmax(0, 1fr) 170px 180px; align-items: center; gap: 1rem; }
-.category-list-heading { border-bottom: 1px solid #dbe2d7; padding: .8rem 1.15rem; background: #f2f5ef; color: #657068; font-size: .72rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.category-list-heading { border-bottom: 1px solid #dbe2d7; padding: .8rem 1.15rem; background: #f2f5ef; color: #657068; font-size: .75rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .category-row { padding: 1rem 1.15rem; }
 .category-row + .category-row { border-top: 1px solid #e1e7de; }
 .category-name { min-width: 0; overflow-wrap: anywhere; color: #263b2c; }
 .category-row time { color: #657068; font-size: .86rem; }
 .category-actions, .category-inline-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.category-actions button, .category-inline-actions button { min-height: 38px; margin: 0; padding: .5rem .75rem; font-size: .82rem; }
+.category-actions button, .category-inline-actions button { min-height: 44px; margin: 0; padding: .5rem .75rem; font-size: .82rem; }
 .category-delete-button { border: 1px solid #e6c8c4; background: #fff7f5; color: #91342f; }
 .category-edit-form { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .75rem; margin: 0; }
 .category-edit-form input { min-width: 0; }
