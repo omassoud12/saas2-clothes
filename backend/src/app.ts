@@ -21,6 +21,7 @@ import type { ExchangeHistoryDependencies } from './exchanges/exchange.history.s
 import { createExpenseRouter } from './expenses/expense.routes.js'
 import type { ExpenseDependencies } from './expenses/expense.types.js'
 import { createSettingsRouter, type SettingsDependencies } from './settings/settings.js'
+import { createCountCheckRouter, type CountCheckDependencies } from './inventory/count-check.js'
 import { createReportRouter } from './reports/report.routes.js'
 import type { ReportDependencies } from './reports/report.types.js'
 import type {
@@ -174,6 +175,7 @@ export interface AppDependencies {
   readonly expenses?: ExpenseDependencies
   readonly reports?: ReportDependencies
   readonly settings?: SettingsDependencies
+  readonly countChecks?: CountCheckDependencies
 }
 
 export function createApp(
@@ -239,6 +241,7 @@ export function createApp(
     app.use('/api/voice-sales', createVoiceMatchingRouter(dependencies.auth, dependencies.voiceMatching, dependencies.voiceTranscription))
   }
   if (dependencies.receipts) app.use('/api/inventory', createReceiptRouter(dependencies.auth, dependencies.receipts))
+  if (dependencies.countChecks) app.use('/api/inventory', createCountCheckRouter(dependencies.auth, dependencies.countChecks))
   app.use('/api/inventory', createInventoryRouter(dependencies.auth, dependencies.inventory))
   app.use('/api/sales', createSaleRouter(
     dependencies.auth,

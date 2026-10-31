@@ -571,3 +571,14 @@
   .products-page .product-price-targets { max-height: 180px; }
   .products-page .product-overview-summary { flex-basis: 100%; }
 }
+/* Count by number: one input per size, then a review of system -> counted. */
+.products-page .count-by-number-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px; align-items: center; gap: 4px 12px; padding: 8px 0; border-top: 1px solid var(--color-border); }
+.products-page .count-by-number-row label { display: grid; gap: 2px; margin: 0; }
+.products-page .count-by-number-row small { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-regular); }
+.products-page .count-by-number-row .error-message { grid-column: 1 / -1; margin: 0; font-size: var(--font-size-xs); }
+.products-page .count-review-list { display: grid; gap: 6px; margin: 8px 0 12px; padding: 0; list-style: none; }
+.products-page .count-review-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.products-page .count-review-list li > small { grid-column: 1 / -1; }
+.products-page .count-review-list .is-more { color: var(--color-success); }
+.products-page .count-review-list .is-less { color: var(--color-danger); }
+.products-page .count-review-state { color: var(--color-success); font-weight: var(--font-weight-bold); }

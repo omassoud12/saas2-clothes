@@ -18,6 +18,7 @@ import {
 import { createProductDependencies } from './products/product.service.js'
 import { createReportDependencies } from './reports/report.service.js'
 import { createSettingsDependencies } from './settings/settings.js'
+import { createCountCheckDependencies } from './inventory/count-check.js'
 import { createReturnDependencies } from './returns/return.service.js'
 import { createJsonLogger } from './runtime/logger.js'
 import {
@@ -76,6 +77,7 @@ async function start(): Promise<void> {
     const expenses = createExpenseDependencies(prisma)
     const reports = createReportDependencies(prisma)
     const settings = createSettingsDependencies(prisma)
+    const countChecks = createCountCheckDependencies(prisma)
     startupStage = 'app'
     const app = createApp(
       {
@@ -113,6 +115,7 @@ async function start(): Promise<void> {
         expenses,
         reports,
         settings,
+        countChecks,
       },
       environment,
       {
