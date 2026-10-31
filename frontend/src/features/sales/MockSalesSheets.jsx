@@ -60,7 +60,8 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
         const unavailable = left === 0 || !Number.isSafeInteger(item.priceCents)
         return <button key={item.variantId} type="button" aria-pressed={item.variantId === variantId} disabled={unavailable}
           className={left === 0 ? 'is-empty' : ''} onClick={() => { setVariantId(item.variantId); setQuantity(1); setError('') }}>
-          {item.name}<small>{left === 0 ? 'Sold out' : !Number.isSafeInteger(item.priceCents) ? 'No price' : `${left} left · ${money(item.priceCents, currency)}`}</small>
+          {item.name}{left === 0 ? <small>Sold out</small> : !Number.isSafeInteger(item.priceCents) ? <small>No price</small>
+          : <><small>{left} left</small><small>{money(item.priceCents, currency)}</small></>}
         </button>
       })}
     </div></fieldset>
