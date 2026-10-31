@@ -96,7 +96,12 @@ Frontend foundation:
 - Navigation is derived from the server-returned role. OWNER and WAREHOUSE may
   receive different navigation conveniences; SUPER_ADMIN uses the separate
   platform area. UI visibility is never authorization, and the backend remains
-  authoritative for every operation.
+  authoritative for every operation. On phones (up to 820px) the shell shows a
+  bottom bar (Home, Products, Sell in the center, History, More) derived from
+  the same navigation list; everything else, including Logout, is under More.
+  Labels are "New product" (the Entry route, unchanged) and "Sell". History is
+  `/app/history`. The bar respects the safe area (the viewport uses
+  `viewport-fit=cover`) and steps aside while a text field has focus.
 - Shared UI primitives and semantic CSS tokens define buttons, fields, cards,
   badges, page headings, empty/error/loading states, modal foundations, and
   responsive table containment. Business pages are lazy-loaded at route level

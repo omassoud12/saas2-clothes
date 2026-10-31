@@ -306,3 +306,8 @@
 @media (prefers-reduced-motion: reduce) {
   .mock-pos-page *, .mock-pos-page *::before, .mock-pos-page *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+@media (max-width: 820px) {
+  .mock-pos-sticky { bottom: var(--bottom-nav-offset, 0px); padding-bottom: 12px; }
+  .mock-pos-toast { bottom: calc(82px + var(--bottom-nav-offset, 0px)); }
+}

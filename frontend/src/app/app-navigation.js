@@ -7,6 +7,7 @@ export const APP_NAVIGATION = Object.freeze([
   Object.freeze({
     key: 'dashboard',
     label: 'Dashboard',
+    mobileLabel: 'Home',
     path: ROUTES.dashboard,
     icon: 'dashboard',
     roles: tenantRoles,
@@ -20,7 +21,7 @@ export const APP_NAVIGATION = Object.freeze([
   }),
   Object.freeze({
     key: 'inventory',
-    label: 'Entry',
+    label: 'New product',
     path: ROUTES.inventory,
     icon: 'entry',
     roles: tenantRoles,
@@ -34,9 +35,17 @@ export const APP_NAVIGATION = Object.freeze([
   }),
   Object.freeze({
     key: 'sales',
-    label: 'Sales / POS',
+    label: 'Sell',
     path: ROUTES.sales,
     icon: 'sales',
+    roles: tenantRoles,
+  }),
+  Object.freeze({
+    key: 'history',
+    label: 'Sales history',
+    mobileLabel: 'History',
+    path: ROUTES.history,
+    icon: 'history',
     roles: tenantRoles,
   }),
   Object.freeze({
@@ -73,6 +82,22 @@ const dashboardRoute = APP_NAVIGATION[0]
 
 export function getAppNavigation(role) {
   return APP_NAVIGATION.filter((item) => item.roles.includes(role))
+}
+
+// Phone navigation: four fixed items (Sell sits in the middle) plus "More" for everything else.
+const MOBILE_BAR_KEYS = Object.freeze(['dashboard', 'products', 'sales', 'history'])
+
+export function getMobileNavigation(role) {
+  const items = getAppNavigation(role)
+  const bar = MOBILE_BAR_KEYS.map((key) => items.find((item) => item.key === key)).filter(Boolean)
+  return Object.freeze({
+    bar: Object.freeze(bar),
+    more: Object.freeze(items.filter((item) => !MOBILE_BAR_KEYS.includes(item.key))),
+  })
+}
+
+export function isPlainLeftClick(event) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
 }
 
 export function isNavigationItemActive(pathname, itemPath) {

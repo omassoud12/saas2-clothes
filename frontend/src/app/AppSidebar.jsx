@@ -3,7 +3,7 @@ import {
   isNavigationItemActive,
 } from './app-navigation.js'
 
-function NavigationIcon({ name }) {
+export function NavigationIcon({ name }) {
   const paths = {
     dashboard: <><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></>,
     products: <><path d="M7 4h10l2 4-7 12L5 8l2-4Z" /><path d="M9 8h6" /></>,
@@ -14,6 +14,8 @@ function NavigationIcon({ name }) {
     exchanges: <><path d="m7 7-3 3 3 3" /><path d="M4 10h13" /><path d="m17 17 3-3-3-3" /><path d="M20 14H7" /></>,
     expenses: <><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-3.5-1.2-4.5.2-1 1.5.5 2.3 2 2.6 1.5.3 3 1.1 2 2.6-1 1.4-4 1.2-4.5.1M12 7v10" /></>,
     reports: <><path d="M5 20V10M12 20V4M19 20v-7" /></>,
+    history: <><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68M12 8v4l2.6 1.6" /></>,
+    more: <><path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" /></>,
   }
 
   return (

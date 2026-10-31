@@ -3,6 +3,8 @@ import { getBusinessShellIdentity } from './app-flow.js'
 import { resolveAppRoute } from './app-navigation.js'
 import { AppHeader } from './AppHeader.jsx'
 import { AppSidebar } from './AppSidebar.jsx'
+import { BottomNav } from './BottomNav.jsx'
+import { MoreSheet } from './MoreSheet.jsx'
 import { LoadingState } from '../components/ui/index.jsx'
 import { useLogout } from './useLogout.js'
 import { NotFoundPage } from '../pages/NotFoundPage.jsx'
@@ -18,6 +20,7 @@ const pageComponents = Object.freeze({
   categories: lazyNamed(() => import('../pages/app/CategoriesPage.jsx'), 'CategoriesPage'),
   inventory: lazyNamed(() => import('../pages/app/InventoryPage.jsx'), 'InventoryPage'),
   sales: lazyNamed(() => import('../pages/app/SalesPage.jsx'), 'SalesPage'),
+  history: lazyNamed(() => import('../pages/app/HistoryPage.jsx'), 'HistoryPage'),
   returns: lazyNamed(() => import('../pages/app/ReturnsPage.jsx'), 'ReturnsPage'),
   exchanges: lazyNamed(() => import('../pages/app/ExchangesPage.jsx'), 'ExchangesPage'),
   expenses: lazyNamed(() => import('../pages/app/ExpensesPage.jsx'), 'ExpensesPage'),
@@ -29,6 +32,8 @@ const pageComponents = Object.freeze({
 
 export function AppLayout({ pathname, navigate, profile }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [typing, setTyping] = useState(false)
   const { loggingOut, logoutError, logout } = useLogout()
   const menuTrigger = useRef(null)
   const identity = getBusinessShellIdentity(profile)
@@ -75,13 +80,28 @@ export function AppLayout({ pathname, navigate, profile }) {
     }
   }, [mobileMenuOpen])
 
+  // The on-screen keyboard covers the bottom bar, so it steps aside while a text field has focus.
+  useEffect(() => {
+    const textTypes = new Set(['text', 'search', 'email', 'tel', 'url', 'password', 'number'])
+    const isTextField = (node) => node instanceof HTMLElement && (
+      node.tagName === 'TEXTAREA' || node.isContentEditable || (node.tagName === 'INPUT' && textTypes.has(node.type)))
+    const onFocusIn = (event) => setTyping(isTextField(event.target))
+    const onFocusOut = () => setTyping(false)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
+
   async function handleLogout() {
     const result = await logout()
-    if (result) setMobileMenuOpen(false)
+    if (result) { setMobileMenuOpen(false); setMoreOpen(false) }
   }
 
   return (
-    <div className="business-shell">
+    <div className={`business-shell${typing ? ' is-keyboard-open' : ''}`}>
       <AppSidebar
         identity={identity}
         mobileOpen={mobileMenuOpen}
@@ -117,6 +137,18 @@ export function AppLayout({ pathname, navigate, profile }) {
           </Suspense>
         </main>
       </div>
+      <BottomNav role={identity.role} pathname={pathname} onNavigate={navigate} onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      {moreOpen && (
+        <MoreSheet
+          role={identity.role}
+          identity={identity}
+          pathname={pathname}
+          loggingOut={loggingOut}
+          onNavigate={navigate}
+          onLogout={handleLogout}
+          onClose={() => setMoreOpen(false)}
+        />
+      )}
     </div>
   )
 }

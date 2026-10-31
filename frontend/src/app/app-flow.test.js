@@ -8,7 +8,9 @@ import {
 } from './app-flow.js'
 import {
   getAppNavigation,
+  getMobileNavigation,
   isNavigationItemActive,
+  isPlainLeftClick,
   resolveAppRoute,
 } from './app-navigation.js'
 import { isBusinessPath, normalizePathname, ROUTES } from './routes.js'
@@ -151,6 +153,7 @@ describe('business app navigation', () => {
         'inventory',
         'categories',
         'sales',
+        'history',
         'returns',
         'exchanges',
         'expenses',
@@ -162,7 +165,7 @@ describe('business app navigation', () => {
   test('hides Expenses and Reports from WAREHOUSE', () => {
     assert.deepEqual(
       getAppNavigation('WAREHOUSE').map(({ key }) => key),
-      ['dashboard', 'products', 'inventory', 'categories', 'sales', 'returns', 'exchanges'],
+      ['dashboard', 'products', 'inventory', 'categories', 'sales', 'history', 'returns', 'exchanges'],
     )
   })
 
@@ -274,7 +277,52 @@ test('unknown tenant URLs remain on a not-found page rather than rendering anoth
  test('Entry preserves the Inventory bookmark with an intake label after Products', () => {
    const navigation = getAppNavigation('OWNER')
    const entry = navigation.find(item => item.key === 'inventory')
-   assert.equal(entry.label, 'Entry')
+   assert.equal(entry.label, 'New product')
    assert.equal(entry.path, '/app/inventory')
    assert.equal(navigation[navigation.indexOf(entry)-1].key, 'products')
  })
+
+describe('phone bottom navigation', () => {
+  test('OWNER gets Home, Products, Sell (center), History and everything else under More', () => {
+    const { bar, more } = getMobileNavigation('OWNER')
+    assert.deepEqual(bar.map(({ key }) => key), ['dashboard', 'products', 'sales', 'history'])
+    assert.deepEqual(bar.map((item) => item.mobileLabel || item.label), ['Home', 'Products', 'Sell', 'History'])
+    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges', 'expenses', 'reports'])
+    assert.equal(bar.length + 1, 5, 'four items plus More fill five slots with Sell in the middle')
+    assert.equal(bar[2].key, 'sales')
+  })
+
+  test('WAREHOUSE gets the same bar but no owner-only modules under More', () => {
+    const { bar, more } = getMobileNavigation('WAREHOUSE')
+    assert.deepEqual(bar.map(({ key }) => key), ['dashboard', 'products', 'sales', 'history'])
+    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges'])
+    assert.equal([...bar, ...more].some(({ key }) => key === 'expenses' || key === 'reports'), false)
+  })
+
+  test('every module is reachable on a phone and SUPER_ADMIN gets nothing', () => {
+    for (const role of ['OWNER', 'WAREHOUSE']) {
+      const { bar, more } = getMobileNavigation(role)
+      assert.deepEqual([...bar, ...more].map(({ key }) => key).sort(), getAppNavigation(role).map(({ key }) => key).sort())
+    }
+    assert.deepEqual(getMobileNavigation('SUPER_ADMIN'), { bar: [], more: [] })
+  })
+
+  test('uses clear labels and the new History route', () => {
+    const labels = Object.fromEntries(getAppNavigation('OWNER').map((item) => [item.key, item.label]))
+    assert.equal(labels.inventory, 'New product')
+    assert.equal(labels.sales, 'Sell')
+    assert.equal(labels.history, 'Sales history')
+    const result = resolveAppRoute('/app/history', 'WAREHOUSE')
+    assert.equal(result.route.key, 'history')
+    assert.equal(result.redirectTo, null)
+    assert.equal(isNavigationItemActive('/app/history', '/app/history'), true)
+  })
+
+  test('only a plain left click is handled in-app; modified clicks keep the browser behavior', () => {
+    assert.equal(isPlainLeftClick({ button: 0 }), true)
+    for (const extra of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+      assert.equal(isPlainLeftClick({ button: 0, ...extra }), false)
+    }
+  })
+})
+

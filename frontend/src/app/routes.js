@@ -15,6 +15,7 @@ export const ROUTES = Object.freeze({
   categories: '/app/categories',
   inventory: '/app/inventory',
   sales: '/app/sales',
+  history: '/app/history',
   returns: '/app/returns',
   exchanges: '/app/exchanges',
   expenses: '/app/expenses',
