@@ -11,6 +11,7 @@ import {
   renameCategory,
   upsertCategoryInList,
 } from '../../features/categories/category-flow.js'
+import { EmptyState, ErrorState, LoadingState } from '../../components/ui/index.jsx'
 import { supabase } from '../../lib/supabase.js'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -215,31 +216,18 @@ export function CategoriesPage() {
         </p>
       )}
 
-      {state.kind === 'loading' && (
-        <div className="category-state" aria-live="polite">
-          <div className="spinner" aria-label="Loading categories" />
-          <p>Loading categories...</p>
-        </div>
-      )}
+      {state.kind === 'loading' && <LoadingState label="Loading categories..." />}
 
       {state.kind === 'error' && (
-        <div className="category-state category-error-state">
-          <h2>Categories unavailable</h2>
-          <p className="error-message" role="alert">{state.message}</p>
-          <button
-            type="button"
-            onClick={handleRetry}
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorState
+          title="Categories unavailable"
+          description={state.message}
+          action={<button type="button" onClick={handleRetry}>Try again</button>}
+        />
       )}
 
       {state.kind === 'ready' && state.categories.length === 0 && (
-        <div className="category-state category-empty-state">
-          <h2>No categories yet.</h2>
-          <p>Add your first category using the form above.</p>
-        </div>
+        <EmptyState title="No categories yet." description="Add your first category using the form above." />
       )}
 
       {state.kind === 'ready' && state.categories.length > 0 && (

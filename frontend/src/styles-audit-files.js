@@ -27,4 +27,7 @@ export const TOKEN_AUDITED = Object.freeze([
   'features/products/product-catalog.css',
   'features/products/product-workspace.css',
   'styles/product-base.css',
+  'features/inventory/receiving.css',
+  'features/inventory/entry-polish.css',
+  'styles/categories.css',
 ])
