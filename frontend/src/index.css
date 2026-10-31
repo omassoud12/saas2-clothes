@@ -31,7 +31,7 @@ input, select, textarea {
   font: inherit;
   font-size: var(--font-size-md);
 }
-input:focus, select:focus, textarea:focus { border-color: var(--color-text-muted); outline: 3px solid color-mix(in srgb, var(--color-text-muted) 16%, transparent); }
+input:focus, select:focus, textarea:focus { border-color: var(--color-text-muted); outline: 3px solid color-mix(in srgb, var(--color-primary) 16%, transparent); }
 textarea { resize: vertical; }
 button, .button-link {
   display: inline-flex;
@@ -69,7 +69,7 @@ button:disabled { cursor: wait; opacity: .65; }
   height: 34px;
   margin-top: 1.5rem;
   border: 3px solid var(--color-border);
-  border-top-color: var(--color-border-strong);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin .8s linear infinite;
 }

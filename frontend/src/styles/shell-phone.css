@@ -65,7 +65,7 @@
   color: var(--color-danger);
   font-weight: var(--font-weight-heavy);
 }
-.more-sheet-close:focus-visible, .more-sheet-list a:focus-visible, .more-sheet-logout:focus-visible { outline: 3px solid var(--color-text-muted); outline-offset: 2px; }
+.more-sheet-close:focus-visible, .more-sheet-list a:focus-visible, .more-sheet-logout:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 @media (max-width: 820px) {
   .bottom-nav {
     position: fixed;
@@ -99,7 +99,7 @@
     line-height: 1.1;
     text-decoration: none;
   }
-  .bottom-nav a:focus-visible, .bottom-nav button:focus-visible { outline: 3px solid var(--color-text-muted); outline-offset: -3px; }
+  .bottom-nav a:focus-visible, .bottom-nav button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
   .bottom-nav .is-active { color: var(--color-text); }
   .bottom-nav .is-active::before {
     content: '';
