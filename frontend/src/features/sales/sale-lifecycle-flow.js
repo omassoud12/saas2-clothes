@@ -74,6 +74,8 @@ function safeItem(item) {
     size: item.size ?? null,
     quantity: item.quantity,
     unitSoldPrice: item.unitSoldPrice,
+    listUnitPrice: item.listUnitPrice ?? null,
+    discountAmount: item.discountAmount ?? '0.00',
     lineTotal: item.lineTotal,
     returnedQuantity: item.returnedQuantity,
     remainingReturnableQuantity: item.remainingReturnableQuantity,
@@ -106,7 +108,7 @@ export async function loadSaleDetail({ supabase, fetchImpl, saleId }) {
     sale: Object.freeze({
       id: sale.id, status: sale.status, currency: sale.currency, subtotal: sale.subtotal,
       totalAmount: sale.totalAmount, createdAt: sale.createdAt, seller: sale.seller,
-      void: sale.void ?? null, returnSummary: sale.returnSummary,
+      void: sale.void ?? null, returnSummary: sale.returnSummary, commercial: sale.commercial ?? null,
       exchangeSummary: sale.exchangeSummary, items: Object.freeze(sale.items.map(safeItem)),
     }),
   })

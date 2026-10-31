@@ -133,13 +133,16 @@ describe('production POS voice UI', () => {
   })
 
   const cartLine = { key: 'v1', variantId: 'v1', productId: 'p1', colorId: 'c1', productName: 'Linen shirt', colorName: 'Blue', size: 'M', priceCents: 2400, quantity: 2, stock: 5 }
-  const cartProps = { cart: [cartLine], currency: 'USD', discount: 10, canDiscount: true, onDiscount() {}, onQuantity() {}, onRemove() {}, onClear() {}, onComplete() {}, onDiscard() {}, onHistory() {}, onClose() {} }
+  const cartProps = { cart: [cartLine], currency: 'USD', discount: 10, canDiscount: true, onDiscount() {},
+    payment: { method: 'CASH', customerName: '', customerPhone: '' }, onPayment() {}, rate: null, onQuantity() {}, onRemove() {}, onClear() {}, onComplete() {}, onDiscard() {}, onHistory() {}, onClose() {} }
 
-  test('the cart offers a plain Complete sale button with no payment method and shows the discount to owners only', () => {
+  test('the cart offers the payment methods and a Complete sale button, and shows the discount to owners only', () => {
     const owner = renderToStaticMarkup(createElement(CartSheet, cartProps))
     assert.match(owner, /Complete sale/u)
     assert.match(owner, /Discount/u)
-    assert.doesNotMatch(owner, /Payment method|Cash|Card/u)
+    for (const label of ['Cash', 'Card', 'Whish / OMT', 'Debt']) assert.ok(owner.includes(`>${label}</button>`), label)
+    assert.match(owner, /aria-pressed="true">Cash</u, 'cash is the default')
+    assert.doesNotMatch(owner, /Customer name/u, 'the customer fields appear only for a debt')
     assert.match(owner, /\$43\.20/u)
     // The total and the amount on the button stay in the sheet footer, outside the scrolling lines.
     const footer = owner.slice(owner.indexOf('mock-pos-sheet-footer'))
@@ -241,5 +244,27 @@ describe('production POS voice UI', () => {
   test('product prices use the compact money format, with a range shown as From', () => {
     assert.ok(row(10, { priceCents: 1250, priceMaxCents: 1250 }).includes('$12.50'))
     assert.ok(row(10, { priceCents: 1200, priceMaxCents: 1800 }).includes('From $12'))
+  })
+
+  test('a debt asks for the customer name and phone, and Complete sale waits for the name', () => {
+    const empty = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, payment: { method: 'DEBT', customerName: '', customerPhone: '' } }))
+    assert.match(empty, /Customer name/u); assert.match(empty, /Phone \(optional\)/u)
+    assert.match(empty, /aria-pressed="true">Debt</u)
+    assert.match(empty, /<button type="button" class="mock-pos-primary" aria-busy="false" disabled="">/u, 'Complete sale is disabled without a customer name')
+    assert.match(empty, /stays open until you mark it as paid/u)
+    const named = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, payment: { method: 'DEBT', customerName: 'Rana', customerPhone: '03 123 456' } }))
+    assert.doesNotMatch(named, /<button type="button" class="mock-pos-primary" aria-busy="false" disabled="">/u)
+    assert.ok(named.includes('value="Rana"') && named.includes('value="03 123 456"'))
+    assert.doesNotMatch(named, /Received \(/u, 'the change calculator is for cash only')
+  })
+
+  test('cash shows what was received and the change; with a rate it also shows pounds', () => {
+    const noRate = renderToStaticMarkup(createElement(CartSheet, cartProps))
+    assert.match(noRate, /Received \(USD\)/u); assert.doesNotMatch(noRate, /Received \(LBP\)|Total \(LBP\)/u)
+    const withRate = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, rate: '89500.00' }))
+    assert.match(withRate, /Received \(USD\)/u); assert.match(withRate, /Received \(LBP\)/u)
+    assert.ok(withRate.includes('Total (LBP)') && withRate.includes('3,866,400 LBP'), 'the $43.20 total is 3,866,400 LBP at 89,500')
+    const card = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, rate: '89500.00', payment: { method: 'CARD', customerName: '', customerPhone: '' } }))
+    assert.ok(card.includes('3,866,400 LBP')); assert.doesNotMatch(card, /Received \(/u)
   })
 })

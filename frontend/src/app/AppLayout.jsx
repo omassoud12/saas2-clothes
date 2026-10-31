@@ -25,6 +25,7 @@ const pageComponents = Object.freeze({
   exchanges: lazyNamed(() => import('../pages/app/ExchangesPage.jsx'), 'ExchangesPage'),
   expenses: lazyNamed(() => import('../pages/app/ExpensesPage.jsx'), 'ExpensesPage'),
   reports: lazyNamed(() => import('../pages/app/ReportsPage.jsx'), 'ReportsPage'),
+  settings: lazyNamed(() => import('../pages/app/SettingsPage.jsx'), 'SettingsPage'),
   ...(import.meta.env.DEV ? {
     textMatchingLab: lazyNamed(() => import('../pages/app/TextMatchingLabPage.jsx'), 'TextMatchingLabPage'),
   } : {}),

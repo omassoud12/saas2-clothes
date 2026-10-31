@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { formatMoneyCompact } from '../../lib/money.js'
 import { cartTotals, discountOptions, money, plural, reservedUnits } from './mock-sales-model.js'
-import { lineIssueText, receiptNumber } from './pos-checkout.js'
+import { lineIssueText, receiptLabel } from './pos-checkout.js'
+import { PAYMENT_METHODS, validatePayment } from './payment.js'
+import { calculateChange, parseLbpAmount, parseUsdAmount, usdCentsToLbp } from '../../lib/currency.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
 
 function Stepper({ value, min = 1, max, onChange, label, disabled = false }) {
@@ -72,9 +74,42 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   </MockSalesSheet>
 }
 
-export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDiscount, busy = false, locked = false, message = '', issues = [], blocked = false,
+function formatLbp(value) { return formatMoneyCompact(String(value), 'LBP', 0) }
+
+// What the customer hands over, in dollars and/or pounds, against the total: shows what is still due or the change to give back.
+function CashCalculator({ totalCents, currency, rate, disabled }) {
+  const [usd, setUsd] = useState('')
+  const [lbp, setLbp] = useState('')
+  const usdCents = parseUsdAmount(usd)
+  const lbpAmount = parseLbpAmount(lbp)
+  const invalid = usdCents === null || lbpAmount === null
+  const result = invalid ? null : calculateChange({ totalCents, rate, receivedUsdCents: usdCents, receivedLbp: lbpAmount })
+  const diff = result?.difference
+  const both = diff ? (diff.lbp !== null ? `${formatLbp(diff.lbp)} (≈ ${money(diff.usdCents, currency)})` : money(diff.usdCents, currency)) : ''
+  return <div className="mock-pos-cash">
+    <div className="mock-pos-cash-fields">
+      <label htmlFor="pos-received-usd">Received ({currency})</label>
+      <input id="pos-received-usd" inputMode="decimal" autoComplete="off" placeholder="0" value={usd} disabled={disabled} aria-invalid={usdCents === null}
+        onChange={event => setUsd(event.target.value)} />
+      {rate && <>
+        <label htmlFor="pos-received-lbp">Received (LBP)</label>
+        <input id="pos-received-lbp" inputMode="numeric" autoComplete="off" placeholder="0" value={lbp} disabled={disabled} aria-invalid={lbpAmount === null}
+          onChange={event => setLbp(event.target.value)} />
+      </>}
+    </div>
+    {invalid && <p className="mock-pos-error" role="alert">Enter the amounts as numbers.</p>}
+    {result?.status === 'short' && <p className="mock-pos-cash-result is-short" role="status">Still due: {both}</p>}
+    {result?.status === 'exact' && <p className="mock-pos-cash-result is-exact" role="status">Exact amount. No change.</p>}
+    {result?.status === 'change' && <p className="mock-pos-cash-result is-change" role="status">Change to give back: {both}</p>}
+  </div>
+}
+
+export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDiscount, payment, onPayment, rate = null, busy = false, locked = false, message = '', issues = [], blocked = false,
   onQuantity, onRemove, onClear, onComplete, onDiscard, onHistory, onClose }) {
   const totals = cartTotals(cart, discount)
+  const lbpTotal = rate && currency === 'USD' ? usdCentsToLbp(totals.totalCents, rate) : null
+  const paymentCheck = validatePayment(payment)
+  const [nameTouched, setNameTouched] = useState(false)
   const [confirmingClear, setConfirmingClear] = useState(false)
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const frozen = busy || locked
@@ -87,9 +122,10 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
           <div><dt>Discount ({discount}%)</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
         </>}
         <div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div>
+        {lbpTotal !== null && <div className="is-lbp"><dt>Total (LBP)</dt><dd>{formatLbp(lbpTotal)}</dd></div>}
       </dl>}
       <button type="button" className="mock-pos-primary" aria-busy={busy}
-        disabled={!cart.length || busy || (!locked && blocked)} onClick={onComplete}>
+        disabled={!cart.length || busy || (!locked && (blocked || !paymentCheck.ok))} onClick={onComplete}>
         {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />Completing sale…</>
           : locked ? 'Try again' : cart.length ? `Complete sale · ${money(totals.totalCents, currency)}` : 'Complete sale'}
       </button>
@@ -117,6 +153,25 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
     {canDiscount && <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
       {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
     </div></section>}
+    {cart.length > 0 && <section className="mock-pos-choice-section"><h3>Payment</h3>
+      <div className="mock-pos-segmented" role="group" aria-label="Payment method">
+        {PAYMENT_METHODS.map(item => <button key={item.id} type="button" aria-pressed={payment.method === item.id} disabled={frozen}
+          onClick={() => onPayment({ ...payment, method: item.id })}>{item.label}</button>)}
+      </div>
+      {payment.method === 'DEBT' && <div className="mock-pos-payment-fields">
+        <label htmlFor="pos-customer-name">Customer name</label>
+        <input id="pos-customer-name" autoComplete="off" maxLength={120} value={payment.customerName} disabled={frozen}
+          aria-invalid={nameTouched && paymentCheck.field === 'customerName'} aria-describedby="pos-customer-hint"
+          onBlur={() => setNameTouched(true)} onChange={event => onPayment({ ...payment, customerName: event.target.value })} />
+        <label htmlFor="pos-customer-phone">Phone (optional)</label>
+        <input id="pos-customer-phone" type="tel" inputMode="tel" autoComplete="off" maxLength={30} value={payment.customerPhone} disabled={frozen}
+          aria-invalid={paymentCheck.field === 'customerPhone'} onChange={event => onPayment({ ...payment, customerPhone: event.target.value })} />
+        <p id="pos-customer-hint" className={`mock-pos-note${!paymentCheck.ok && (nameTouched || paymentCheck.field === 'customerPhone') ? ' is-error' : ''}`}
+          role={!paymentCheck.ok && nameTouched ? 'alert' : undefined}>
+          {!paymentCheck.ok && (nameTouched || paymentCheck.field === 'customerPhone') ? paymentCheck.message : 'The debt stays open until you mark it as paid in Sales history.'}</p>
+      </div>}
+      {payment.method === 'CASH' && <CashCalculator key={`${totals.totalCents}|${rate}`} totalCents={totals.totalCents} currency={currency} rate={rate} disabled={frozen} />}
+    </section>}
     {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
     {cart.length > 0 && !frozen && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
       <p>Remove {cart.reduce((sum, line) => sum + line.quantity, 0) === 1 ? 'the item' : 'all items'} from the cart?</p>
@@ -133,7 +188,7 @@ export function SalesHistorySheet({ state, role, currency = 'USD', onRetry, onCl
       <button type="button" onClick={onRetry}>Try again</button></div>}
     {state.kind === 'ready' && !state.sales.length && <div className="mock-pos-empty"><strong>No sales yet today</strong><p>Completed sales show up here.</p></div>}
     {state.kind === 'ready' && state.sales.length > 0 && <div className="mock-pos-receipts">{state.sales.map(sale => <article key={sale.id}>
-      <div><strong>{receiptNumber(sale.id)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? ' · Voided' : ''}</span></div>
+      <div><strong>{receiptLabel(sale)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? ' · Voided' : ''}</span></div>
       <div>{role === 'OWNER' && <strong>{formatMoneyCompact(sale.totalAmount, sale.currency || currency)}</strong>}
         <time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
     </article>)}</div>}

@@ -513,3 +513,23 @@
 .mock-pos-page .mock-history-status span { font-size: 12px; overflow-wrap: anywhere; }
 .mock-pos-page .mock-history-status.is-void { background: var(--pos-warn-bg); color: var(--pos-warn); }
 .mock-pos-page .mock-history-status.is-returned { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+
+/* Payment method, debt customer, USD + LBP totals and the change calculator in the cart. */
+.mock-pos-page .mock-pos-payment-fields { display: grid; gap: 6px; margin-top: 12px; }
+.mock-pos-payment-fields label, .mock-pos-cash-fields label { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); }
+.mock-pos-payment-fields input, .mock-pos-cash-fields input { width: 100%; height: var(--touch-target); min-width: 0; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-md); }
+.mock-pos-payment-fields input[aria-invalid="true"], .mock-pos-cash-fields input[aria-invalid="true"] { border-color: var(--color-danger); }
+.mock-pos-page .mock-pos-note.is-error { color: var(--color-danger); }
+.mock-pos-cash { display: grid; gap: 8px; margin-top: 12px; }
+.mock-pos-cash-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.mock-pos-cash-fields label:nth-of-type(1), .mock-pos-cash-fields input:nth-of-type(1) { grid-column: 1; }
+.mock-pos-page .mock-pos-cash-result { margin: 0; padding: 10px 12px; border-radius: var(--radius-md); font-size: var(--font-size-md); font-weight: var(--font-weight-bold); }
+.mock-pos-page .mock-pos-cash-result.is-change { background: var(--badge-success-bg); color: var(--badge-success-fg); }
+.mock-pos-page .mock-pos-cash-result.is-short { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+.mock-pos-page .mock-pos-cash-result.is-exact { background: var(--badge-neutral-bg); color: var(--badge-neutral-fg); }
+.mock-pos-totals .is-lbp dd { color: var(--color-text-muted); font-weight: var(--font-weight-bold); }
+.mock-history-badge.is-debt { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+.mock-history-badge.is-paid { background: var(--badge-success-bg); color: var(--badge-success-fg); }
+.mock-history-badge.is-method { background: var(--badge-neutral-bg); color: var(--badge-neutral-fg); }
+.mock-pos-page .mock-history-status.is-debt { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+.mock-pos-page .mock-history-status.is-paid { background: var(--badge-success-bg); color: var(--badge-success-fg); }

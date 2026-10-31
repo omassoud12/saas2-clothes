@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatMoneyCompact } from '../../lib/money.js'
-import { loadSaleHistory } from './sale-flow.js'
+import { loadSaleHistory, markSalePaid } from './sale-flow.js'
 import { loadSaleDetail } from './sale-lifecycle-flow.js'
-import { receiptNumber, summarizeSales } from './pos-checkout.js'
+import { receiptLabel, summarizeSales } from './pos-checkout.js'
 import { buildReceipt } from './pos-receipt.js'
-import { dateInputValue, HISTORY_PAGE_SIZE, HISTORY_RANGES, HISTORY_STATUSES, historyQuery, saleBadges, saleTimeText } from './history-flow.js'
+import { dateInputValue, HISTORY_PAGE_SIZE, HISTORY_PAYMENTS, HISTORY_RANGES, HISTORY_STATUSES, historyQuery, saleBadges, saleTimeText } from './history-flow.js'
 import { PrintCopy, ReceiptView } from './SaleReceipt.jsx'
 import { useReceiptActions } from './use-receipt-actions.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
@@ -24,10 +24,11 @@ export function SaleRow({ sale, role, currency, withDay, onOpen }) {
   const owner = role === 'OWNER'
   const money = (amount) => formatMoneyCompact(amount, sale.currency || currency)
   return <button type="button" className="mock-history-row" onClick={() => onOpen(sale.id)}
-    aria-label={`Open receipt ${receiptNumber(sale.id)}`}>
+    aria-label={`Open receipt ${receiptLabel(sale)}`}>
     <span className="mock-history-main">
-      <strong>{receiptNumber(sale.id)}</strong>
+      <strong>{receiptLabel(sale)}</strong>
       <span>{plural(sale.totalUnits, 'item')} · {saleTimeText(sale.createdAt, { withDay })}</span>
+      {sale.customerName && <span>{sale.customerName}</span>}
       {owner && sale.seller?.name && <span>{sale.seller.name}</span>}
       {badges.length > 0 && <span className="mock-history-badges">{badges.map((badge) => <small key={badge.text} className={`mock-history-badge ${badge.tone}`}>{badge.text}</small>)}</span>}
     </span>
@@ -93,6 +94,16 @@ function HistoryResults({ supabase, queryKey, role, currency, withDay, onOpen })
   </section>
 }
 
+function DebtNote({ sale }) {
+  const commercial = sale.commercial
+  if (commercial?.paymentMethod !== 'DEBT') return null
+  return <p className={`mock-history-status ${commercial.paidAt ? 'is-paid' : 'is-debt'}`}>
+    <strong>{commercial.paidAt ? 'Debt paid' : 'Unpaid debt'}</strong>
+    {commercial.customer && <span>{commercial.customer.name}{commercial.customer.phone ? ` · ${commercial.customer.phone}` : ''}</span>}
+    {commercial.paidAt && <span>{saleTimeText(commercial.paidAt, { withDay: true })}{commercial.paidBy ? ` · ${commercial.paidBy.name}` : ''}</span>}
+  </p>
+}
+
 function ReturnsNote({ sale, currency }) {
   const { returnSummary, status } = sale
   if (status === 'VOIDED' && sale.void) {
@@ -105,9 +116,10 @@ function ReturnsNote({ sale, currency }) {
     <span>{plural(returnSummary.totalReturnedUnits, 'item')} · refund {formatMoneyCompact(returnSummary.totalReturnedAmount, currency)}</span></p>
 }
 
-function SaleDetailSheet({ supabase, saleId, currency, storeName, onClose }) {
+function SaleDetailSheet({ supabase, saleId, role, currency, storeName, onChanged, onClose }) {
   const [state, setState] = useState({ kind: 'loading', sale: null, message: '' })
   const [attempt, setAttempt] = useState(0)
+  const [paying, setPaying] = useState({ step: 'idle', message: '' })
   useEffect(() => {
     let active = true
     void loadSaleDetail({ supabase, saleId }).then((result) => {
@@ -121,15 +133,38 @@ function SaleDetailSheet({ supabase, saleId, currency, storeName, onClose }) {
   const receipt = useMemo(() => state.sale ? buildReceipt({ sale: state.sale, storeName }) : null, [state.sale, storeName])
   const { share, print, shareMessage, printRoot } = useReceiptActions(receipt ?? { number: '', lines: [], storeName: '' })
 
-  return <MockSalesSheet title={receiptNumber(saleId)} subtitle={state.sale ? `Sold by ${state.sale.seller.name}` : 'Receipt'} onClose={onClose}
-    footer={receipt && <div className="mock-pos-receipt-secondary">
-      <button type="button" onClick={share}>Share on WhatsApp</button>
-      <button type="button" onClick={print}>Print / PDF</button>
+  const canMarkPaid = role === 'OWNER' && state.sale?.status === 'COMPLETED' && state.sale.commercial?.paymentMethod === 'DEBT' && !state.sale.commercial.paidAt
+
+  async function confirmPaid() {
+    setPaying({ step: 'saving', message: '' })
+    const result = await markSalePaid({ supabase, saleId })
+    if (result.requiresLogin) { goToLogin(); return }
+    if (!result.ok) { setPaying({ step: 'confirm', message: result.message }); return }
+    setPaying({ step: 'idle', message: '' })
+    setAttempt((value) => value + 1)
+    onChanged()
+  }
+
+  return <MockSalesSheet title={state.sale ? receiptLabel(state.sale) : receiptLabel({ id: saleId })} subtitle={state.sale ? `Sold by ${state.sale.seller.name}` : 'Receipt'} onClose={onClose}
+    footer={receipt && <div className="mock-pos-receipt-actions">
+      {canMarkPaid && paying.step === 'idle' && <button type="button" className="mock-pos-primary" onClick={() => setPaying({ step: 'confirm', message: '' })}>Mark debt as paid</button>}
+      {canMarkPaid && paying.step !== 'idle' && <div className="mock-pos-delete-confirm" role="alert">
+        <p>Mark this debt{state.sale.commercial.customer ? ` from ${state.sale.commercial.customer.name}` : ''} as paid? {receipt.total} was received.</p>
+        {paying.message && <p>{paying.message}</p>}
+        <div><button type="button" className="is-danger" disabled={paying.step === 'saving'} aria-busy={paying.step === 'saving'} onClick={confirmPaid}>
+          {paying.step === 'saving' ? 'Saving…' : 'Yes, it was paid'}</button>
+          <button type="button" disabled={paying.step === 'saving'} onClick={() => setPaying({ step: 'idle', message: '' })}>Not yet</button></div>
+      </div>}
+      <div className="mock-pos-receipt-secondary">
+        <button type="button" onClick={share}>Share on WhatsApp</button>
+        <button type="button" onClick={print}>Print / PDF</button>
+      </div>
     </div>}>
     {state.kind === 'loading' && <div className="mock-pos-empty" role="status"><span className="mock-pos-spinner" /><p>Loading receipt…</p></div>}
     {state.kind === 'error' && <div className="mock-pos-empty" role="alert"><strong>Receipt could not load</strong><p>{state.message}</p>
       <button type="button" onClick={() => { setState({ kind: 'loading', sale: null, message: '' }); setAttempt((value) => value + 1) }}>Try again</button></div>}
     {state.sale && <>
+      <DebtNote sale={state.sale} />
       <ReturnsNote sale={state.sale} currency={state.sale.currency || currency} />
       <ReceiptView receipt={receipt} />
       {shareMessage && <p className="mock-pos-error" role="alert">{shareMessage}</p>}
@@ -141,11 +176,12 @@ function SaleDetailSheet({ supabase, saleId, currency, storeName, onClose }) {
 export function SalesHistory({ supabase, role = 'OWNER', currency = 'USD', storeName = '' }) {
   const [range, setRange] = useState('today')
   const [status, setStatus] = useState('all')
+  const [payment, setPayment] = useState('all')
   const [customFrom, setCustomFrom] = useState(() => dateInputValue())
   const [customTo, setCustomTo] = useState(() => dateInputValue())
   const [refresh, setRefresh] = useState(0)
   const [openId, setOpenId] = useState(null)
-  const built = historyQuery({ range, status, customFrom, customTo })
+  const built = historyQuery({ range, status, payment, customFrom, customTo })
   const queryKey = built.ok ? JSON.stringify(built.query) : null
 
   return <div className="mock-pos-page mock-history-page">
@@ -159,11 +195,13 @@ export function SalesHistory({ supabase, role = 'OWNER', currency = 'USD', store
         <label>To<input type="date" value={customTo} min={customFrom || undefined} onChange={(event) => setCustomTo(event.target.value)} /></label>
       </div>}
       <Chips label="Status" items={HISTORY_STATUSES} value={status} onChange={setStatus} />
+      <Chips label="Payment method" items={HISTORY_PAYMENTS} value={payment} onChange={setPayment} />
       {built.ok
         ? <HistoryResults key={`${queryKey}|${refresh}`} supabase={supabase} queryKey={queryKey} role={role} currency={currency}
           withDay={range === 'week' || range === 'custom'} onOpen={setOpenId} />
         : <p className="mock-pos-error" role="alert">{built.message}</p>}
     </div>
-    {openId && <SaleDetailSheet key={openId} supabase={supabase} saleId={openId} currency={currency} storeName={storeName} onClose={() => setOpenId(null)} />}
+    {openId && <SaleDetailSheet key={openId} supabase={supabase} saleId={openId} role={role} currency={currency} storeName={storeName}
+      onChanged={() => setRefresh((value) => value + 1)} onClose={() => setOpenId(null)} />}
   </div>
 }

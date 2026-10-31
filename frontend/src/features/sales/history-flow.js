@@ -14,6 +14,15 @@ export const HISTORY_STATUSES = Object.freeze([
   Object.freeze({ id: 'completed', label: 'Completed' }),
   Object.freeze({ id: 'voided', label: 'Voided' }),
   Object.freeze({ id: 'returned', label: 'Returned' }),
+  Object.freeze({ id: 'unpaid', label: 'Unpaid debts' }),
+])
+
+export const HISTORY_PAYMENTS = Object.freeze([
+  Object.freeze({ id: 'all', label: 'All payments' }),
+  Object.freeze({ id: 'CASH', label: 'Cash' }),
+  Object.freeze({ id: 'CARD', label: 'Card' }),
+  Object.freeze({ id: 'WHISH_OMT', label: 'Whish / OMT' }),
+  Object.freeze({ id: 'DEBT', label: 'Debt' }),
 ])
 
 const dayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -43,12 +52,15 @@ function statusQuery(status) {
   if (status === 'completed') return { status: 'COMPLETED' }
   if (status === 'voided') return { status: 'VOIDED' }
   if (status === 'returned') return { returned: true }
+  if (status === 'unpaid') return { unpaid: true }
   return {}
 }
 
 // The server query for the chosen filters. Dates are the shop's local days, sent as exact instants.
-export function historyQuery({ range, status = 'all', customFrom = '', customTo = '', now = new Date() }) {
+export function historyQuery({ range, status = 'all', payment = 'all', customFrom = '', customTo = '', now = new Date() }) {
   if (!HISTORY_STATUSES.some((item) => item.id === status)) return Object.freeze({ ok: false, message: 'Choose a valid status.' })
+  if (!HISTORY_PAYMENTS.some((item) => item.id === payment)) return Object.freeze({ ok: false, message: 'Choose a valid payment method.' })
+  if (status === 'unpaid' && payment !== 'all' && payment !== 'DEBT') return Object.freeze({ ok: false, message: 'Unpaid debts are always paid by debt. Choose All payments or Debt.' })
   const today = dayStart(now)
   let from
   let to = null
@@ -63,7 +75,7 @@ export function historyQuery({ range, status = 'all', customFrom = '', customTo 
     from = start
     to = new Date(addDays(end, 1).getTime() - 1)
   } else return Object.freeze({ ok: false, message: 'Choose a valid period.' })
-  return Object.freeze({ ok: true, query: Object.freeze({ from: from.toISOString(), ...(to ? { to: to.toISOString() } : {}), ...statusQuery(status) }) })
+  return Object.freeze({ ok: true, query: Object.freeze({ from: from.toISOString(), ...(to ? { to: to.toISOString() } : {}), ...statusQuery(status), ...(payment !== 'all' && status !== 'unpaid' ? { paymentMethod: payment } : {}) }) })
 }
 
 // Today and yesterday show only the time; longer periods also show the day.
@@ -74,10 +86,13 @@ export function saleTimeText(iso, { withDay = false, locale } = {}) {
   return withDay ? `${date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })} · ${time}` : time
 }
 
-// Small labels shown on a row: a voided sale, and a sale that has returns.
+// Small labels shown on a row: a voided sale, a sale that has returns, and how it was paid (a debt shows if it is still open).
 export function saleBadges(sale) {
   return [
     ...(sale.status === 'VOIDED' ? [Object.freeze({ tone: 'is-void', text: 'Voided' })] : []),
     ...(sale.hasReturns === true ? [Object.freeze({ tone: 'is-returned', text: 'Returned' })] : []),
+    ...(sale.paymentMethod === 'DEBT'
+      ? [Object.freeze(sale.paidAt ? { tone: 'is-paid', text: 'Debt paid' } : { tone: 'is-debt', text: 'Unpaid debt' })]
+      : sale.paymentMethod && sale.paymentMethod !== 'CASH' ? [Object.freeze({ tone: 'is-method', text: sale.paymentMethod === 'CARD' ? 'Card' : 'Whish / OMT' })] : []),
   ]
 }

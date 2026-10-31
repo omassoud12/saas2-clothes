@@ -5,21 +5,25 @@ import { useReceiptActions } from './use-receipt-actions.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
 
 export function ReceiptView({ receipt, className = '' }) {
-  return <article className={`mock-pos-receipt ${className}`} aria-label={`Receipt ${receipt.number}`}>
+  return <article className={`mock-pos-receipt ${className}`} aria-label={`${receipt.labels.receipt} ${receipt.number}`}>
     {receipt.storeName && <h3 className="mock-pos-receipt-store">{receipt.storeName}</h3>}
-    <p className="mock-pos-receipt-meta"><span>Receipt {receipt.number}</span>{receipt.dateText && <time dateTime={receipt.isoDate}>{receipt.dateText}</time>}</p>
+    <p className="mock-pos-receipt-meta"><span>{receipt.labels.receipt} {receipt.number}</span>{receipt.dateText && <time dateTime={receipt.isoDate}>{receipt.dateText}</time>}</p>
+    {receipt.paymentText && <p className="mock-pos-receipt-meta"><span>{receipt.labels.payment}</span><span>{receipt.paymentText}</span></p>}
+    {receipt.customer && <p className="mock-pos-receipt-meta"><span>{receipt.labels.customer}</span><span>{receipt.customer.name}{receipt.customer.phone ? ` · ${receipt.customer.phone}` : ''}</span></p>}
     <ul className="mock-pos-receipt-lines">{receipt.lines.map(line => <li key={line.id}>
       <div><strong>{line.name}</strong>{line.detail && <span>{line.detail}</span>}<span>{line.quantity} × {line.unitPrice}</span></div>
       <b>{line.lineTotal}</b>
     </li>)}</ul>
     <dl className="mock-pos-receipt-totals">
       {receipt.discount && <>
-        <div><dt>Subtotal</dt><dd>{receipt.subtotal}</dd></div>
-        <div><dt>Discount{receipt.discountPercent ? ` (${receipt.discountPercent}%)` : ''}</dt><dd>−{receipt.discount}</dd></div>
+        <div><dt>{receipt.labels.subtotal}</dt><dd>{receipt.subtotal}</dd></div>
+        <div><dt>{receipt.labels.discount}{receipt.discountPercent ? ` (${receipt.discountPercent}%)` : ''}</dt><dd>−{receipt.discount}</dd></div>
       </>}
-      <div className="is-total"><dt>Total</dt><dd>{receipt.total}</dd></div>
+      <div className="is-total"><dt>{receipt.labels.total}</dt><dd>{receipt.total}</dd></div>
+      {receipt.totalLbp && <div><dt>{receipt.labels.totalLbp}</dt><dd>{receipt.totalLbp}</dd></div>}
+      {receipt.debt && <div><dt>{receipt.labels.debt}</dt><dd>{receipt.debt.text}</dd></div>}
     </dl>
-    <p className="mock-pos-receipt-thanks">Thank you!</p>
+    <p className="mock-pos-receipt-thanks">{receipt.labels.thanks}</p>
   </article>
 }
 

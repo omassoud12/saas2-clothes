@@ -4,6 +4,8 @@ import { addCartSelection, cartTotals, cartUnits, decrementCatalogStock, money, 
   restoreMockCartLine, setMockCartQuantity, stockBadge, UNCATEGORIZED_ID } from './mock-sales-model.js'
 import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, prepareCheckout, startOfLocalDayIso, summarizeSales } from './pos-checkout.js'
 import { createCheckoutGuard, loadSaleHistory, submitSale } from './sale-flow.js'
+import { DEFAULT_PAYMENT, paymentFromPayload } from './payment.js'
+import { loadSettings } from '../settings/settings-flow.js'
 import { browserMockSalesStorage } from './mock-sales-storage.js'
 import { loadSalesCatalog, mapCatalogProduct, searchLoadedCatalogByVoice, voiceCatalogSelection } from './sales-catalog.js'
 import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
@@ -93,6 +95,9 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
   const [categoryId, setCategoryId] = useState('all')
   const [sheet, setSheet] = useState(null)
   const [discount, setDiscount] = useState(restoredCheckout?.summary.discountPercent ?? 0)
+  const [payment, setPayment] = useState(() => restoredCheckout ? paymentFromPayload(restoredCheckout.payload) : DEFAULT_PAYMENT)
+  // Lebanese pounds per dollar, set by the owner; null hides the pound amounts.
+  const [rate, setRate] = useState(null)
   const [checkout, setCheckout] = useState(() => restoredCheckout ? { ...IDLE_CHECKOUT, locked: true, message: RESTORED_CHECKOUT_MESSAGE } : IDLE_CHECKOUT)
   const [completed, setCompleted] = useState(null)
   const [today, setToday] = useState({ kind: 'loading', sales: [], truncated: false })
@@ -110,6 +115,11 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
   const voiceSearchRevision = useRef(0)
 
   useEffect(() => { storage.saveCart(storageScope, cart) }, [cart, storage, storageScope])
+  useEffect(() => {
+    let active = true
+    void loadSettings({ supabase }).then(result => { if (active && result.ok) setRate(result.lbpPerUsd) })
+    return () => { active = false }
+  }, [supabase])
   useEffect(() => {
     const controller = new AbortController()
     void loadSalesCatalog({ supabase, signal: controller.signal }).then(result => {
@@ -270,7 +280,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     operationRef.current = null
     // A replayed sale is already counted in the stock that was loaded; a new one is applied now and confirmed by the refresh below.
     if (!result.idempotentReplay) setSalesState(current => ({ ...current, products: decrementCatalogStock(current.products, soldLines) }))
-    setCart([]); setDiscount(0); setUndo(null); setToast('')
+    setCart([]); setDiscount(0); setPayment(DEFAULT_PAYMENT); setUndo(null); setToast('')
     setCheckout(IDLE_CHECKOUT)
     setCompleted({ sale: result.sale, summary, replay: result.idempotentReplay })
     setSheet('receipt')
@@ -283,7 +293,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     const retrying = checkout.locked && operationRef.current
     const prepared = retrying
       ? { ok: true, operation: operationRef.current.operation, summary: operationRef.current.summary }
-      : prepareCheckout({ cart, role, discountPercent: discount, current: operationRef.current?.operation ?? null })
+      : prepareCheckout({ cart, role, discountPercent: discount, payment, current: operationRef.current?.operation ?? null })
     if (!prepared.ok) { setCheckout(current => ({ ...current, message: prepared.message })); return }
     operationRef.current = { operation: prepared.operation, summary: prepared.summary }
     // Saved before sending: if the page closes mid-request, the same Idempotency-Key is reused.
@@ -359,6 +369,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     </div>
 
     {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={activeDiscount} canDiscount={role === 'OWNER'} onDiscount={setDiscount}
+      payment={payment} onPayment={setPayment} rate={currency === 'USD' ? rate : null}
       busy={busy} locked={checkout.locked} message={checkout.message} issues={checkout.issues} blocked={hasBlockingIssue(cart)}
       onQuantity={(key, quantity) => setCart(current => setMockCartQuantity(current, key, quantity))}
       onRemove={removeCartLine} onClear={clearCart} onComplete={completeSale} onDiscard={discardCheckout}

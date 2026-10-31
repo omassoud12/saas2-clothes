@@ -113,7 +113,7 @@ export function calculateCart(cart) {
   return Object.freeze({ valid: true, units, total: minorUnitsToDecimal(total) })
 }
 
-export function buildSalePayload(cart) {
+export function buildSalePayload(cart, extras = {}) {
   if (!Array.isArray(cart) || cart.length === 0) return failure('SALE_CART_EMPTY', 'Add at least one item before checkout.')
   if (cart.length > maxLines) return failure('SALE_CART_TOO_LARGE', safeMessages.SALE_CART_TOO_LARGE)
   const items = []
@@ -124,11 +124,14 @@ export function buildSalePayload(cart) {
     if (minor === null || minor <= 0n) return failure('INVALID_SALE_PRICE', 'Every cart item needs a valid selling price.')
     items.push({ variantId: line.variantId.toLowerCase(), quantity: line.quantity, unitSoldPrice: minorUnitsToDecimal(minor) })
   }
-  return { ok: true, payload: { items } }
+  if (extras.paymentMethod === 'DEBT' && !(typeof extras.customer?.name === 'string' && extras.customer.name.trim())) {
+    return failure('INVALID_SALE_CUSTOMER', 'Enter the customer name for a debt.')
+  }
+  return { ok: true, payload: { items, ...extras } }
 }
 
-export function checkoutOperation(cart, current, uuidFactory = () => globalThis.crypto.randomUUID()) {
-  const built = buildSalePayload(cart)
+export function checkoutOperation(cart, current, uuidFactory = () => globalThis.crypto.randomUUID(), extras = {}) {
+  const built = buildSalePayload(cart, extras)
   if (!built.ok) return built
   const signature = JSON.stringify(built.payload)
   if (current?.signature === signature) return { ok: true, operation: current }
@@ -167,7 +170,27 @@ export async function submitSale({ supabase, fetchImpl, operation }) {
   return Object.freeze({ ok: true, sale, idempotentReplay: result.data.idempotentReplay === true })
 }
 
-export async function loadSaleHistory({ supabase, fetchImpl, cursor = null, limit = 10, from = null, to = null, status = null, returned = false }) {
+// OWNER only: marks an unpaid debt sale as paid. Repeating it returns the stored settlement.
+export async function markSalePaid({ supabase, fetchImpl, saleId }) {
+  const result = await request({ supabase, fetchImpl, path: `/api/sales/${encodeURIComponent(saleId)}/pay`, method: 'POST', payload: { confirm: true } })
+  if (!result.ok) {
+    if (result.code === 'SESSION_REQUIRED' || result.status === 401) return failure(result.code, 'Your session has expired. Sign in again.', { requiresLogin: true })
+    const messages = {
+      SALE_NOT_DEBT: 'Only a debt sale can be marked as paid.',
+      SALE_PAY_NOT_ALLOWED: 'A voided sale cannot be marked as paid.',
+      SALE_PAY_ACTOR_UNAVAILABLE: 'Only an owner can mark a debt as paid.',
+    }
+    if (result.status === 403) return failure(result.code, 'Only an owner can mark a debt as paid.')
+    return failure(result.code, messages[result.code] || 'The payment could not be saved. Please try again.', { retryable: !result.status || result.status >= 500 })
+  }
+  const paid = result.data?.sale
+  if (![200, 201].includes(result.status) || typeof paid?.id !== 'string' || !paid.paidAt) {
+    return failure('INVALID_SALE_PAY_RESPONSE', 'The payment could not be confirmed. Check the sales history.', { retryable: true })
+  }
+  return Object.freeze({ ok: true, paidAt: paid.paidAt, paidBy: paid.paidBy ?? null, idempotentReplay: result.data.idempotentReplay === true })
+}
+
+export async function loadSaleHistory({ supabase, fetchImpl, cursor = null, limit = 10, from = null, to = null, status = null, returned = false, paymentMethod = null, unpaid = false }) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) return failure('INVALID_SALE_LIMIT', 'Recent Sales limit is invalid.')
   if (status !== null && !['COMPLETED', 'VOIDED'].includes(status)) return failure('INVALID_SALE_STATUS', 'The sales status is invalid.')
   const query = new URLSearchParams({ limit: String(limit) })
@@ -176,6 +199,11 @@ export async function loadSaleHistory({ supabase, fetchImpl, cursor = null, limi
   if (to) query.set('to', to)
   if (status) query.set('status', status)
   if (returned) query.set('returned', 'true')
+  if (paymentMethod) {
+    if (!['CASH', 'CARD', 'WHISH_OMT', 'DEBT'].includes(paymentMethod)) return failure('INVALID_SALE_PAYMENT_METHOD', 'The payment method is invalid.')
+    query.set('paymentMethod', paymentMethod)
+  }
+  if (unpaid) query.set('unpaid', 'true')
   const result = await request({ supabase, fetchImpl, path: `/api/sales?${query}` })
   if (!result.ok) return mapFailure(result)
   if (result.status !== 200 || !Array.isArray(result.data?.sales) || !result.data.sales.every((sale) => typeof sale.id === 'string' && typeof sale.totalAmount === 'string')) {

@@ -20,6 +20,7 @@ export const ROUTES = Object.freeze({
   exchanges: '/app/exchanges',
   expenses: '/app/expenses',
   reports: '/app/reports',
+  settings: '/app/settings',
   textMatchingLab: '/app/dev/text-matching',
 })
 

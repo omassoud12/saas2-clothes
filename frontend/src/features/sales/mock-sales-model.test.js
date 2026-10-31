@@ -171,7 +171,7 @@ describe('local mock Sales model', () => {
     ])
     const prepared = prepareCheckout({ cart, role: 'OWNER', discountPercent: 5, uuidFactory: () => key1 })
     assert.equal(prepared.ok, true)
-    assert.deepEqual(prepared.operation.payload, { items: toSaleLines(cart, 5) })
+    assert.deepEqual(prepared.operation.payload, { items: toSaleLines(cart, 5), discountPercent: '5.00' }, 'the chosen percent is sent too; the server derives the money discount from catalog prices')
     assert.equal(prepared.summary.totalCents, cartTotals(cart, 5).totalCents, 'the sent total equals the screen total')
     assert.equal(prepared.summary.listSubtotalCents, 10_985)
   })
@@ -234,7 +234,7 @@ describe('local mock Sales model', () => {
     assert.equal(seen[0].key, key1)
     assert.equal(seen[1].key, key1)
     assert.equal(seen[0].body, seen[1].body)
-    assert.deepEqual(JSON.parse(seen[0].body), { items: [{ variantId: variant1, quantity: 2, unitSoldPrice: '21.60' }] })
+    assert.deepEqual(JSON.parse(seen[0].body), { items: [{ variantId: variant1, quantity: 2, unitSoldPrice: '21.60' }], discountPercent: '10.00' })
   })
 
   test('explains each backend failure in simple words', () => {
@@ -296,7 +296,7 @@ describe('local mock Sales model', () => {
     assert.match(receipt.dateText, /14 Oct 2026/)
     assert.match(receipt.dateText, /10:30/)
     assert.deepEqual(receipt.lines.map(line => [line.name, line.detail, line.quantity, line.unitPrice, line.lineTotal]), [['Linen shirt', 'Blue · M', 2, '$21.60', '$43.20']])
-    assert.deepEqual([receipt.subtotal, receipt.discount, receipt.discountPercent, receipt.total, receipt.units], ['$48', '$4.80', 10, '$43.20', 2])
+    assert.deepEqual([receipt.subtotal, receipt.discount, receipt.discountPercent, receipt.total, receipt.units], ['$48', '$4.80', '10', '$43.20', 2])
     assert.equal(JSON.stringify(receipt).includes('Cash'), false, 'no payment method is shown')
   })
 

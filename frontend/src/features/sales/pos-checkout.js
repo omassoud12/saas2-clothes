@@ -1,6 +1,7 @@
 import { decimalToMinorUnits, formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
 import { cartTotals, discountedUnitCents, money } from './mock-sales-model.js'
 import { checkoutOperation } from './sale-flow.js'
+import { DEFAULT_PAYMENT, paymentExtras, validatePayment } from './payment.js'
 
 // Cart -> POST /api/sales mapping and checkout error handling for the POS screen.
 // The backend only accepts { items: [{ variantId, quantity, unitSoldPrice }] }, so a discount is applied to each unit price.
@@ -13,7 +14,14 @@ export function canDiscount(role) { return role === 'OWNER' }
 
 export function effectiveDiscount(role, discountPercent) { return canDiscount(role) ? discountPercent : 0 }
 
+// Older sales have no number and keep this short reference built from their id.
 export function receiptNumber(saleId) { return `#${String(saleId).slice(0, 8).toUpperCase()}` }
+
+// "#12" when the sale has its per-account number, else the short id reference. Accepts a sale from the list or the detail.
+export function receiptLabel(sale) {
+  const number = sale?.commercial?.receiptNumber ?? sale?.receiptNumber
+  return Number.isSafeInteger(number) && number > 0 ? `#${number}` : receiptNumber(sale?.id)
+}
 
 export function toSaleLines(cart, discountPercent) {
   return cart.map(line => ({
@@ -31,9 +39,12 @@ function payloadTotalCents(payload) {
 }
 
 // Reuses the Idempotency-Key while the payload is unchanged; a changed cart gets a new key.
-export function prepareCheckout({ cart, role, discountPercent, current = null, uuidFactory }) {
+export function prepareCheckout({ cart, role, discountPercent, payment = DEFAULT_PAYMENT, current = null, uuidFactory }) {
   const percent = effectiveDiscount(role, discountPercent)
-  const prepared = checkoutOperation(toSaleLines(cart, percent), current, uuidFactory)
+  const checked = validatePayment(payment)
+  if (!checked.ok) return failure('POS_PAYMENT_INVALID', checked.message)
+  const extras = paymentExtras({ method: payment.method, customerName: payment.customerName, customerPhone: payment.customerPhone, discountPercent: percent })
+  const prepared = checkoutOperation(toSaleLines(cart, percent), current, uuidFactory, extras)
   if (!prepared.ok) return prepared
   const totals = cartTotals(cart, percent)
   if (payloadTotalCents(prepared.operation.payload) !== BigInt(totals.totalCents)) {
@@ -42,7 +53,7 @@ export function prepareCheckout({ cart, role, discountPercent, current = null, u
   return Object.freeze({
     ok: true,
     operation: prepared.operation,
-    summary: Object.freeze({ discountPercent: percent, listSubtotalCents: totals.subtotalCents, totalCents: totals.totalCents }),
+    summary: Object.freeze({ discountPercent: percent, listSubtotalCents: totals.subtotalCents, totalCents: totals.totalCents, paymentMethod: payment.method }),
   })
 }
 

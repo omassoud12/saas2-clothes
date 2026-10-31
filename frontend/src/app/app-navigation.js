@@ -76,6 +76,13 @@ export const APP_NAVIGATION = Object.freeze([
     icon: 'reports',
     roles: ownerRoles,
   }),
+  Object.freeze({
+    key: 'settings',
+    label: 'Settings',
+    path: ROUTES.settings,
+    icon: 'settings',
+    roles: ownerRoles,
+  }),
 ])
 
 const dashboardRoute = APP_NAVIGATION[0]

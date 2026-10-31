@@ -14,6 +14,7 @@ export function NavigationIcon({ name }) {
     exchanges: <><path d="m7 7-3 3 3 3" /><path d="M4 10h13" /><path d="m17 17 3-3-3-3" /><path d="M20 14H7" /></>,
     expenses: <><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-3.5-1.2-4.5.2-1 1.5.5 2.3 2 2.6 1.5.3 3 1.1 2 2.6-1 1.4-4 1.2-4.5.1M12 7v10" /></>,
     reports: <><path d="M5 20V10M12 20V4M19 20v-7" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></>,
     history: <><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68M12 8v4l2.6 1.6" /></>,
     more: <><path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" /></>,
   }

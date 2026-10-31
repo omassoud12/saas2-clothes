@@ -484,3 +484,6 @@ button:disabled { cursor: wait; opacity: .65; }
   .bottom-nav .business-nav-icon { width: 24px; height: 24px; }
 }
 .ui-badge--info { background: var(--badge-info-bg); color: var(--badge-info-fg); }
+.settings-rate-form { display: grid; gap: var(--space-3); max-width: 480px; }
+.settings-rate-example { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.settings-actions { display: flex; }
