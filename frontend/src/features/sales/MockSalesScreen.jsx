@@ -8,7 +8,8 @@ import { createCheckoutGuard, loadSaleHistory, submitSale } from './sale-flow.js
 import { browserMockSalesStorage } from './mock-sales-storage.js'
 import { loadSalesCatalog, mapCatalogProduct, searchLoadedCatalogByVoice, voiceCatalogSelection } from './sales-catalog.js'
 import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
-import { CartSheet, CategoryManagerSheet, ProductCategorySheet, ProductPickerSheet, SaleCompletedSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
+import { CartSheet, CategoryManagerSheet, ProductCategorySheet, ProductPickerSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
+import { SaleCompletedSheet } from './SaleReceipt.jsx'
 import './mock-sales.css'
 
 const SALES_VOICE_SEARCH_LANGUAGE = 'ar-LB'
@@ -83,7 +84,7 @@ function ProductRow({ product, availableStock, currency, onOpen, onEdit }) {
   </article>
 }
 
-export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', storageScope = '' }) {
+export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', storageScope = '', storeName = '' }) {
   const storage = useMemo(() => browserMockSalesStorage(), [])
   const [salesState, setSalesState] = useState({ categories: [], products: [] })
   const [catalog, setCatalog] = useState({ kind: 'loading', complete: true })
@@ -413,7 +414,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       onRemove={removeCartLine} onClear={clearCart} onComplete={completeSale} onDiscard={discardCheckout}
       onHistory={() => setSheet('history')} onClose={() => { if (!busy) setSheet(null) }} />}
     {sheet === 'history' && <SalesHistorySheet state={today} role={role} currency={currency} onRetry={reloadToday} onClose={() => setSheet(null)} />}
-    {sheet === 'receipt' && completed && <SaleCompletedSheet completed={completed} onNewSale={() => { setSheet(null); setCompleted(null) }} />}
+    {sheet === 'receipt' && completed && <SaleCompletedSheet completed={completed} storeName={storeName} onNewSale={() => { setSheet(null); setCompleted(null) }} />}
     {sheet === 'categories' && <CategoryManagerSheet categories={salesState.categories} products={salesState.products}
       onAdd={addCategory} onRename={renameCategory} onDelete={deleteCategory} onClose={() => setSheet(null)} />}
     {sheet?.type === 'product' && selectedProduct && <ProductPickerSheet key={selectedProduct.id} product={selectedProduct} cart={cart} currency={currency}

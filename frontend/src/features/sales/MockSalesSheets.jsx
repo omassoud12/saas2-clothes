@@ -117,18 +117,6 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
   </MockSalesSheet>
 }
 
-export function SaleCompletedSheet({ completed, onNewSale }) {
-  const { sale, replay } = completed
-  const units = sale.items.reduce((sum, item) => sum + item.quantity, 0)
-  return <MockSalesSheet title="Sale completed" subtitle={`Receipt ${receiptNumber(sale.id)}`} onClose={onNewSale}
-    footer={<button type="button" className="mock-pos-primary" onClick={onNewSale}>New sale</button>}>
-    <div className="mock-pos-sale-done">
-      <strong>{formatMoney(sale.totalAmount, sale.currency)}</strong>
-      <p>{units} {units === 1 ? 'item' : 'items'}{replay ? ' · Confirmed from the original attempt.' : ''}</p>
-    </div>
-  </MockSalesSheet>
-}
-
 export function SalesHistorySheet({ state, role, currency = 'USD', onRetry, onClose }) {
   return <MockSalesSheet title="Sales history" subtitle="Today" onClose={onClose}>
     {state.kind === 'loading' && <div className="mock-pos-empty" role="status"><span className="mock-pos-spinner" /><p>Loading today's sales…</p></div>}

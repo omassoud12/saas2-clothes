@@ -11,6 +11,7 @@ This folder contains the responsive Sales/POS screen.
 - `pos-checkout.js`: cart to `POST /api/sales` mapping, checkout error handling and cart/catalog comparison.
 - `MockSalesScreen.jsx`: real catalog loading, page composition, filtering, voice search and UI state.
 - `MockSalesSheets.jsx`: product picker, cart, history and category bottom sheets.
+- `pos-receipt.js` / `SaleReceipt.jsx`: the receipt shown after a sale, its WhatsApp text, share handoff and print copy (`@media print`, 58mm/80mm/A4).
 - `MockSalesSheet.jsx`: reusable accessible sheet shell.
 - `mock-sales.css`: page-scoped responsive, dark-mode and RTL styles.
 

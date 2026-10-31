@@ -8,6 +8,7 @@ export function SalesPage({ profile }) {
     supabase={supabase}
     role={profile?.user?.role}
     currency={profile?.account?.baseCurrency || 'USD'}
+    storeName={profile?.account?.name || ''}
     storageScope={accountId && userId ? `${accountId}:${userId}` : ''}
   />
 }

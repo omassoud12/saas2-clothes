@@ -29,7 +29,8 @@ before(async () => {
   ReviewCard = voiceModule.ReviewCard
   SalesPage = (await vite.ssrLoadModule('/src/pages/app/SalesPage.jsx')).SalesPage
   const sheets = await vite.ssrLoadModule('/src/features/sales/MockSalesSheets.jsx')
-  ;({ CartSheet, SaleCompletedSheet, SalesHistorySheet } = sheets)
+  ;({ CartSheet, SalesHistorySheet } = sheets)
+  SaleCompletedSheet = (await vite.ssrLoadModule('/src/features/sales/SaleReceipt.jsx')).SaleCompletedSheet
 })
 after(async () => { await vite?.close() })
 
@@ -166,13 +167,26 @@ describe('production POS voice UI', () => {
     assert.match(html, /mock-pos-primary"[^>]*disabled/u)
   })
 
-  test('the completed sale shows the short receipt number and total, and a New sale button', () => {
-    const sale = { id: 'a1b2c3d4-0000-4000-8000-000000000000', currency: 'USD', totalAmount: '43.20', items: [{ quantity: 2 }] }
-    const html = renderToStaticMarkup(createElement(SaleCompletedSheet, { completed: { sale, summary: {}, replay: false }, onNewSale() {} }))
-    assert.match(html, /Sale completed/u)
-    assert.match(html, /#A1B2C3D4/u)
-    assert.match(html, /43.20 USD/u)
-    assert.match(html, /New sale/u)
+  const receiptSale = { id: 'a1b2c3d4-0000-4000-8000-000000000000', currency: 'USD', subtotal: '43.20', totalAmount: '43.20', createdAt: '2026-10-14T10:30:00.000Z',
+    items: [{ id: 'i1', productName: 'Linen shirt', color: 'Blue', size: 'M', quantity: 2, unitSoldPrice: '21.60', lineTotal: '43.20' }] }
+
+  test('the completed sale is a full receipt with share, print and a main New sale button', () => {
+    const summary = { discountPercent: 10, listSubtotalCents: 4800, totalCents: 4320 }
+    const html = renderToStaticMarkup(createElement(SaleCompletedSheet, { completed: { sale: receiptSale, summary, replay: false }, storeName: 'Mini Store', onNewSale() {} }))
+    for (const part of ['Sale completed', '#A1B2C3D4', 'Mini Store', 'Linen shirt', 'Blue · M', '2 × 21.60 USD', 'Subtotal', '48.00 USD', 'Discount (10%)', '4.80 USD',
+      '43.20 USD', 'Share on WhatsApp', 'Print / PDF', 'New sale', 'Thank you!', '<time']) {
+      assert.ok(html.includes(part), part)
+    }
+    assert.doesNotMatch(html, /Payment|Cash|Card/u)
+    assert.ok(html.indexOf('Print / PDF') < html.indexOf('New sale'), 'New sale is the last, main action')
+    assert.match(html, /class="mock-pos-primary"[^>]*>New sale/u)
+  })
+
+  test('a receipt without a discount hides the subtotal and discount rows', () => {
+    const summary = { discountPercent: 0, listSubtotalCents: 4320, totalCents: 4320 }
+    const html = renderToStaticMarkup(createElement(SaleCompletedSheet, { completed: { sale: receiptSale, summary, replay: true }, onNewSale() {} }))
+    assert.doesNotMatch(html, /Subtotal|Discount/u)
+    assert.match(html, /Confirmed from the original attempt/u)
   })
 
   test('sales history reads server sales and hides amounts from non-owners', () => {

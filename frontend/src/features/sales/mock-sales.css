@@ -177,9 +177,43 @@
 .mock-pos-checkout-actions button { min-width: 44px; padding: 0 12px; border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; font-weight: 700; }
 .mock-pos-checkout-actions button.is-danger { color: var(--pos-warn); }
 .mock-pos-line-issue { grid-column: 1 / -1; margin: 0; color: var(--pos-warn); font-size: 12px; font-weight: 700; }
-.mock-pos-sale-done { display: grid; justify-items: center; gap: 4px; padding: 24px 0; text-align: center; }
-.mock-pos-sale-done strong { font-size: 30px; letter-spacing: -.02em; }
+.mock-pos-sale-done { display: grid; justify-items: center; gap: 4px; padding: 4px 0 16px; text-align: center; }
+.mock-pos-sale-done span { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 50%; background: var(--pos-soft); color: var(--pos-brand); font-size: 22px; font-weight: 800; }
 .mock-pos-sale-done p { margin: 0; color: var(--pos-muted); font-size: 13px; }
+
+/* Receipt: shown in the sale-completed sheet and, from a copy next to #root, printed. */
+.mock-pos-receipt { padding: 16px; border: 1px dashed var(--pos-line, #999); border-radius: 14px; background: var(--pos-surface, #fff); color: var(--pos-ink, #000); font-size: 13px; line-height: 1.4; }
+.mock-pos-receipt-store { margin: 0 0 4px; font-size: 17px; text-align: center; }
+.mock-pos-receipt-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; color: var(--pos-muted, #444); font-size: 12px; }
+.mock-pos-receipt-lines { display: grid; gap: 10px; margin: 0; padding: 10px 0; border-block: 1px dashed var(--pos-line, #999); list-style: none; }
+.mock-pos-receipt-lines li { display: flex; justify-content: space-between; gap: 12px; }
+.mock-pos-receipt-lines li > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.mock-pos-receipt-lines li span { color: var(--pos-muted, #444); font-size: 12px; }
+.mock-pos-receipt-lines li > b { flex: 0 0 auto; white-space: nowrap; }
+.mock-pos-receipt-totals { display: grid; gap: 4px; margin: 10px 0 0; }
+.mock-pos-receipt-totals > div { display: flex; justify-content: space-between; gap: 12px; }
+.mock-pos-receipt-totals dt, .mock-pos-receipt-totals dd { margin: 0; }
+.mock-pos-receipt-totals .is-total { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--pos-line, #999); font-size: 17px; font-weight: 800; }
+.mock-pos-receipt-thanks { margin: 14px 0 0; color: var(--pos-muted, #444); font-size: 12px; text-align: center; }
+.mock-pos-receipt-actions { display: grid; gap: 8px; }
+.mock-pos-receipt-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mock-pos-page .mock-pos-receipt-secondary button { border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; font-weight: 700; }
+.mock-pos-print-root { display: none; }
+
+@page { margin: 4mm; }
+@media print {
+  /* Only while a receipt is open (its print copy exists), so printing other pages is unaffected. */
+  body:has(> .mock-pos-print-root) #root { display: none !important; }
+  body:has(> .mock-pos-print-root) { background: #fff !important; }
+  .mock-pos-print-root { display: block; }
+  /* One column that fits 58mm and 80mm rolls; it is centered and larger on A4. */
+  .mock-pos-print-root .mock-pos-receipt { width: 100%; max-width: 80mm; margin: 0 auto; padding: 0; border: 0; border-radius: 0; background: #fff; color: #000; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; }
+  .mock-pos-print-root .mock-pos-receipt * { color: #000 !important; }
+  .mock-pos-print-root .mock-pos-receipt-lines li { break-inside: avoid; }
+}
+@media print and (min-width: 150mm) {
+  .mock-pos-print-root .mock-pos-receipt { max-width: 120mm; font-size: 14px; }
+}
 
 @keyframes mock-pos-sheet-in { from { opacity: .7; transform: translateY(42px); } }
 @keyframes mock-pos-toast-in { from { opacity: 0; transform: translateY(8px); } }

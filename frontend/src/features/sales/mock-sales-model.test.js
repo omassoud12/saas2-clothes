@@ -5,6 +5,7 @@ import { addCartSelection, cartTotals, decrementCatalogStock, deleteMockCategory
 import { createMockSalesStorage } from './mock-sales-storage.js'
 import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, lineIssueText, prepareCheckout, receiptNumber, startOfLocalDayIso, summarizeSales, toSaleLines } from './pos-checkout.js'
 import { submitSale } from './sale-flow.js'
+import { buildReceipt, buildReceiptText, shareReceipt, whatsappUrl } from './pos-receipt.js'
 
 const variant1 = '22222222-2222-4222-8222-222222222222'
 const variant2 = '44444444-4444-4444-8444-444444444444'
@@ -260,5 +261,66 @@ describe('local mock Sales model', () => {
     assert.deepEqual(summary, { count: 2, total: '37.50 USD' })
     assert.equal(receiptNumber('a1b2c3d4-0000-4000-8000-000000000000'), '#A1B2C3D4')
     assert.match(startOfLocalDayIso(new Date(2026, 9, 14, 15, 30)), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/)
+  })
+
+  const discountedSale = { id: 'a1b2c3d4-0000-4000-8000-000000000000', currency: 'USD', subtotal: '43.20', totalAmount: '43.20', createdAt: '2026-10-14T10:30:00.000Z',
+    items: [{ id: 'i1', productName: 'Linen shirt', color: 'Blue', size: 'M', quantity: 2, unitSoldPrice: '21.60', lineTotal: '43.20' }] }
+  const plainSale = { ...discountedSale, subtotal: '143.20', totalAmount: '143.20', items: [
+    { id: 'i1', productName: 'Linen shirt', color: 'Blue', size: 'M', quantity: 2, unitSoldPrice: '21.60', lineTotal: '43.20' },
+    { id: 'i2', productName: 'Wool coat', color: null, size: null, quantity: 1, unitSoldPrice: '100.00', lineTotal: '100.00' }] }
+  const discountSummary = { discountPercent: 10, listSubtotalCents: 4800, totalCents: 4320 }
+
+  test('the receipt shows the server sale with the discount taken from the checked-out cart', () => {
+    const receipt = buildReceipt({ sale: discountedSale, summary: discountSummary, storeName: ' Mini Store ', locale: 'en-GB', timeZone: 'UTC' })
+    assert.equal(receipt.storeName, 'Mini Store')
+    assert.equal(receipt.number, '#A1B2C3D4')
+    assert.match(receipt.dateText, /14 Oct 2026/)
+    assert.match(receipt.dateText, /10:30/)
+    assert.deepEqual(receipt.lines.map(line => [line.name, line.detail, line.quantity, line.unitPrice, line.lineTotal]), [['Linen shirt', 'Blue · M', 2, '21.60 USD', '43.20 USD']])
+    assert.deepEqual([receipt.subtotal, receipt.discount, receipt.discountPercent, receipt.total, receipt.units], ['48.00 USD', '4.80 USD', 10, '43.20 USD', 2])
+    assert.equal(JSON.stringify(receipt).includes('Cash'), false, 'no payment method is shown')
+  })
+
+  test('a sale without a discount shows only the total, and items without color or size stay clean', () => {
+    const receipt = buildReceipt({ sale: plainSale, storeName: '', locale: 'en-GB', timeZone: 'UTC' })
+    assert.equal(receipt.discount, null)
+    assert.equal(receipt.discountPercent, null)
+    assert.equal(receipt.subtotal, '143.20 USD')
+    assert.equal(receipt.total, '143.20 USD')
+    assert.equal(receipt.lines[1].detail, '')
+    const none = buildReceipt({ sale: discountedSale, summary: { discountPercent: 0, listSubtotalCents: 4320, totalCents: 4320 } })
+    assert.equal(none.discount, null)
+  })
+
+  test('the WhatsApp text is a clean receipt and long carts are shortened', () => {
+    const text = buildReceiptText(buildReceipt({ sale: discountedSale, summary: discountSummary, storeName: 'Mini Store', locale: 'en-GB', timeZone: 'UTC' }))
+    for (const part of ['*Mini Store*', 'Receipt #A1B2C3D4', 'Linen shirt (Blue · M)', '  2 × 21.60 USD = 43.20 USD', 'Subtotal: 48.00 USD', 'Discount (10%): -4.80 USD', '*Total: 43.20 USD*', 'Thank you!']) {
+      assert.ok(text.includes(part), part)
+    }
+    assert.equal(/payment|cash|card/i.test(text), false)
+    const plain = buildReceiptText(buildReceipt({ sale: plainSale }), { maxItems: 1 })
+    assert.equal(plain.includes('Subtotal:'), false)
+    assert.ok(plain.includes('…and 1 more item'))
+    assert.equal(plain.includes('Wool coat'), false)
+    const url = whatsappUrl(text)
+    assert.ok(url.startsWith('https://wa.me/?text='))
+    assert.equal(decodeURIComponent(url.slice('https://wa.me/?text='.length)), text)
+  })
+
+  test('sharing uses the share sheet when there is one and falls back to WhatsApp otherwise', async () => {
+    const receipt = buildReceipt({ sale: discountedSale, summary: discountSummary })
+    const shared = []
+    const opened = []
+    const open = url => { opened.push(url); return { opener: 'x' } }
+    assert.deepEqual(await shareReceipt(receipt, { nav: { share: async data => { shared.push(data) } }, open }), { ok: true, method: 'share' })
+    assert.ok(shared[0].text.includes('43.20 USD'))
+    assert.equal(opened.length, 0)
+    const cancel = Object.assign(new Error('closed'), { name: 'AbortError' })
+    assert.deepEqual(await shareReceipt(receipt, { nav: { share: async () => { throw cancel } }, open }), { ok: true, method: 'cancelled' })
+    assert.equal(opened.length, 0, 'cancelling the share sheet does not open WhatsApp')
+    assert.deepEqual(await shareReceipt(receipt, { nav: { share: async () => { throw new Error('unsupported') } }, open }), { ok: true, method: 'whatsapp' })
+    assert.deepEqual(await shareReceipt(receipt, { nav: {}, open }), { ok: true, method: 'whatsapp' })
+    assert.ok(opened.every(url => url.startsWith('https://wa.me/?text=')))
+    assert.deepEqual(await shareReceipt(receipt, { nav: {}, open: () => null }), { ok: false, method: 'blocked' })
   })
 })
