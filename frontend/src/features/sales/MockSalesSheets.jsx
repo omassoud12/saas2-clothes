@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { formatMoneyCompact } from '../../lib/money.js'
-import { cartTotals, discountOptions, money, plural, reservedUnits } from './mock-sales-model.js'
+import { formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
+import { cartTotals, lineUnitCents, money, plural, reservedUnits } from './mock-sales-model.js'
 import { lineIssueText, receiptLabel } from './pos-checkout.js'
 import { PAYMENT_METHODS, validatePayment } from './payment.js'
 import { calculateChange, parseLbpAmount, parseUsdAmount, usdCentsToLbp } from '../../lib/currency.js'
@@ -77,6 +77,30 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   </MockSalesSheet>
 }
 
+const plainPrice = cents => minorUnitsToDecimal(BigInt(cents)).replace(/\.00$/, '')
+
+// The owner's final price for one piece. Empty means the catalog price; anything else must be a price above zero.
+function LinePrice({ line, currency, disabled, onPrice, onInvalid }) {
+  const { t } = useI18n()
+  const [text, setText] = useState(() => Number.isSafeInteger(line.finalPriceCents) ? plainPrice(line.finalPriceCents) : '')
+  const parsed = parseUsdAmount(text)
+  const invalid = parsed === null || (text.trim() !== '' && parsed <= 0)
+  function change(value) {
+    setText(value)
+    const cents = parseUsdAmount(value)
+    const bad = cents === null || (value.trim() !== '' && cents <= 0)
+    onInvalid(line.key, bad)
+    if (!bad) onPrice(line.key, value.trim() === '' ? null : cents)
+  }
+  return <div className="mock-pos-line-price">
+    <label htmlFor={`price-${line.key}`}>{t('Final price each ({currency})', { currency })}</label>
+    <input id={`price-${line.key}`} inputMode="decimal" autoComplete="off" placeholder={plainPrice(line.priceCents)} value={text} disabled={disabled} aria-invalid={invalid}
+      onChange={event => change(event.target.value)} />
+    {invalid ? <small className="is-error" role="alert">{t('Enter a price greater than zero.')}</small>
+      : <small>{Number.isSafeInteger(line.finalPriceCents) ? t('Catalog price {price}', { price: money(line.priceCents, currency) }) : t('Leave empty for the catalog price.')}</small>}
+  </div>
+}
+
 function formatLbp(value) { return formatMoneyCompact(String(value), 'LBP', 0) }
 
 // What the customer hands over, in dollars and/or pounds, against the total: shows what is still due or the change to give back.
@@ -108,13 +132,16 @@ function CashCalculator({ totalCents, currency, rate, disabled }) {
   </div>
 }
 
-export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDiscount, payment, onPayment, rate = null, busy = false, locked = false, message = '', issues = [], blocked = false,
+export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onPrice = () => {}, payment, onPayment, rate = null, busy = false, locked = false, message = '', issues = [], blocked = false,
   onQuantity, onRemove, onClear, onComplete, onDiscard, onHistory, onClose }) {
   const { t } = useI18n()
   const totals = cartTotals(cart, discount)
   const lbpTotal = rate && currency === 'USD' ? usdCentsToLbp(totals.totalCents, rate) : null
   const paymentCheck = validatePayment(payment)
   const [nameTouched, setNameTouched] = useState(false)
+  const [badPrices, setBadPrices] = useState(() => new Set())
+  const priceBlocked = cart.some(line => badPrices.has(line.key))
+  function markPrice(key, bad) { setBadPrices(current => { const next = new Set(current); if (bad) next.add(key); else next.delete(key); return next }) }
   const [confirmingClear, setConfirmingClear] = useState(false)
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const frozen = busy || locked
@@ -122,15 +149,15 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
   return <MockSalesSheet title={t('Cart')} subtitle={plural(cart.reduce((sum, line) => sum + line.quantity, 0), 'item', t)} onClose={onClose}
     className="mock-pos-cart-sheet" footer={<>
       {cart.length > 0 && <dl className="mock-pos-totals">
-        {discount > 0 && totals.discountCents > 0 && <>
+        {totals.discountCents > 0 && <>
           <div><dt>{t('Subtotal')}</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
-          <div><dt>{t('Discount ({discount}%)', { discount })}</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
+          <div><dt>{discount > 0 ? t('Discount ({discount}%)', { discount }) : t('Discount')}</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
         </>}
         <div className="is-total"><dt>{t('Total')}</dt><dd>{money(totals.totalCents, currency)}</dd></div>
         {lbpTotal !== null && <div className="is-lbp"><dt>{t('Total (LBP)')}</dt><dd>{formatLbp(lbpTotal)}</dd></div>}
       </dl>}
       <button type="button" className="mock-pos-primary" aria-busy={busy}
-        disabled={!cart.length || busy || (!locked && (blocked || !paymentCheck.ok))} onClick={onComplete}>
+        disabled={!cart.length || busy || (!locked && (blocked || !paymentCheck.ok || priceBlocked))} onClick={onComplete}>
         {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />{t('Completing sale…')}</>
           : locked ? t('Try again') : cart.length ? t('Complete sale · {money}', { money: money(totals.totalCents, currency) }) : t('Complete sale')}
       </button>
@@ -149,15 +176,13 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
       : <div className="mock-pos-cart-lines">{cart.map(line => {
         const issue = issueByKey.get(line.key)
         return <article key={line.key} className="mock-pos-cart-line">
-          <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(line.priceCents, currency)}</span></div>
+          <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(lineUnitCents(line, discount), currency)}</span></div>
           <Stepper value={line.quantity} max={line.stock} disabled={frozen} onChange={value => onQuantity(line.key, value)} label={t('{productName} quantity', { productName: line.productName })} />
+          {canDiscount && <LinePrice line={line} currency={currency} disabled={frozen} onPrice={onPrice} onInvalid={markPrice} />}
           {issue && <p className="mock-pos-line-issue" role="alert">{lineIssueText(issue, currency)}</p>}
           <button type="button" className="mock-pos-remove" disabled={frozen} onClick={() => onRemove(line.key)}>{t('Remove')}</button>
         </article>
       })}</div>}
-    {canDiscount && <section className="mock-pos-choice-section"><h3>{t('Discount')}</h3><div className="mock-pos-segmented">
-      {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : t('None')}</button>)}
-    </div></section>}
     {cart.length > 0 && <section className="mock-pos-choice-section"><h3>{t('Payment')}</h3>
       <div className="mock-pos-segmented" role="group" aria-label={t('Payment method')}>
         {PAYMENT_METHODS.map(item => <button key={item.id} type="button" aria-pressed={payment.method === item.id} disabled={frozen}

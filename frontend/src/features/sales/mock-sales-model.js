@@ -48,10 +48,24 @@ export function discountedUnitCents(unitCents, discountPercent = 0) {
   return Math.floor((unitCents * (100 - discountPercent) + 50) / 100)
 }
 
+// The price one piece is sold at: the final price the owner typed for the line, else the catalog price (less a percent, if any).
+export function lineUnitCents(line, discountPercent = 0) {
+  return Number.isSafeInteger(line.finalPriceCents) && line.finalPriceCents > 0 ? line.finalPriceCents : discountedUnitCents(line.priceCents, discountPercent)
+}
+
 export function cartTotals(cart, discountPercent = 0) {
   const subtotalCents = cart.reduce((total, line) => total + line.priceCents * line.quantity, 0)
-  const totalCents = cart.reduce((total, line) => total + discountedUnitCents(line.priceCents, discountPercent) * line.quantity, 0)
+  const totalCents = cart.reduce((total, line) => total + lineUnitCents(line, discountPercent) * line.quantity, 0)
   return Object.freeze({ subtotalCents, discountCents: subtotalCents - totalCents, totalCents })
+}
+
+// Sets (or, with null, clears) the final price of one line. The server derives the discount by comparing it with the catalog price.
+export function setMockLinePrice(cart, key, cents) {
+  return cart.map(line => {
+    if (line.key !== key) return line
+    if (cents === null) { const { finalPriceCents, ...rest } = line; void finalPriceCents; return rest }
+    return Number.isSafeInteger(cents) && cents > 0 ? { ...line, finalPriceCents: cents } : line
+  })
 }
 
 export function addCartSelection(cart, product, color, size, quantity) {

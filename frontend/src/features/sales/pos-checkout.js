@@ -1,5 +1,5 @@
 import { decimalToMinorUnits, formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
-import { cartTotals, discountedUnitCents, money } from './mock-sales-model.js'
+import { cartTotals, lineUnitCents, money } from './mock-sales-model.js'
 import { checkoutOperation } from './sale-flow.js'
 import { DEFAULT_PAYMENT, paymentExtras, validatePayment } from './payment.js'
 
@@ -28,7 +28,7 @@ export function toSaleLines(cart, discountPercent) {
     variantId: line.variantId,
     quantity: line.quantity,
     unitSoldPrice: Number.isSafeInteger(line.priceCents) && line.priceCents >= 0
-      ? minorUnitsToDecimal(BigInt(discountedUnitCents(line.priceCents, discountPercent))) : '',
+      ? minorUnitsToDecimal(BigInt(lineUnitCents(line, discountPercent))) : '',
   }))
 }
 
@@ -39,8 +39,10 @@ function payloadTotalCents(payload) {
 }
 
 // Reuses the Idempotency-Key while the payload is unchanged; a changed cart gets a new key.
-export function prepareCheckout({ cart, role, discountPercent, payment = DEFAULT_PAYMENT, current = null, uuidFactory }) {
+export function prepareCheckout({ cart: entered, role, discountPercent, payment = DEFAULT_PAYMENT, current = null, uuidFactory }) {
   const percent = effectiveDiscount(role, discountPercent)
+  // Only an owner may sell below the catalog price; anyone else's cart always uses the catalog price.
+  const cart = role === 'OWNER' ? entered : entered.map(line => ({ ...line, finalPriceCents: undefined }))
   const checked = validatePayment(payment)
   if (!checked.ok) return failure('POS_PAYMENT_INVALID', checked.message)
   const extras = paymentExtras({ method: payment.method, customerName: payment.customerName, customerPhone: payment.customerPhone, discountPercent: percent })

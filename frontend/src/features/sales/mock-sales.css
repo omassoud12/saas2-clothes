@@ -543,3 +543,11 @@
 .mock-history-badge.is-method { background: var(--badge-neutral-bg); color: var(--badge-neutral-fg); }
 .mock-pos-page .mock-history-status.is-debt { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
 .mock-pos-page .mock-history-status.is-paid { background: var(--badge-success-bg); color: var(--badge-success-fg); }
+
+/* The owner's final price for one piece, inside a cart line. */
+.mock-pos-line-price { grid-column: 1 / -1; display: grid; gap: 4px; }
+.mock-pos-line-price label { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); }
+.mock-pos-line-price input { width: 100%; height: var(--touch-target); min-width: 0; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-md); }
+.mock-pos-line-price input[aria-invalid="true"] { border-color: var(--color-danger); }
+.mock-pos-line-price small { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.mock-pos-line-price small.is-error { color: var(--color-danger); }

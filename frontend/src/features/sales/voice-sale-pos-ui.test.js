@@ -267,4 +267,17 @@ describe('production POS voice UI', () => {
     const card = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, rate: '89500.00', payment: { method: 'CARD', customerName: '', customerPhone: '' } }))
     assert.ok(card.includes('3,866,400 LBP')); assert.doesNotMatch(card, /Received \(/u)
   })
+
+  test('an owner sets the final price of each piece instead of choosing a discount; a warehouse user cannot', () => {
+    const owner = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, discount: 0, cart: [{ ...cartLine, finalPriceCents: 2160 }] }))
+    assert.match(owner, /Final price each \(USD\)/u); assert.ok(owner.includes('value="21.60"'))
+    assert.doesNotMatch(owner, /<h3>Discount<\/h3>|aria-pressed="[a-z]+">10%</u, 'the percent buttons are gone')
+    const footer = owner.slice(owner.indexOf('mock-pos-sheet-footer'))
+    assert.ok(footer.includes('Subtotal') && footer.includes('>Discount<') && footer.includes('Complete sale · $43.20'), 'the discount appears by itself')
+    assert.ok(owner.includes('Catalog price $24'))
+    const blank = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, discount: 0 }))
+    assert.ok(blank.includes('placeholder="24"')); assert.match(blank, /Leave empty for the catalog price/u)
+    const warehouse = renderToStaticMarkup(createElement(CartSheet, { ...cartProps, canDiscount: false, discount: 0 }))
+    assert.doesNotMatch(warehouse, /Final price each/u)
+  })
 })

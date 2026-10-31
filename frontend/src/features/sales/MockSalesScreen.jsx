@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getProduct } from '../products/product-flow.js'
 import { addCartSelection, cartTotals, cartUnits, decrementCatalogStock, money, plural, productStock, reconcileMockCart,
-  restoreMockCartLine, setMockCartQuantity, stockBadge, UNCATEGORIZED_ID } from './mock-sales-model.js'
+  restoreMockCartLine, setMockCartQuantity, setMockLinePrice, stockBadge, UNCATEGORIZED_ID } from './mock-sales-model.js'
 import { analyzeCart, checkoutFailure, effectiveDiscount, hasBlockingIssue, prepareCheckout, startOfLocalDayIso, summarizeSales } from './pos-checkout.js'
 import { createCheckoutGuard, loadSaleHistory, submitSale } from './sale-flow.js'
 import { DEFAULT_PAYMENT, paymentFromPayload } from './payment.js'
@@ -371,7 +371,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       </button></footer> : <div className="mock-pos-end-space" aria-hidden="true" />}
     </div>
 
-    {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={activeDiscount} canDiscount={role === 'OWNER'} onDiscount={setDiscount}
+    {sheet === 'cart' && <CartSheet cart={cart} currency={currency} discount={activeDiscount} canDiscount={role === 'OWNER'} onPrice={(key, cents) => setCart(current => setMockLinePrice(current, key, cents))}
       payment={payment} onPayment={setPayment} rate={currency === 'USD' ? rate : null}
       busy={busy} locked={checkout.locked} message={checkout.message} issues={checkout.issues} blocked={hasBlockingIssue(cart)}
       onQuantity={(key, quantity) => setCart(current => setMockCartQuantity(current, key, quantity))}
