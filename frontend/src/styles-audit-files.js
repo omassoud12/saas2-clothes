@@ -16,6 +16,10 @@ export const SIZE_AUDITED = Object.freeze([
   'styles/product-base.css',
   'styles/finance.css',
   'styles/lifecycle.css',
+  'styles/auth.css',
+  'styles/admin.css',
+  'styles/landing.css',
+  'features/voice-sales/text-matching-lab.css',
 ])
 
 // tokens-audit.test.js (no hardcoded hex colors outside styles/tokens.css).
@@ -34,4 +38,8 @@ export const TOKEN_AUDITED = Object.freeze([
   'styles/categories.css',
   'styles/finance.css',
   'styles/lifecycle.css',
+  'styles/auth.css',
+  'styles/admin.css',
+  'styles/landing.css',
+  'features/voice-sales/text-matching-lab.css',
 ])
