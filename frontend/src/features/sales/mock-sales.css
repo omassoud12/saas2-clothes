@@ -1,14 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
-
-.business-content:has(> .mock-pos-page) { padding: 20px 16px 0; background: #faf5f3; }
+.business-content:has(> .mock-pos-page) { padding: 20px 16px 0; background: var(--color-background); }
 .mock-pos-page {
-  --pos-bg: #faf5f3; --pos-surface: #fffdfc; --pos-ink: #232224; --pos-muted: #766b68;
-  --pos-line: #eadeda; --pos-brand: #2c2c2e; --pos-brand-ink: #fffdfc; --pos-soft: #f3e3df;
-  --pos-active: #e8c5bd; --pos-hero: #2c2c2e; --pos-hero-ink: #fffdfc;
-  --pos-warn: #9a3e35; --pos-warn-bg: #f3e3df;
   width: 100%; min-height: calc(100dvh - 96px); color: var(--pos-ink); background: var(--pos-bg);
-  font-family: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
-  font-size: 15px; line-height: 1.45;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base); line-height: var(--line-height);
 }
 .mock-pos-page *, .mock-pos-page *::before, .mock-pos-page *::after { box-sizing: border-box; }
 .mock-pos-page button, .mock-pos-page input { font: inherit; }
@@ -27,7 +21,7 @@
 .mock-pos-page .mock-pos-today svg { width: 18px; height: 18px; color: var(--pos-muted); }
 
 
-.mock-pos-search { display: grid; grid-template-columns: 22px minmax(0, 1fr) 44px; align-items: center; gap: 8px; height: 52px; padding-inline: 14px 4px; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: 0 4px 12px #18351f08; transition: border-color .16s ease, box-shadow .16s ease; }
+.mock-pos-search { display: grid; grid-template-columns: 22px minmax(0, 1fr) 44px; align-items: center; gap: 8px; height: 52px; padding-inline: 14px 4px; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: var(--shadow-card); transition: border-color .16s ease, box-shadow .16s ease; }
 .mock-pos-search:focus-within { border-color: var(--pos-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pos-brand) 18%, transparent); }
 .mock-pos-search > svg { color: var(--pos-muted); }
 .mock-pos-search input { width: 100%; min-width: 0; height: 48px; padding: 0; border: 0; border-radius: 0; outline: 0; appearance: none; background: transparent; color: var(--pos-ink); font-size: 16px; box-shadow: none; }
@@ -47,9 +41,9 @@
 .mock-pos-list-heading { grid-column: 1 / -1; display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 2px; padding: 0; }
 .mock-pos-list-heading h2 { max-width: none; margin: 0; color: var(--pos-ink); font-family: inherit; font-size: 17px; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; }
 .mock-pos-list-heading span { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; background: var(--pos-soft); color: var(--pos-muted); font-size: 12px; font-weight: 700; }
-.mock-pos-product { display: block; min-width: 0; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: 0 3px 12px #17341f06; transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+.mock-pos-product { display: block; min-width: 0; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 14px; background: var(--pos-surface); box-shadow: var(--shadow-card); transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
 .mock-pos-product-main { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 8px 10px; background: transparent; color: var(--pos-ink); text-align: start; }
-.mock-pos-product:not(.is-out):hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pos-brand) 48%, var(--pos-line)); box-shadow: 0 8px 22px #17341f0d; }
+.mock-pos-product:not(.is-out):hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pos-brand) 48%, var(--pos-line)); box-shadow: var(--shadow-card-hover); }
 .mock-pos-product-art { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--garment) 16%, var(--pos-soft)); color: var(--garment); }
 .mock-pos-product-art img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .mock-pos-product-art svg { width: 34px; height: 34px; fill: currentColor; stroke: color-mix(in srgb, currentColor 80%, var(--pos-ink)); stroke-width: 1.1; }
@@ -59,9 +53,9 @@
 .mock-pos-product-line b { flex: 0 0 auto; font-size: 14px; font-weight: 800; }
 .mock-pos-product-line small { color: var(--pos-muted); font-size: 12px; }
 .mock-pos-product-line small.mock-pos-stock { flex: 0 0 auto; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.mock-pos-stock.is-ok { background: #efebea; color: #5a5254; }
-.mock-pos-stock.is-low { background: #fdecc8; color: #7a4b00; }
-.mock-pos-stock.is-out { background: #fbe0dc; color: #a3201a; }
+.mock-pos-stock.is-ok { background: var(--badge-neutral-bg); color: var(--badge-neutral-fg); }
+.mock-pos-stock.is-low { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+.mock-pos-stock.is-out { background: var(--badge-danger-bg); color: var(--badge-danger-fg); }
 .mock-pos-page .mock-pos-product-main:disabled { opacity: 1; cursor: not-allowed; }
 .mock-pos-product.is-out .mock-pos-product-art, .mock-pos-product.is-out .mock-pos-product-line strong, .mock-pos-product.is-out .mock-pos-product-line b { opacity: .55; }
 .mock-pos-catalog-state, .mock-pos-catalog-note { grid-column: 1 / -1; }
@@ -78,8 +72,8 @@
 .mock-pos-primary:disabled { border: 1px solid var(--pos-line); background: var(--pos-surface); color: var(--pos-muted); opacity: 1; }
 .mock-pos-primary strong { font-size: 16px; }
 
-.mock-pos-scrim { position: fixed; z-index: 1000; inset: 0; display: grid; align-items: end; justify-items: center; padding-top: 30px; background: #07100bb0; }
-.mock-pos-sheet { display: flex; width: min(100%, 520px); max-height: min(88dvh, 820px); flex-direction: column; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 24px 24px 0 0; background: var(--pos-surface); color: var(--pos-ink); box-shadow: 0 -18px 50px #07100b38; animation: mock-pos-sheet-in .22s ease-out both; }
+.mock-pos-scrim { position: fixed; z-index: 1000; inset: 0; display: grid; align-items: end; justify-items: center; padding-top: 30px; background: var(--color-overlay); }
+.mock-pos-sheet { display: flex; width: min(100%, 520px); max-height: min(88dvh, 820px); flex-direction: column; overflow: hidden; border: 1px solid var(--pos-line); border-radius: 24px 24px 0 0; background: var(--pos-surface); color: var(--pos-ink); box-shadow: var(--shadow-sheet); animation: mock-pos-sheet-in .22s ease-out both; }
 .mock-pos-sheet-grip { width: 40px; height: 4px; flex: 0 0 4px; margin: 9px auto 2px; border-radius: 999px; background: var(--pos-line); }
 .mock-pos-sheet-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 18px 14px; border-bottom: 1px solid var(--pos-line); }
 .mock-pos-sheet-header h2 { margin: 0; font-family: inherit; font-size: 21px; letter-spacing: -.02em; }
@@ -119,7 +113,7 @@
 .mock-pos-segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 4px; border-radius: 14px; background: var(--pos-soft); }
 .mock-pos-segmented.is-two { grid-template-columns: repeat(2, 1fr); }
 .mock-pos-segmented button { min-width: 0; padding: 7px 4px; border-radius: 10px; background: transparent; color: var(--pos-muted); font-size: 12px; font-weight: 600; }
-.mock-pos-segmented button[aria-pressed="true"] { background: var(--pos-surface); color: var(--pos-brand); box-shadow: 0 2px 8px #142c1c12; }
+.mock-pos-segmented button[aria-pressed="true"] { background: var(--pos-surface); color: var(--pos-brand); box-shadow: var(--shadow-raised); }
 .mock-pos-totals { display: grid; gap: 4px; margin: 0 0 12px; font-size: 13px; }
 .mock-pos-totals div { display: flex; justify-content: space-between; gap: 12px; }
 .mock-pos-totals dt { color: var(--pos-muted); }
@@ -142,7 +136,7 @@
 .mock-pos-delete-confirm p { margin: 0 0 6px; font-size: 12px; }
 .mock-pos-delete-confirm > div { display: flex; gap: 14px; }
 .mock-pos-note { margin: 12px 0 0; color: var(--pos-muted); font-size: 12px; }
-.mock-pos-toast { position: fixed; z-index: 1100; inset-inline: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 488px); margin-inline: auto; padding: 12px 15px; border-radius: 13px; background: var(--pos-ink); color: var(--pos-surface); box-shadow: 0 10px 30px #07100b30; font-size: 13px; font-weight: 600; text-align: center; animation: mock-pos-toast-in .18s ease-out both; }
+.mock-pos-toast { position: fixed; z-index: 1100; inset-inline: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 488px); margin-inline: auto; padding: 12px 15px; border-radius: 13px; background: var(--pos-ink); color: var(--pos-surface); box-shadow: var(--shadow-toast); font-size: 13px; font-weight: 600; text-align: center; animation: mock-pos-toast-in .18s ease-out both; }
 
 .mock-pos-toast.has-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: start; }
 .mock-pos-toast.has-action button { flex: 0 0 auto; min-width: 64px; padding: 0 14px; border-radius: 10px; background: transparent; color: inherit; font-weight: 800; text-decoration: underline; }
@@ -160,19 +154,19 @@
 .mock-pos-sale-done p { margin: 0; color: var(--pos-muted); font-size: 13px; }
 
 /* Receipt: shown in the sale-completed sheet and, from a copy next to #root, printed. */
-.mock-pos-receipt { padding: 16px; border: 1px dashed var(--pos-line, #999); border-radius: 14px; background: var(--pos-surface, #fff); color: var(--pos-ink, #000); font-size: 13px; line-height: 1.4; }
+.mock-pos-receipt { padding: 16px; border: 1px dashed var(--pos-line); border-radius: 14px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; line-height: 1.4; }
 .mock-pos-receipt-store { margin: 0 0 4px; font-size: 17px; text-align: center; }
-.mock-pos-receipt-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; color: var(--pos-muted, #444); font-size: 12px; }
-.mock-pos-receipt-lines { display: grid; gap: 10px; margin: 0; padding: 10px 0; border-block: 1px dashed var(--pos-line, #999); list-style: none; }
+.mock-pos-receipt-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; color: var(--pos-muted); font-size: 12px; }
+.mock-pos-receipt-lines { display: grid; gap: 10px; margin: 0; padding: 10px 0; border-block: 1px dashed var(--pos-line); list-style: none; }
 .mock-pos-receipt-lines li { display: flex; justify-content: space-between; gap: 12px; }
 .mock-pos-receipt-lines li > div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
-.mock-pos-receipt-lines li span { color: var(--pos-muted, #444); font-size: 12px; }
+.mock-pos-receipt-lines li span { color: var(--pos-muted); font-size: 12px; }
 .mock-pos-receipt-lines li > b { flex: 0 0 auto; white-space: nowrap; }
 .mock-pos-receipt-totals { display: grid; gap: 4px; margin: 10px 0 0; }
 .mock-pos-receipt-totals > div { display: flex; justify-content: space-between; gap: 12px; }
 .mock-pos-receipt-totals dt, .mock-pos-receipt-totals dd { margin: 0; }
-.mock-pos-receipt-totals .is-total { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--pos-line, #999); font-size: 17px; font-weight: 800; }
-.mock-pos-receipt-thanks { margin: 14px 0 0; color: var(--pos-muted, #444); font-size: 12px; text-align: center; }
+.mock-pos-receipt-totals .is-total { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--pos-line); font-size: 17px; font-weight: 800; }
+.mock-pos-receipt-thanks { margin: 14px 0 0; color: var(--pos-muted); font-size: 12px; text-align: center; }
 .mock-pos-receipt-actions { display: grid; gap: 8px; }
 .mock-pos-receipt-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mock-pos-page .mock-pos-receipt-secondary button { border: 1px solid var(--pos-line); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: 13px; font-weight: 700; }
@@ -182,11 +176,11 @@
 @media print {
   /* Only while a receipt is open (its print copy exists), so printing other pages is unaffected. */
   body:has(> .mock-pos-print-root) #root { display: none !important; }
-  body:has(> .mock-pos-print-root) { background: #fff !important; }
+  body:has(> .mock-pos-print-root) { background: var(--print-paper) !important; }
   .mock-pos-print-root { display: block; }
   /* One column that fits 58mm and 80mm rolls; it is centered and larger on A4. */
-  .mock-pos-print-root .mock-pos-receipt { width: 100%; max-width: 80mm; margin: 0 auto; padding: 0; border: 0; border-radius: 0; background: #fff; color: #000; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; }
-  .mock-pos-print-root .mock-pos-receipt * { color: #000 !important; }
+  .mock-pos-print-root .mock-pos-receipt { width: 100%; max-width: 80mm; margin: 0 auto; padding: 0; border: 0; border-radius: 0; background: var(--print-paper); color: var(--print-ink); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; }
+  .mock-pos-print-root .mock-pos-receipt * { color: var(--print-ink) !important; }
   .mock-pos-print-root .mock-pos-receipt-lines li { break-inside: avoid; }
 }
 @media print and (min-width: 150mm) {
@@ -237,25 +231,6 @@
   .mock-pos-primary { min-height: 48px !important; padding: 11px 14px; }
 }
 
-@media (prefers-color-scheme: dark) {
-  .business-shell:has(.mock-pos-page), .business-workspace:has(.mock-pos-page), .business-content:has(> .mock-pos-page) { background: #faf5f3; }
-  .business-shell:has(.mock-pos-page) .business-header { border-bottom-color: #eadeda; background: color-mix(in srgb, #fffdfc 94%, transparent); }
-  .business-shell:has(.mock-pos-page) .business-header-title strong,
-  .business-shell:has(.mock-pos-page) .business-user-copy strong { color: #232224; }
-  .business-shell:has(.mock-pos-page) .business-header-title span,
-  .business-shell:has(.mock-pos-page) .business-user-copy span { color: #766b68; }
-  .business-shell:has(.mock-pos-page) .mobile-menu-button { background: #f3e3df; color: #232224; }
-  .mock-pos-page {
-    --pos-bg: #faf5f3; --pos-surface: #fffdfc; --pos-ink: #232224; --pos-muted: #766b68;
-    --pos-line: #eadeda; --pos-brand: #2c2c2e; --pos-brand-ink: #fffdfc; --pos-soft: #f3e3df;
-    --pos-active: #e8c5bd; --pos-hero: #2c2c2e; --pos-hero-ink: #fffdfc;
-    --pos-warn: #9a3e35; --pos-warn-bg: #f3e3df;
-  }
-  .mock-pos-product, .mock-pos-search { box-shadow: none; }
-  .mock-pos-product-art { background: color-mix(in srgb, var(--garment) 20%, var(--pos-soft)); }
-  .mock-pos-toast { background: #232224; color: #fffdfc; }
-}
-
 [dir="rtl"] .mock-pos-page { text-align: start; }
 [dir="rtl"] .mock-pos-search > svg { transform: scaleX(-1); }
 
@@ -278,7 +253,7 @@
 .mock-history-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
 .mock-history-badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .mock-history-badge.is-void { background: var(--pos-warn-bg); color: var(--pos-warn); }
-.mock-history-badge.is-returned { background: #fff1d6; color: #7a5200; }
+.mock-history-badge.is-returned { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
 .mock-history-amount { display: grid; flex: 0 0 auto; justify-items: end; gap: 2px; }
 .mock-history-amount strong { font-size: 16px; font-variant-numeric: tabular-nums; }
 .mock-history-amount .is-struck { color: var(--pos-muted); text-decoration: line-through; }
@@ -290,4 +265,4 @@
 .mock-pos-page .mock-history-status { display: grid; gap: 2px; margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 13px; }
 .mock-pos-page .mock-history-status span { font-size: 12px; overflow-wrap: anywhere; }
 .mock-pos-page .mock-history-status.is-void { background: var(--pos-warn-bg); color: var(--pos-warn); }
-.mock-pos-page .mock-history-status.is-returned { background: #fff1d6; color: #7a5200; }
+.mock-pos-page .mock-history-status.is-returned { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }

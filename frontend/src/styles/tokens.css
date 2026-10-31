@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+/*
+  Design tokens for the whole app. The Sell (POS) screen is the reference design: every other page takes its
+  colors, type, spacing, radius, shadows and sizes from here. Hex colors live only in this file.
+  Contrast (WCAG AA, normal text needs 4.5:1):
+    text #232224 on background #faf5f3 14.6 · on surface #fffdfc 15.6
+    muted #6f6461 on background 5.3 · on surface 5.6 · on soft #f3e3df 4.6
+    primary-contrast #fffdfc on primary #2c2c2e 13.7
+    danger #9a3e35 on surface 6.7 · on danger-soft #f3e3df 5.4
+    success #1f6b3a on surface 6.4 · warning #7a4b00 on warning-soft #fdecc8 6.4 · info #1f4e79 on info-soft #e3eef8 7.4
+*/
+:root {
+  /* Color */
+  --color-background: #faf5f3;
+  --color-surface: #fffdfc;
+  --color-surface-muted: #faf5f3;
+  --color-surface-soft: #f3e3df;
+  --color-surface-active: #e8c5bd;
+  --color-text: #232224;
+  --color-text-muted: #6f6461;
+  --color-border: #eadeda;
+  --color-border-strong: #c9b8b3;
+  --color-primary: #2c2c2e;
+  --color-primary-strong: #1a1a1c;
+  --color-primary-soft: #f3e3df;
+  --color-primary-contrast: #fffdfc;
+  --color-success: #1f6b3a;
+  --color-success-soft: #e4f1e6;
+  --color-warning: #7a4b00;
+  --color-warning-soft: #fdecc8;
+  --color-danger: #9a3e35;
+  --color-danger-soft: #f3e3df;
+  --color-info: #1f4e79;
+  --color-info-soft: #e3eef8;
+  --color-overlay: #07100bb0;
+
+  /* Badges: a tinted background with strong text of the same hue */
+  --badge-neutral-bg: #efebea;
+  --badge-neutral-fg: #5a5254;
+  --badge-success-bg: var(--color-success-soft);
+  --badge-success-fg: var(--color-success);
+  --badge-warning-bg: var(--color-warning-soft);
+  --badge-warning-fg: var(--color-warning);
+  --badge-danger-bg: #fbe0dc;
+  --badge-danger-fg: #a3201a;
+  --badge-info-bg: var(--color-info-soft);
+  --badge-info-fg: var(--color-info);
+
+  /* Type */
+  --font-family: 'IBM Plex Sans Arabic', 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+  --line-height: 1.45;
+
+  /* Space (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 3px 12px #17341f06;
+  --shadow-card-hover: 0 8px 22px #17341f0d;
+  --shadow-raised: 0 2px 8px #142c1c12;
+  --shadow-toast: 0 10px 30px #07100b30;
+  --shadow-sheet: 0 -18px 50px #07100b38;
+
+  /* Paper: receipts print black on white */
+  --print-paper: #fff;
+  --print-ink: #000;
+
+  /* Touch */
+  --touch-target: 44px;
+  --touch-target-large: 52px;
+  --focus-ring: 3px solid color-mix(in srgb, var(--color-primary) 58%, transparent);
+
+  /* The Sell screen names (kept so its styles read the shared tokens) */
+  --pos-bg: var(--color-background);
+  --pos-surface: var(--color-surface);
+  --pos-ink: var(--color-text);
+  --pos-muted: var(--color-text-muted);
+  --pos-line: var(--color-border);
+  --pos-brand: var(--color-primary);
+  --pos-brand-ink: var(--color-primary-contrast);
+  --pos-soft: var(--color-surface-soft);
+  --pos-active: var(--color-surface-active);
+  --pos-hero: var(--color-primary);
+  --pos-hero-ink: var(--color-primary-contrast);
+  --pos-warn: var(--color-danger);
+  --pos-warn-bg: var(--color-danger-soft);
+}
