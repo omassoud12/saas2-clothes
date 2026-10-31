@@ -9,18 +9,22 @@ export function object(value: unknown, keys: readonly string[]): Record<string, 
 }
 export function parseReceipt(value: unknown, key: 'variantId' | 'sku' = 'variantId') {
   const input = object(value, ['unitCost', 'items'])
-  const cost = parseRestockInput({ quantity: 1, unitCost: input.unitCost }).unitCost
+  // One cost for every option, and/or a cost on each option; each option needs one or the other.
+  const cost = input.unitCost === undefined ? undefined : parseRestockInput({ quantity: 1, unitCost: input.unitCost }).unitCost
   if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 200) throw new HttpError(422, 'INVALID_RECEIPT_INPUT', 'Choose 1 to 200 receiving options')
   const seen = new Set<string>()
   const items = input.items.map(value => {
-    const row = object(value, [key, 'quantity'])
+    const row = object(value, [key, 'quantity', 'unitCost'])
     const id = key === 'variantId' ? parseCatalogId(row[key], key) : typeof row[key] === 'string' ? row[key].normalize('NFC').trim() : ''
     if (!id || seen.has(id)) throw new HttpError(422, 'RECEIPT_ITEM_DUPLICATE', 'Options must be unique')
     seen.add(id)
-    const quantity = parseRestockInput({ quantity: row.quantity, unitCost: cost }).quantity
-    return { id, quantity }
+    const own = row.unitCost === undefined ? undefined : parseRestockInput({ quantity: 1, unitCost: row.unitCost }).unitCost
+    const lineCost = own ?? cost
+    if (lineCost === undefined) throw new HttpError(422, 'INVALID_RECEIPT_INPUT', 'Every receiving option needs a cost')
+    const quantity = parseRestockInput({ quantity: row.quantity, unitCost: lineCost }).quantity
+    return { id, quantity, ...(own !== undefined ? { unitCost: own } : {}) }
   }).sort((a, b) => a.id.localeCompare(b.id))
-  return { unitCost: cost, items }
+  return { ...(cost !== undefined ? { unitCost: cost } : {}), items }
 }
 export function parseReceivingSetup(value: unknown, owner: boolean) {
   const input = object(value, ['product', 'variants', 'receipt'])

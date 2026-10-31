@@ -3,6 +3,7 @@ import { InventoryHistory, InventoryReconciliation } from '../../features/invent
 import { ReceiptHistory } from '../../features/inventory/ReceiptHistory.jsx'
 import { ProductStock, ProductCountCheck } from '../../features/products/ProductStockSections.jsx'
 import { CountByNumber } from '../../features/inventory/CountByNumber.jsx'
+import { saveDuplicateDraft } from '../../features/products/duplicate-product.js'
 import { ProductActionsMenu } from '../../features/products/ProductActionsMenu.jsx'
 import { ProductNavigation } from '../../features/products/ProductNavigation.jsx'
 import { ProductLoading } from '../../features/products/ProductLoading.jsx'
@@ -63,6 +64,14 @@ export function ProductsPage({ profile, navigate, productId }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [listState, setListState] = useState({ kind: 'loading' })
   const [listVersion, setListVersion] = useState(0)
+  // Live search: the list follows what is typed (after a short pause) without hiding the current list while it loads.
+  useEffect(() => {
+    const trimmed = searchDraft.trim()
+    if (trimmed === filters.search) return undefined
+    // The list request of the previous filters is aborted by the fetch effect, so a late answer is never shown.
+    const timer = window.setTimeout(() => setFilters((current) => ({ ...current, search: trimmed, page: 1 })), 300)
+    return () => window.clearTimeout(timer)
+  }, [searchDraft, filters.search])
   const [selectedId] = useState(productId || null)
   const [detailState, setDetailState] = useState({ kind: productId ? 'loading' : 'idle' })
   const [detailVersion, setDetailVersion] = useState(0)
@@ -410,7 +419,7 @@ export function ProductsPage({ profile, navigate, productId }) {
       {detailState.kind === 'loading' && selectedId && <ProductLoading label="Loading product details..." />}
       {detailState.kind === 'error' && selectedId && <div className="product-state"><h2>Product unavailable</h2><p className="error-message" role="alert">{detailState.message}</p><button type="button" onClick={() => { setDetailState({ kind: 'loading' }); refreshDetail() }}>Try again</button></div>}
       {detail && selectedId && <div className="product-detail-stack">
-        <header className="product-detail-header"><div className="product-detail-context"><h1>{detail.name}</h1><div className="product-detail-meta"><span>{detail.category.name}</span><span>{detail.variants.length} variants</span><span className={`product-status ${detail.isActive ? '' : 'is-inactive'}`}>{detail.isActive ? 'Active' : 'Inactive'}</span></div></div><div className="product-detail-header-actions"><button type="button" className="secondary-action" aria-label="Edit product" disabled={Boolean(busy)} onClick={editProduct}>Edit Product</button><ProductActionsMenu label="Product actions" items={[{ label: detail.isActive ? 'Deactivate product' : 'Reactivate product', danger: detail.isActive, disabled: Boolean(busy) || stockBusy.size > 0, action: () => { setFeedback(null); setConfirmation({ kind: 'product', next: !detail.isActive, label: detail.name }) } }]} /></div></header>
+        <header className="product-detail-header"><div className="product-detail-context"><h1>{detail.name}</h1><div className="product-detail-meta"><span>{detail.category.name}</span><span>{detail.variants.length} variants</span><span className={`product-status ${detail.isActive ? '' : 'is-inactive'}`}>{detail.isActive ? 'Active' : 'Inactive'}</span></div></div><div className="product-detail-header-actions"><button type="button" className="secondary-action" aria-label="Edit product" disabled={Boolean(busy)} onClick={editProduct}>Edit Product</button><ProductActionsMenu label="Product actions" items={[{ label: 'Duplicate product', disabled: Boolean(busy), action: () => { if (saveDuplicateDraft(window.sessionStorage, detail, { owner: role === 'OWNER' })) navigate('/app/inventory') } }, { label: detail.isActive ? 'Deactivate product' : 'Reactivate product', danger: detail.isActive, disabled: Boolean(busy) || stockBusy.size > 0, action: () => { setFeedback(null); setConfirmation({ kind: 'product', next: !detail.isActive, label: detail.name }) } }]} /></div></header>
         <ProductNavigation role={role} section={section} onSelect={selectSection} />
         <div id="product-panel-overview" className="product-detail-stack" hidden={section !== 'overview'} role="tabpanel" tabIndex={0} aria-labelledby="product-section-overview">
         <section className="product-panel product-overview">

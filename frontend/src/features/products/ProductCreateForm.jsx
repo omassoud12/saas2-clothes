@@ -50,6 +50,11 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
     setDraft((current) => current.colors.some((color) => color.color.toLowerCase() === name.toLowerCase()) ? current : { ...current, colors: [...current.colors, newColor(name)] })
     setCustomColor('')
   }
+  function toggleColor(name) {
+    const existing = draft.colors.find((color) => color.color.toLowerCase() === name.toLowerCase())
+    if (existing) setDraft((current) => ({ ...current, colors: current.colors.filter((color) => color.id !== existing.id) }))
+    else addColor(name)
+  }
   function changeColor(id, change) {
     setDraft((current) => ({ ...current, colors: current.colors.map((color) => color.id === id ? change(color) : color) }))
   }
@@ -111,7 +116,11 @@ export function ProductCreateForm({ role, currency, categories, categoriesLoadin
         {imagePreview && <div className="product-image-preview"><img src={imagePreview} alt="Selected product photo preview" /><button type="button" className="secondary-action" onClick={() => chooseImage(null)}>Remove photo</button></div>}
       </fieldset>
       <fieldset disabled={locked} className="product-create-fields product-color-fields" aria-describedby={feedbackSection === 'variants' ? 'product-create-error' : 'entry-color-help'}><legend>Variants</legend>
-        <label htmlFor="product-color-list">Color</label><select id="product-color-list" value="" onChange={(event) => addColor(event.target.value)}><option value="">Choose a color...</option>{colorChoices.map((name) => <option key={name} value={name} disabled={draft.colors.some((color) => color.color.toLowerCase() === name.toLowerCase())}>{name}</option>)}</select>
+        <p id="product-color-label" className="product-color-label">Color</p>
+        <div className="product-color-grid" role="group" aria-labelledby="product-color-label">{[...colorChoices, ...draft.colors.map((color) => color.color).filter((name) => !colorChoices.some((choice) => choice.toLowerCase() === name.toLowerCase()))].map((name) => {
+          const chosen = draft.colors.some((color) => color.color.toLowerCase() === name.toLowerCase())
+          return <button key={name} type="button" className="product-color-choice" aria-pressed={chosen} onClick={() => toggleColor(name)}><ColorSwatch name={name} /><span>{name}</span></button>
+        })}</div>
         <details className="product-optional product-custom-color-action"><summary>+ Add Custom Color</summary><div className="product-custom-size"><label htmlFor="product-custom-color" className="sr-only">Custom color name</label><input id="product-custom-color" maxLength={100} placeholder="e.g. Dusty rose" value={customColor} onChange={(event) => setCustomColor(event.target.value)} /><button type="button" className="secondary-action" disabled={!customColor.trim()} onClick={() => addColor(customColor)}>Add color</button></div></details>
         <p id="entry-color-help" className="product-muted entry-color-help">{draft.colors.length ? 'Choose sizes for each color below.' : 'Select a color to configure its sizes.'}</p>
       </fieldset>

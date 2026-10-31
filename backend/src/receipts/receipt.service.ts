@@ -47,13 +47,15 @@ export function createReceiptDependencies(prisma: PrismaClient) {
     }
     const receipt = await tx.stockReceipt.create({ data: { accountId,productId,createdById:userId,operationId:key,requestFingerprint:fingerprint } })
     for (const item of input.items) {
-      await tx.productVariant.update({ where:{id_productId_accountId:{id:item.id,productId,accountId}}, data:{currentStock:{increment:item.quantity},lastPurchaseCost:input.unitCost} })
+      const unitCost = item.unitCost ?? input.unitCost
+      if (unitCost === undefined) throw new HttpError(422,'INVALID_RECEIPT_INPUT','Every receiving option needs a cost')
+      await tx.productVariant.update({ where:{id_productId_accountId:{id:item.id,productId,accountId}}, data:{currentStock:{increment:item.quantity},lastPurchaseCost:unitCost} })
       // Receipt replay is guarded by the receipt operation/fingerprint. Each
       // linked RESTOCK also receives its own deterministic ledger identity so
       // it satisfies the existing movement-level RESTOCK database contract.
-      const movementIdentity = receiptMovementIdentity(accountId,userId,key,productId,item,input.unitCost)
-      const movement = await tx.inventoryMovement.create({data:{accountId,variantId:item.id,type:'RESTOCK',quantityChange:item.quantity,unitCost:input.unitCost,performedById:userId,note:`Receipt ${receipt.id}`,...movementIdentity}})
-      await tx.stockReceiptItem.create({data:{accountId,productId,receiptId:receipt.id,variantId:item.id,movementId:movement.id,quantity:item.quantity,unitCost:input.unitCost}})
+      const movementIdentity = receiptMovementIdentity(accountId,userId,key,productId,item,unitCost)
+      const movement = await tx.inventoryMovement.create({data:{accountId,variantId:item.id,type:'RESTOCK',quantityChange:item.quantity,unitCost,performedById:userId,note:`Receipt ${receipt.id}`,...movementIdentity}})
+      await tx.stockReceiptItem.create({data:{accountId,productId,receiptId:receipt.id,variantId:item.id,movementId:movement.id,quantity:item.quantity,unitCost}})
     }
     return tx.stockReceipt.findUniqueOrThrow({where:{id:receipt.id},include})
   }
@@ -86,7 +88,7 @@ export function createReceiptDependencies(prisma: PrismaClient) {
       await tx.productVariant.createMany({data:variants})
       if(!input.receipt) return {productId:product.id,receipt:null,idempotentReplay:false}
       if(role!==UserRole.OWNER) throw new HttpError(403,'ROLE_FORBIDDEN','Owner required')
-      const receipt=await receive(tx,accountId,userId,product.id,key,fingerprint,{unitCost:input.receipt.unitCost,items:input.receipt.items.map(item=>({id:variants.find(v=>v.sku===item.id)!.id,quantity:item.quantity}))})
+      const receipt=await receive(tx,accountId,userId,product.id,key,fingerprint,{...(input.receipt.unitCost!==undefined?{unitCost:input.receipt.unitCost}:{}),items:input.receipt.items.map(item=>({id:variants.find(v=>v.sku===item.id)!.id,quantity:item.quantity,...(item.unitCost!==undefined?{unitCost:item.unitCost}:{})}))})
       return {productId:product.id,receipt:view(receipt,true),idempotentReplay:false}
     },{timeout:15000}).catch(error=>{
       if(error instanceof Prisma.PrismaClientKnownRequestError && error.code==='P2002') {

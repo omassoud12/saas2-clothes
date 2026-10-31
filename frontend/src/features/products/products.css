@@ -582,3 +582,9 @@
 .products-page .count-review-list .is-more { color: var(--color-success); }
 .products-page .count-review-list .is-less { color: var(--color-danger); }
 .products-page .count-review-state { color: var(--color-success); font-weight: var(--font-weight-bold); }
+/* Color grid: tap a color to add or remove it, instead of a drop-down. */
+.products-page .product-color-label { margin: 0 0 8px; color: var(--color-text); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+.products-page .product-color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.products-page .product-color-grid .product-color-choice { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: var(--touch-target); margin: 0; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); text-align: start; }
+.products-page .product-color-grid .product-color-choice .product-color-swatch { margin: 0; flex: 0 0 18px; width: 18px; height: 18px; }
+.products-page .product-color-grid .product-color-choice[aria-pressed='true'] { border-color: var(--color-primary); background: var(--color-surface-soft); box-shadow: inset 0 0 0 1px var(--color-primary); }

@@ -19,11 +19,11 @@ export function ReceiptReview({ review, name, variants, currency }) {
   const items = review.summary?.payload.items ?? []
   const rows = items.map((item) => {
     const option = variants.find((variant) => (variant.id ?? variant.sku) === (item.variantId ?? item.sku))
-    return <li key={item.variantId ?? item.sku}><span>{option?.color || 'No color'} / {option?.size || 'No size'}</span><strong>+{item.quantity} received</strong></li>
+    return <li key={item.variantId ?? item.sku}><span>{option?.color || 'No color'} / {option?.size || 'No size'}</span><strong>+{item.quantity} received{item.unitCost ? ` · ${formatMoney(item.unitCost, currency, 4)} each` : ''}</strong></li>
   })
   return <section className="receipt-review" aria-labelledby="receipt-review-title"><h2 id="receipt-review-title" tabIndex={-1} ref={focus}>{review.receive ? 'Review receiving' : 'Review product'}</h2><p className="receipt-review-product">{name}</p>
     {review.receive ? <><p>Confirming adds these pieces to current stock.</p><ul className="receipt-review-items">{rows.slice(0, 8)}</ul>{rows.length > 8 && <details><summary>Show {rows.length - 8} more options</summary><ul className="receipt-review-items">{rows.slice(8)}</ul></details>}
-      <dl className="receipt-summary"><div><dt>Options</dt><dd>{items.length}</dd></div><div><dt>Total pieces</dt><dd>{review.summary.totalQuantity}</dd></div><div><dt>Unit cost</dt><dd>{formatMoney(review.summary.payload.unitCost, currency, 4)}</dd></div><div className="receipt-summary-total"><dt>Purchase total</dt><dd>{formatMoney(review.summary.totalCost, currency, 4)}</dd></div></dl></>
+      <dl className="receipt-summary"><div><dt>Options</dt><dd>{items.length}</dd></div><div><dt>Total pieces</dt><dd>{review.summary.totalQuantity}</dd></div>{review.summary.payload.unitCost !== undefined && <div><dt>Unit cost</dt><dd>{formatMoney(review.summary.payload.unitCost, currency, 4)}</dd></div>}<div className="receipt-summary-total"><dt>Purchase total</dt><dd>{formatMoney(review.summary.totalCost, currency, 4)}</dd></div></dl></>
       : <><p>The product will be created with zero stock and no purchase cost.</p><ul className="receipt-review-items">{variants.slice(0,8).map(variant => <li key={variant.id ?? variant.sku}><span>{variant.color || 'No color'} / {variant.size || 'No size'}</span>{variant.sellingPrice != null && variant.sellingPrice !== '' && <strong>{formatMoney(variant.sellingPrice,currency)}</strong>}</li>)}</ul>{variants.length > 8 && <p>{variants.length - 8} more options included.</p>}</>}
   </section>
 }

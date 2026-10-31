@@ -12,6 +12,9 @@ import { RECEIPT_OUTCOME } from './stock-receipt-outcome.js'
 export function StockReceiptForm({ product, definition, imageFile, profile, scope, onSaved, onCancel, onEditDefinition, onTerminal, blocked }) {
   const [quantities, setQuantities] = useState({})
   const [cost, setCost] = useState('')
+  // "Different cost per size": each received size may have its own cost; the cost above is the default for the others.
+  const [perLine, setPerLine] = useState(false)
+  const [lineCosts, setLineCosts] = useState({})
   const [review, setReview] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
@@ -19,7 +22,7 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
   const running = useRef(false)
   const heading = useRef(null)
   useEffect(() => { heading.current?.focus() }, [])
-  const clearDirty = useDirtyState(Boolean(definition || cost || Object.values(quantities).some(Boolean)))
+  const clearDirty = useDirtyState(Boolean(definition || cost || Object.values(quantities).some(Boolean) || Object.values(lineCosts).some(Boolean)))
   const owner = profile.user.role === 'OWNER'
   const variants = definition?.options ?? product.variants
 
@@ -36,7 +39,7 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
     const operationLabel = saveOnly ? 'product save' : 'receiving request'
     let payload, summary
     if (receive) {
-      summary = buildReceipt(variants, quantities, cost, Boolean(definition))
+      summary = buildReceipt(variants, quantities, cost, Boolean(definition), perLine ? lineCosts : {})
       if (!summary.ok) { setMessage({kind:'error',text:summary.message}); return }
     }
     if (definition) {
@@ -76,10 +79,13 @@ export function StockReceiptForm({ product, definition, imageFile, profile, scop
     finally { running.current = false; setBusy(false) }
   }
   if (savedResult) return <section className="product-panel receipt-photo-retry"><h2>Product saved; photo needs attention</h2><InventoryFeedback kind="pending">{message?.text}</InventoryFeedback><div className="product-actions"><button disabled={busy} onClick={async () => { setBusy(true); try { await upload(savedResult) } finally { setBusy(false) } }}>Retry photo only</button><button className="secondary-action" onClick={() => { clearDirty(); onSaved(savedResult) }}>Finish without photo</button></div></section>
-  const preview = owner && cost && Object.values(quantities).some(Boolean) ? buildReceipt(variants, quantities, cost, Boolean(definition)) : null
+  const receivedVariants = variants.filter((variant) => /^[1-9]\d*$/.test(String(quantities[variant.id ?? variant.sku] ?? '').trim()))
+  const preview = owner && (cost || (perLine && Object.values(lineCosts).some(Boolean))) && Object.values(quantities).some(Boolean) ? buildReceipt(variants, quantities, cost, Boolean(definition), perLine ? lineCosts : {}) : null
   return <section className="product-panel receipt-form"><ReceiptSteps owner={owner} newProduct={Boolean(definition)} current={review ? owner ? (definition ? 2 : 1) : 1 : definition ? 1 : 0} />{!review && (definition ? <h2 ref={heading} tabIndex={-1}>{definition.name}</h2> : <div className="receipt-product-context"><h2 ref={heading} tabIndex={-1}>{definition ? definition.name : product.name}</h2>{!definition && <p>{variants.length} variants · Current stock {variants.reduce((total, variant) => total + variant.currentStock, 0)}</p>}</div>)}
     {review ? <ReceiptReview review={review} name={definition ? definition.name : product.name} variants={variants} currency={profile.account?.baseCurrency} /> : owner ? <><VariantQuantityMatrix variants={variants} quantities={quantities} disabled={busy || blocked} onChange={(key, value) => { setQuantities({ ...quantities, [key]: value }); setReview(null); setMessage(null) }} />
-      <div className="receipt-cost-row"><div><label htmlFor="receipt-cost">Purchase cost per piece ({profile.account?.baseCurrency})</label><input id="receipt-cost" inputMode="decimal" value={cost} disabled={busy || blocked} onChange={(event) => { setCost(event.target.value); setReview(null); setMessage(null) }} /><small>One cost for all received pieces.</small></div><div className="receipt-live-summary" role="status"><strong>{definition ? 'Live receipt preview' : 'Delivery summary'}</strong>{preview?.ok ? <><span>{!definition && 'Receiving: '}{preview.totalQuantity} pieces · {preview.payload.items.length} options</span><span hidden={Boolean(definition)}>Unit cost: {formatMoney(preview.payload.unitCost, profile.account?.baseCurrency, 4)}</span><b>{!definition && <small>Total purchase</small>}{formatMoney(preview.totalCost, profile.account?.baseCurrency, 4)}</b></> : <span>Enter quantities and cost to see the exact total.</span>}</div></div></> : <p>Review this product definition before saving it with zero stock.</p>}
+      <div className="receipt-cost-row"><div><label htmlFor="receipt-cost">Purchase cost per piece ({profile.account?.baseCurrency})</label><input id="receipt-cost" inputMode="decimal" value={cost} disabled={busy || blocked} onChange={(event) => { setCost(event.target.value); setReview(null); setMessage(null) }} /><small>{perLine ? 'Used for any size without its own cost below.' : 'One cost for all received pieces.'}</small>
+        <label className="receipt-perline-toggle" htmlFor="receipt-per-line"><input id="receipt-per-line" type="checkbox" checked={perLine} disabled={busy || blocked} onChange={(event) => { setPerLine(event.target.checked); setReview(null); setMessage(null) }} />Different cost per size</label>
+        {perLine && receivedVariants.length > 0 && <div className="receipt-line-costs">{receivedVariants.map((variant) => { const key = variant.id ?? variant.sku; return <div key={key}><label htmlFor={'line-cost-' + key}>{variant.color || 'No color'} / {variant.size || 'No size'} · {quantities[key]} pcs</label><input id={'line-cost-' + key} inputMode="decimal" placeholder={cost || 'Cost'} value={lineCosts[key] ?? ''} disabled={busy || blocked} onChange={(event) => { setLineCosts({ ...lineCosts, [key]: event.target.value }); setReview(null); setMessage(null) }} /></div> })}</div>}</div><div className="receipt-live-summary" role="status"><strong>{definition ? 'Live receipt preview' : 'Delivery summary'}</strong>{preview?.ok ? <><span>{!definition && 'Receiving: '}{preview.totalQuantity} pieces · {preview.payload.items.length} options</span><span hidden={Boolean(definition) || preview.payload.unitCost === undefined}>Unit cost: {preview.payload.unitCost !== undefined && formatMoney(preview.payload.unitCost, profile.account?.baseCurrency, 4)}</span><b>{!definition && <small>Total purchase</small>}{formatMoney(preview.totalCost, profile.account?.baseCurrency, 4)}</b></> : <span>Enter quantities and cost to see the exact total.</span>}</div></div></> : <p>Review this product definition before saving it with zero stock.</p>}
     {message && <InventoryFeedback kind={message.kind}>{message.text}</InventoryFeedback>}
     <div className="product-actions receipt-form-actions">{owner && (!review || review.receive) && <button aria-label={!definition && review?.receive ? 'Confirm receiving' : undefined} disabled={busy || blocked || !profile.account?.baseCurrency} onClick={() => save(true)}>{busy ? 'Saving…' : review?.receive ? definition ? 'Confirm receiving' : 'Confirm Restock' : 'Review receipt'}</button>}
       {review && !review.receive && <button disabled={busy || blocked} onClick={() => save(false)}>{busy ? 'Saving…' : 'Confirm product only'}</button>}

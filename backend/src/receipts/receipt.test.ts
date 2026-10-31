@@ -108,6 +108,31 @@ test('multi-option receipt creates one linked RESTOCK per option and increments 
   await f.service.receiveExisting('tenant','user','product',id,input)
   assert.deepEqual(f.state().stocks,{[id]:5,[second]:11});assert.equal(f.state().movementRows.length,2)
 })
+test('each option may carry its own cost; the receipt cost is the default for the others',()=>{
+  const second='22222222-2222-4222-8222-222222222222'
+  assert.deepEqual(parseReceipt({unitCost:'2',items:[{variantId:id,quantity:1,unitCost:'3.5'},{variantId:second,quantity:2}]}),{unitCost:'2.0000',items:[{id,quantity:1,unitCost:'3.5000'},{id:second,quantity:2}]})
+  assert.deepEqual(parseReceipt({items:[{variantId:id,quantity:1,unitCost:'3'},{variantId:second,quantity:2,unitCost:'4'}]}),{items:[{id,quantity:1,unitCost:'3.0000'},{id:second,quantity:2,unitCost:'4.0000'}]})
+  assert.throws(()=>parseReceipt({items:[{variantId:id,quantity:1,unitCost:'3'},{variantId:second,quantity:2}]}),/needs a cost/)
+  assert.throws(()=>parseReceipt({items:[{variantId:id,quantity:1}]}),/needs a cost/)
+  for(const bad of ['0','-1','abc',''])assert.throws(()=>parseReceipt({unitCost:'1',items:[{variantId:id,quantity:1,unitCost:bad}]}))
+  assert.throws(()=>parseReceipt({unitCost:'1',items:[{variantId:id,quantity:1,unitCost:'1',extra:true}]}))
+})
+test('a receipt with one cost for everyone is parsed exactly as before',()=>{
+  assert.deepEqual(parseReceipt({unitCost:'1.2345',items:[{variantId:id,quantity:40}]}),{unitCost:'1.2345',items:[{id,quantity:40}]})
+  assert.notEqual(receiptFingerprint('t','u','existing',parseReceipt({unitCost:'2',items:[{variantId:id,quantity:1}]})),receiptFingerprint('t','u','existing',parseReceipt({unitCost:'2',items:[{variantId:id,quantity:1,unitCost:'2'}]})),'a different request is a different fingerprint')
+})
+test('per-option costs reach each movement, receipt item and the option last cost',async()=>{
+  const second='22222222-2222-4222-8222-222222222222'
+  const f=fixture(false,{[id]:3,[second]:7})
+  const input=parseReceipt({unitCost:'2.0000',items:[{variantId:id,quantity:2,unitCost:'3.5000'},{variantId:second,quantity:4}]})
+  const result=await f.service.receiveExisting('tenant','user','product',id,input)
+  assert.equal(result.receipt.totalQuantity,6);assert.equal(result.receipt.totalCost,'15.0000','2 x 3.50 + 4 x 2.00')
+  const costs=Object.fromEntries(f.state().movementRows.map(row=>[row.variantId,String(row.unitCost)]))
+  assert.deepEqual(costs,{[id]:'3.5000',[second]:'2.0000'})
+  assert.deepEqual(Object.fromEntries(f.state().itemRows.map(row=>[row.variantId,String(row.unitCost)])),costs)
+  await f.service.receiveExisting('tenant','user','product',id,input)
+  assert.equal(f.state().movementRows.length,2,'a replay writes nothing again')
+})
 test('item failure rolls back every write and foreign tenant cannot change stock',async()=>{
   const input=parseReceipt({unitCost:'1',items:[{variantId:id,quantity:2}]})
   const failed=fixture(true)

@@ -51,22 +51,32 @@ function committedResult(result, kind, extra = {}) {
   return {ok:true,outcome:RECEIPT_OUTCOME.COMMITTED,operationKind:kind,preservePending:false,retrySameOperation:false,...data,...extra}
 }
 
-export function buildReceipt(variants, quantities, unitCost, newProduct = false) {
+const validCost=cost=>cost!==null&&cost>0n&&cost<=999999999999999999n
+// unitCost is the one cost for every size; lineCosts ({ [option key]: text }) may give a size its own cost. Each received size needs one or the other.
+export function buildReceipt(variants, quantities, unitCost, newProduct = false, lineCosts = {}) {
   if(new Set(variants.map(combinationKey)).size!==variants.length)return {ok:false,message:'This product has duplicate color/size options. Correct them in Products before receiving.'}
-  const cost=decimalToMinorUnits(unitCost,4)
-  if(cost===null || cost<=0n || cost>999999999999999999n) return {ok:false,message:'Enter a positive purchase cost with up to four decimals.'}
+  const defaultText=String(unitCost??'').trim()
+  const cost=defaultText===''?null:decimalToMinorUnits(defaultText,4)
+  if(defaultText!==''&&!validCost(cost)) return {ok:false,message:'Enter a positive purchase cost with up to four decimals.'}
   const items=[]
+  let totalCostMinor=0n
   for(const variant of variants) {
     const key=variant.id??variant.sku
     const text=String(quantities[key]??'').trim()
     if(text===''||text==='0') continue
     if(!/^[1-9]\d{0,6}$/.test(text)||Number(text)>1000000) return {ok:false,message:'Enter whole quantities from 1 to 1,000,000.'}
     if(variant.isActive===false) return {ok:false,message:'Inactive options cannot receive stock.'}
-    items.push({[newProduct?'sku':'variantId']:key,quantity:Number(text)})
+    const ownText=String(lineCosts[key]??'').trim()
+    const own=ownText===''?null:decimalToMinorUnits(ownText,4)
+    if(ownText!==''&&!validCost(own)) return {ok:false,message:'Enter a positive purchase cost with up to four decimals for each size.'}
+    const lineCost=own??cost
+    if(lineCost===null) return {ok:false,message:defaultText===''&&Object.values(lineCosts).every(value=>String(value??'').trim()==='')?'Enter a positive purchase cost with up to four decimals.':'Enter a cost for every size you receive, or one cost for all.'}
+    totalCostMinor+=lineCost*BigInt(Number(text))
+    items.push({[newProduct?'sku':'variantId']:key,quantity:Number(text),...(own!==null?{unitCost:minorUnitsToDecimal(own,4)}:{})})
   }
   if(!items.length || items.length>200) return {ok:false,message:'Enter quantities for 1 to 200 options.'}
   const totalQuantity=items.reduce((sum,item)=>sum+item.quantity,0)
-  return {ok:true,payload:{unitCost:minorUnitsToDecimal(cost,4),items},totalQuantity,totalCost:minorUnitsToDecimal(cost*BigInt(totalQuantity),4)}
+  return {ok:true,payload:{...(cost!==null?{unitCost:minorUnitsToDecimal(cost,4)}:{}),items},totalQuantity,totalCost:minorUnitsToDecimal(totalCostMinor,4)}
 }
 export function buildReceivingSetup(definition, role, receipt = null) {
   const product=buildProductPayload(definition,role)

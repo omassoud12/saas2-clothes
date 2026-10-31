@@ -137,3 +137,23 @@ test('direct failure classifier keeps locally rejected configuration out of reco
   const result=classifyReceiptFailure({ok:false,code:'API_CONFIGURATION_INVALID',message:'bad'},'receiving')
   assert.equal(result.outcome,RECEIPT_OUTCOME.CORRECTABLE_REJECTION);assert.equal(result.preservePending,false)
 })
+
+test('a size may have its own cost; the default cost covers the others',()=>{
+  const options=[{id:'a',color:'Black',size:'M',isActive:true},{id:'b',color:'Black',size:'L',isActive:true}]
+  const mixed=buildReceipt(options,{a:'2',b:'4'},'2',false,{a:'3.5'})
+  assert.equal(mixed.ok,true)
+  assert.deepEqual(mixed.payload,{unitCost:'2.0000',items:[{variantId:'a',quantity:2,unitCost:'3.5000'},{variantId:'b',quantity:4}]})
+  assert.equal(mixed.totalCost,'15.0000','2 x 3.50 + 4 x 2.00');assert.equal(mixed.totalQuantity,6)
+  const own=buildReceipt(options,{a:'1',b:'1'},'',false,{a:'3',b:'4'})
+  assert.equal(own.ok,true);assert.equal('unitCost' in own.payload,false);assert.equal(own.totalCost,'7.0000')
+  const sku=buildReceipt(options.map(o=>({...o,id:undefined,sku:'S-'+o.id})),{'S-a':'1'},'',true,{'S-a':'5'})
+  assert.deepEqual(sku.payload.items,[{sku:'S-a',quantity:1,unitCost:'5.0000'}])
+})
+test('every received size needs a cost, and a bad cost is refused',()=>{
+  const options=[{id:'a',color:'Black',size:'M',isActive:true},{id:'b',color:'Black',size:'L',isActive:true}]
+  assert.match(buildReceipt(options,{a:'1',b:'1'},'',false,{a:'3'}).message,/cost for every size/)
+  assert.match(buildReceipt(options,{a:'1'},'',false,{}).message,/positive purchase cost/)
+  for(const bad of ['0','-1','abc','1.23456'])assert.equal(buildReceipt(options,{a:'1'},'2',false,{a:bad}).ok,false,bad)
+  assert.equal(buildReceipt(options,{a:'1'},'abc',false,{a:'3'}).ok,false,'a typed default must be valid even when a size has its own')
+  assert.equal(buildReceipt(options,{a:'1',b:''},'2',false,{b:'9'}).payload.items.length,1,'a size without a quantity is not received, so its cost is ignored')
+})
