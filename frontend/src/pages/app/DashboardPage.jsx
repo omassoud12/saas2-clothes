@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { dashboardQuickActions, loadDashboardCatalog, loadDashboardFinance, loadDashboardRecentSales } from '../../features/dashboard/dashboard-flow.js'
 import { createLatestRequestGuard, isZeroReport, localBusinessDate } from '../../features/finance/finance-flow.js'
 import { ROUTES } from '../../app/routes.js'
-import { ErrorState, LoadingSpinner, PageHeader } from '../../components/ui/index.jsx'
+import { Badge, ErrorState, LoadingSpinner, PageHeader } from '../../components/ui/index.jsx'
 import { formatSignedMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
 
@@ -56,7 +56,7 @@ function RecentSales({ navigate, role, state, onRetry }) {
       <div><strong>Sale {sale.id.slice(0, 8)}</strong><time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleString()}</time></div>
       <div><span>{sale.totalUnits} unit{sale.totalUnits === 1 ? '' : 's'} · {sale.itemCount} line{sale.itemCount === 1 ? '' : 's'}</span><small>{sale.seller.name}</small></div>
       {role === 'OWNER' && <strong className="dashboard-sale-total">{formatSignedMoney(sale.totalAmount, sale.currency)}</strong>}
-      <span className={`dashboard-sale-status ${sale.status === 'VOIDED' ? 'is-voided' : ''}`}>{sale.status === 'VOIDED' ? 'Voided' : 'Completed'}</span>
+      <Badge tone={sale.status === 'VOIDED' ? 'danger' : 'success'}>{sale.status === 'VOIDED' ? 'Voided' : 'Completed'}</Badge>
     </article>)}</div>}
   </section>
 }
