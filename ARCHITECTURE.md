@@ -875,6 +875,26 @@ one grouped query for the whole page), and the optional `returned=true` filter
 keeps only Sales that have at least one Return. These are derived read-only
 values; `Sale.status` is unchanged.
 
+Sales also store how they were paid and what was discounted. `paymentMethod`
+is CASH (default and the value of every older Sale), CARD, WHISH_OMT or DEBT; a
+DEBT Sale requires a customer name (phone optional) and starts unpaid. The OWNER
+settles it with `POST /api/sales/:saleId/pay` and `{ "confirm": true }`; the
+Sale row is locked, the settlement (`paidAt`, `paidById` and the actor
+snapshots) is written once, and repeating the call returns the stored settlement.
+The database trigger allows this single change and keeps every other Sale field
+immutable. The discount is never trusted from the client: for each line the
+server compares `unitSoldPrice` with the catalog `sellingPrice`; a lower price
+stores `listUnitPrice` and a line `discountAmount`, `Sale.subtotal` is the
+catalog total, `Sale.totalAmount` the final total and `Sale.discountAmount`
+their difference (also enforced by a CHECK). An OWNER may send the percent
+`discountPercent` that was chosen; a WAREHOUSE user cannot discount. Each Sale
+receives a per-account sequential `receiptNumber` taken from
+`Account.lastReceiptNumber` while the Account row is locked in the Sale
+transaction (older Sales keep none and are shown by the short id). The OWNER sets
+the USD to LBP rate with `PUT /api/settings/exchange-rate` (Accounts selling in
+USD only); every new Sale snapshots it as `lbpRateAtSale`. The history list
+accepts `paymentMethod` and `unpaid=true` filters.
+
 Sale detail uses the immutable seller and SaleItem catalog snapshots rather
 than current User, Product, Category, or ProductVariant values. OWNER detail
 also derives historical economics from `SaleItem.unitCostAtSale`: `lineCost`,

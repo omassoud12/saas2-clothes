@@ -37,14 +37,25 @@ enum SaleStatus {
   VOIDED
 }
 
+enum PaymentMethod {
+  CASH
+  CARD
+  WHISH_OMT
+  DEBT
+}
+
 model Account {
-  id              String        @id @default(uuid()) @db.Uuid
-  name            String
-  status          AccountStatus @default(PENDING)
-  baseCurrency    String        @default("USD") @db.Char(3)
-  reviewedAt      DateTime?     @db.Timestamptz(3)
-  reviewedById    String?       @db.Uuid
-  rejectionReason String?
+  id                String        @id @default(uuid()) @db.Uuid
+  name              String
+  status            AccountStatus @default(PENDING)
+  baseCurrency      String        @default("USD") @db.Char(3)
+  // Lebanese pounds per 1 USD, set by the OWNER; null until the owner enters it.
+  lbpPerUsd         Decimal?      @db.Decimal(18, 2)
+  // Last per-account sequential receipt number handed out (incremented inside the Sale transaction).
+  lastReceiptNumber Int           @default(0)
+  reviewedAt        DateTime?     @db.Timestamptz(3)
+  reviewedById      String?       @db.Uuid
+  rejectionReason   String?
 
   stockReceipts StockReceipt[]
 
@@ -92,6 +103,7 @@ model User {
   expensesCreated    Expense[]           @relation("ExpenseCreatedBy")
   sales              Sale[]              @relation("SaleSoldBy")
   voidedSales        Sale[]              @relation("SaleVoidedBy")
+  paidSales          Sale[]              @relation("SalePaidBy")
   processedReturns   SaleReturn[]        @relation("SaleReturnProcessedBy")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -135,9 +147,9 @@ model Product {
   category  Category @relation(fields: [categoryId, accountId], references: [id, accountId], onDelete: Restrict)
   createdBy User     @relation("ProductCreatedBy", fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
 
-  creationOperationId String? @db.Uuid
-  creationFingerprint String? @db.VarChar(64)
-  stockReceipts StockReceipt[]
+  creationOperationId String?        @db.Uuid
+  creationFingerprint String?        @db.VarChar(64)
+  stockReceipts       StockReceipt[]
 
   variants  ProductVariant[]
   saleItems SaleItem[]
@@ -174,9 +186,9 @@ model ProductVariant {
   product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
 
   receiptItems StockReceiptItem[]
-  movements   InventoryMovement[]
-  saleItems   SaleItem[]
-  returnItems SaleReturnItem[]
+  movements    InventoryMovement[]
+  saleItems    SaleItem[]
+  returnItems  SaleReturnItem[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -214,9 +226,9 @@ model InventoryMovement {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
+  @@unique([id, variantId, accountId])
   @@index([accountId, createdAt])
   @@index([accountId, variantId, createdAt])
-  @@unique([id, variantId, accountId])
   @@index([accountId, type, createdAt])
   @@index([variantId, accountId])
   @@index([performedById, accountId])
@@ -262,9 +274,26 @@ model Sale {
   voidedByCode       String?
   voidReason         String?
 
+  // Per-account sequential receipt number; null for Sales created before numbering existed.
+  receiptNumber   Int?
+  paymentMethod   PaymentMethod @default(CASH)
+  customerName    String?
+  customerPhone   String?
+  // subtotal - totalAmount, derived by the server from catalog prices; discountPercent is the cashier's chosen percent.
+  discountAmount  Decimal       @default(0) @db.Decimal(18, 2)
+  discountPercent Decimal?      @db.Decimal(5, 2)
+  // USD->LBP rate in force when the Sale was made (null when the owner had not set one).
+  lbpRateAtSale   Decimal?      @db.Decimal(18, 2)
+  // Debt settlement: only DEBT Sales are ever paid later; paidAt is null while the debt is unpaid.
+  paidAt          DateTime?     @db.Timestamptz(3)
+  paidById        String?       @db.Uuid
+  paidByName      String?
+  paidByCode      String?
+
   account           Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
   soldBy            User             @relation("SaleSoldBy", fields: [soldById, accountId], references: [id, accountId], onDelete: Restrict)
   voidedBy          User?            @relation("SaleVoidedBy", fields: [voidedById, accountId], references: [id, accountId], onDelete: Restrict)
+  paidBy            User?            @relation("SalePaidBy", fields: [paidById, accountId], references: [id, accountId], onDelete: Restrict)
   items             SaleItem[]
   returns           SaleReturn[]
   returnItems       SaleReturnItem[]
@@ -275,6 +304,10 @@ model Sale {
 
   @@unique([id, accountId])
   @@unique([accountId, idempotencyKey])
+  @@unique([accountId, receiptNumber])
+  @@index([accountId, paymentMethod, createdAt])
+  @@index([accountId, paymentMethod, paidAt])
+  @@index([paidById, accountId])
   @@index([accountId, createdAt])
   @@index([accountId, voidedAt])
   @@index([accountId, soldById, createdAt])
@@ -299,9 +332,13 @@ model SaleItem {
   sizeAtSale         String?
 
   quantity       Int
-  unitSoldPrice  Decimal @db.Decimal(18, 2)
+  // unitSoldPrice stays the final price; listUnitPrice is the catalog price it was discounted from (null on old rows).
+  listUnitPrice  Decimal? @db.Decimal(18, 2)
+  unitSoldPrice  Decimal  @db.Decimal(18, 2)
+  // (listUnitPrice - unitSoldPrice) * quantity when discounted, else 0.
+  discountAmount Decimal  @default(0) @db.Decimal(18, 2)
   unitCostAtSale Decimal? @db.Decimal(18, 4)
-  lineTotal      Decimal @db.Decimal(18, 2)
+  lineTotal      Decimal  @db.Decimal(18, 2)
 
   account  Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
   sale     Sale           @relation(fields: [saleId, accountId], references: [id, accountId], onDelete: Restrict)
@@ -431,19 +468,19 @@ model DailyReport {
   @@unique([accountId, reportDate])
 }
 
-
 model StockReceipt {
-  id String @id @default(uuid()) @db.Uuid
-  accountId String @db.Uuid
-  productId String @db.Uuid
-  createdById String @db.Uuid
-  operationId String @db.Uuid
-  requestFingerprint String @db.VarChar(64)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  product Product @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
-  createdBy User @relation(fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
-  items StockReceiptItem[]
+  id                 String             @id @default(uuid()) @db.Uuid
+  accountId          String             @db.Uuid
+  productId          String             @db.Uuid
+  createdById        String             @db.Uuid
+  operationId        String             @db.Uuid
+  requestFingerprint String             @db.VarChar(64)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  account            Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  product            Product            @relation(fields: [productId, accountId], references: [id, accountId], onDelete: Restrict)
+  createdBy          User               @relation(fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
+  items              StockReceiptItem[]
+
   @@unique([accountId, operationId])
   @@unique([id, productId, accountId])
   @@index([accountId, createdAt, id])
@@ -451,17 +488,18 @@ model StockReceipt {
 }
 
 model StockReceiptItem {
-  id String @id @default(uuid()) @db.Uuid
-  accountId String @db.Uuid
-  productId String @db.Uuid
-  receiptId String @db.Uuid
-  variantId String @db.Uuid
-  movementId String @unique @db.Uuid
-  quantity Int
-  unitCost Decimal @db.Decimal(18,4)
-  receipt StockReceipt @relation(fields: [receiptId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
-  variant ProductVariant @relation(fields: [variantId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
-  movement InventoryMovement @relation(fields: [movementId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
+  id         String            @id @default(uuid()) @db.Uuid
+  accountId  String            @db.Uuid
+  productId  String            @db.Uuid
+  receiptId  String            @db.Uuid
+  variantId  String            @db.Uuid
+  movementId String            @unique @db.Uuid
+  quantity   Int
+  unitCost   Decimal           @db.Decimal(18, 4)
+  receipt    StockReceipt      @relation(fields: [receiptId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
+  variant    ProductVariant    @relation(fields: [variantId, productId, accountId], references: [id, productId, accountId], onDelete: Restrict)
+  movement   InventoryMovement @relation(fields: [movementId, variantId, accountId], references: [id, variantId, accountId], onDelete: Restrict)
+
   @@unique([movementId, variantId, accountId])
   @@unique([receiptId, variantId])
   @@index([accountId, variantId])

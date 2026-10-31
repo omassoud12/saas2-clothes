@@ -20,6 +20,7 @@ import { createExchangeHistoryRouter } from './exchanges/exchange.history.routes
 import type { ExchangeHistoryDependencies } from './exchanges/exchange.history.service.js'
 import { createExpenseRouter } from './expenses/expense.routes.js'
 import type { ExpenseDependencies } from './expenses/expense.types.js'
+import { createSettingsRouter, type SettingsDependencies } from './settings/settings.js'
 import { createReportRouter } from './reports/report.routes.js'
 import type { ReportDependencies } from './reports/report.types.js'
 import type {
@@ -172,6 +173,7 @@ export interface AppDependencies {
   readonly exchangeHistory?: ExchangeHistoryDependencies
   readonly expenses?: ExpenseDependencies
   readonly reports?: ReportDependencies
+  readonly settings?: SettingsDependencies
 }
 
 export function createApp(
@@ -252,6 +254,9 @@ export function createApp(
   }
   if (dependencies.reports) {
     app.use('/api/reports', createReportRouter(dependencies.auth, dependencies.reports))
+  }
+  if (dependencies.settings) {
+    app.use('/api/settings', createSettingsRouter(dependencies.auth, dependencies.settings))
   }
   app.use(
     '/api/admin/accounts',

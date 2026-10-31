@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { describe, test } from 'node:test'
 import express from 'express'
@@ -57,8 +57,8 @@ function expectHttp(error: unknown, status: number, code: string): boolean {
 class SaleDouble {
   state: State = {
     accounts: new Map([
-      [accountA, { id: accountA, baseCurrency: 'USD' }],
-      [accountB, { id: accountB, baseCurrency: 'LBP' }],
+      [accountA, { id: accountA, baseCurrency: 'USD', lastReceiptNumber: 0, lbpPerUsd: new Prisma.Decimal('89500.00') }],
+      [accountB, { id: accountB, baseCurrency: 'LBP', lastReceiptNumber: 0, lbpPerUsd: new Prisma.Decimal('1.00') }],
     ]),
     users: new Map([
       [ownerA, { id: ownerA, accountId: accountA, firstName: 'Ada', lastName: 'Owner', employeeCode: null, role: UserRole.OWNER, isActive: true }],
@@ -103,8 +103,16 @@ class SaleDouble {
   private client(state: State, transactional: boolean): PrismaClient {
     const store = this
     const current = () => transactional ? state : store.state
-    const persisted = (sale: Row) => ({ ...sale, items: current().items.filter((item) => item.saleId === sale.id).sort((a, b) => a.id.localeCompare(b.id)) })
+    const persisted = (sale: Row) => ({ ...saleDefaults, ...sale, items: current().items.filter((item) => item.saleId === sale.id).sort((a, b) => a.id.localeCompare(b.id)).map((item) => ({ ...itemDefaults, ...item })) })
     return {
+      account: {
+        async update({ where, data }: Row) {
+          const row = current().accounts.get(where.id)
+          if (!row) throw new Error('account missing')
+          row.lastReceiptNumber = data.lastReceiptNumber
+          return { id: row.id }
+        },
+      },
       sale: {
         async findUnique({ where }: Row) {
           const idKey = where.id_accountId
@@ -198,6 +206,13 @@ class SaleDouble {
   asClient(): PrismaClient { return this.client(this.state, false) }
 }
 
+const saleDefaults = {
+  receiptNumber: null, paymentMethod: 'CASH', customerName: null, customerPhone: null,
+  discountAmount: new Prisma.Decimal(0), discountPercent: null, lbpRateAtSale: null,
+  paidAt: null, paidByName: null, paidByCode: null,
+}
+const itemDefaults = { listUnitPrice: null, discountAmount: new Prisma.Decimal(0) }
+
 class HistoryDouble {
   readonly currentCatalog = { sellerName: 'New Seller', productName: 'New Product', sku: 'NEW-SKU' }
   readonly sales: Row[] = [
@@ -254,6 +269,8 @@ class HistoryDouble {
           let rows = store.sales.filter((sale) => sale.accountId === where.accountId)
           if (where.status) rows = rows.filter((sale) => sale.status === where.status)
           if (where.soldById) rows = rows.filter((sale) => sale.soldById === where.soldById)
+          if (where.paymentMethod) rows = rows.filter((sale) => (sale.paymentMethod ?? 'CASH') === where.paymentMethod)
+          if (where.paidAt === null) rows = rows.filter((sale) => (sale.paidAt ?? null) === null)
           if (where.returns?.some) rows = rows.filter((sale) => store.returns.some((row) => row.accountId === sale.accountId && row.saleId === sale.id))
           if (where.createdAt?.gte) rows = rows.filter((sale) => sale.createdAt >= where.createdAt.gte)
           if (where.createdAt?.lte) rows = rows.filter((sale) => sale.createdAt <= where.createdAt.lte)
@@ -263,12 +280,12 @@ class HistoryDouble {
             rows = rows.filter((sale) => sale.createdAt < before || (sale.createdAt.getTime() === before.getTime() && sale.id < cursorId))
           }
           return rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime() || right.id.localeCompare(left.id))
-            .slice(0, take).map((sale) => ({ ...sale, _count: { items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).length } }))
+            .slice(0, take).map((sale) => ({ ...saleDefaults, ...sale, _count: { items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).length } }))
         },
         async findUnique({ where }: Row) {
           const key = where.id_accountId
           const sale = store.sales.find((candidate) => candidate.id === key.id && candidate.accountId === key.accountId)
-          return sale ? { ...sale, items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).sort((a, b) => a.id.localeCompare(b.id)) } : null
+          return sale ? { ...saleDefaults, ...sale, items: store.items.filter((item) => item.saleId === sale.id && item.accountId === sale.accountId).sort((a, b) => a.id.localeCompare(b.id)).map((item) => ({ ...itemDefaults, ...item })) } : null
         },
       },
       saleItem: {
@@ -529,7 +546,7 @@ describe('transactional Sale service', () => {
         )
         assert.equal(result.status, SaleStatus.COMPLETED)
         assert.equal(result.currency, 'USD')
-        assert.equal(result.subtotal.toFixed(2), '81.00')
+        assert.equal(result.subtotal.toFixed(2), '90.00')
         assert.equal(result.totalAmount.toFixed(2), '81.00')
         assert.equal(result.sellerNameAtSale, 'Ada Owner')
         assert.equal(result.items.length, 1)
@@ -587,10 +604,10 @@ describe('transactional Sale service', () => {
     const result = await createSaleDependencies(store.asClient()).createSale(accountA, ownerA, key, ownerInput())
     assert.equal(result.idempotentReplay, false)
     assert.equal(result.sale.currency, 'USD')
-    assert.equal(result.sale.subtotal, '81.00')
+    assert.equal(result.sale.subtotal, '90.00', 'subtotal is the catalog total before the discount')
     assert.equal(result.sale.totalAmount, '81.00')
     assert.deepEqual(result.sale.seller, { name: 'Ada Owner', employeeCode: null })
-    assert.deepEqual(result.sale.items[0], { id: result.sale.items[0].id, productName: 'Tee', categoryName: 'Shirts', sku: 'TEE-M', color: 'Black', size: 'M', quantity: 3, unitSoldPrice: '27.00', lineTotal: '81.00' })
+    assert.deepEqual(result.sale.items[0], { id: result.sale.items[0].id, productName: 'Tee', categoryName: 'Shirts', sku: 'TEE-M', color: 'Black', size: 'M', quantity: 3, unitSoldPrice: '27.00', listUnitPrice: '30.00', discountAmount: '9.00', lineTotal: '81.00' })
     assert.equal(Object.hasOwn(result.sale.items[0], 'unitCostAtSale'), false)
     assert.equal(store.state.variants.get(variantA)!.currentStock, 7)
     assert.equal(store.state.variants.get(variantA)!.sellingPrice.toFixed(2), '30.00')
@@ -707,6 +724,7 @@ describe('Sale route authorization and response', () => {
       async listSales() { throw Error('must not run') },
       async getSale() { throw Error('must not run') },
       async voidSale() { throw Error('must not run') },
+      async markSalePaid() { throw Error('must not run') },
     }
     await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const response = await fetch(`${base}/api/sales`, { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify(ownerInput()) })
@@ -734,6 +752,7 @@ describe('Sale route authorization and response', () => {
       async listSales() { throw Error('must not run') },
       async getSale() { throw Error('must not run') },
       async voidSale() { throw Error('must not run') },
+      async markSalePaid() { throw Error('must not run') },
     }
     await withServer(UserRole.SUPER_ADMIN, forbidden, async (base) => {
       const headers = { Authorization: 'Bearer test' }
@@ -764,4 +783,260 @@ test('OWNER historical detail exposes incomplete economics while WAREHOUSE stays
  assert.equal(owner.sale.items[0].unitCostAtSale,null)
  const warehouse=await service.getSale(accountA,UserRole.WAREHOUSE,saleA)
  assert.doesNotMatch(JSON.stringify(warehouse),/costStatus|unitCostAtSale|lineCost|grossProfit/)
+})
+
+describe('Sale payment method, customer, discount, receipt number and rate', () => {
+  const owner = (overrides: Partial<SaleInput> = {}, price = '27.00'): SaleInput => ({ ...ownerInput(price), ...overrides })
+
+  test('validates payment method, customer, discount percent and rejects unknown fields', () => {
+    assert.equal(parseSaleInput({ items: ownerInput().items }).paymentMethod, undefined, 'CASH is the default and is not repeated')
+    for (const method of ['CARD', 'WHISH_OMT'] as const) assert.equal(parseSaleInput({ items: ownerInput().items, paymentMethod: method }).paymentMethod, method)
+    for (const bad of ['cash', 'PAYPAL', 5, null]) {
+      assert.throws(() => parseSaleInput({ items: ownerInput().items, paymentMethod: bad }), (e) => expectHttp(e, 422, 'INVALID_SALE_PAYMENT_METHOD'))
+    }
+    assert.throws(() => parseSaleInput({ items: ownerInput().items, paymentMethod: 'DEBT' }), (e) => expectHttp(e, 422, 'SALE_DEBT_CUSTOMER_REQUIRED'))
+    assert.throws(() => parseSaleInput({ items: ownerInput().items, paymentMethod: 'DEBT', customer: { name: '   ' } }), (e) => expectHttp(e, 422, 'INVALID_SALE_CUSTOMER'))
+    const debt = parseSaleInput({ items: ownerInput().items, paymentMethod: 'DEBT', customer: { name: '  Rana Haddad ', phone: '+961 3 123 456' } })
+    assert.deepEqual(debt.customer, { name: 'Rana Haddad', phone: '+961 3 123 456' })
+    assert.equal(parseSaleInput({ items: ownerInput().items, paymentMethod: 'DEBT', customer: { name: 'Rana' } }).customer!.phone, null, 'phone is optional')
+    for (const badCustomer of [{ name: 'Rana', phone: 'call me' }, { name: 'x'.repeat(121) }, { name: 'Rana', extra: 1 }, 'Rana', [], { phone: '03' }]) {
+      assert.throws(() => parseSaleInput({ items: ownerInput().items, paymentMethod: 'DEBT', customer: badCustomer }), (e) => expectHttp(e, 422, 'INVALID_SALE_CUSTOMER'))
+    }
+    assert.equal(parseSaleInput({ items: ownerInput().items, discountPercent: '10' }).discountPercent, '10.00')
+    assert.equal(parseSaleInput({ items: ownerInput().items, discountPercent: '12.5' }).discountPercent, '12.50')
+    assert.equal(parseSaleInput({ items: ownerInput().items, discountPercent: '0' }).discountPercent, undefined, 'a zero discount is no discount')
+    for (const bad of ['101', '-5', '10.123', 'ten', 10, '']) {
+      assert.throws(() => parseSaleInput({ items: ownerInput().items, discountPercent: bad }), (e) => expectHttp(e, 422, 'INVALID_SALE_DISCOUNT'))
+    }
+    assert.throws(() => parseSaleInput({ items: ownerInput().items, totalAmount: '1.00' }), (e) => expectHttp(e, 422, 'INVALID_SALE_INPUT'))
+  })
+
+  test('the fingerprint of a plain cash sale is unchanged; payment, customer and discount change it', () => {
+    const items = ownerInput().items
+    const legacy = createHash('sha256').update(JSON.stringify({
+      accountId: accountA, soldById: ownerA,
+      items: [{ variantId: variantA, quantity: 3, unitSoldPrice: '27.00' }],
+    }), 'utf8').digest('hex')
+    assert.equal(saleFingerprint(accountA, ownerA, items), legacy)
+    assert.equal(saleFingerprint(accountA, ownerA, items, { paymentMethod: 'CASH' }), legacy)
+    const variants = new Set([
+      saleFingerprint(accountA, ownerA, items, { paymentMethod: 'CARD' }),
+      saleFingerprint(accountA, ownerA, items, { paymentMethod: 'DEBT', customer: { name: 'Rana', phone: null } }),
+      saleFingerprint(accountA, ownerA, items, { paymentMethod: 'DEBT', customer: { name: 'Rana', phone: '03' } }),
+      saleFingerprint(accountA, ownerA, items, { discountPercent: '10.00' }),
+      legacy,
+    ])
+    assert.equal(variants.size, 5)
+  })
+
+  test('derives the discount from catalog prices, keeps the final price, and snapshots payment, customer and rate', async () => {
+    const store = new SaleDouble()
+    const service = createSaleDependencies(store.asClient())
+    const result = await service.createSale(accountA, ownerA, key, owner({ discountPercent: '10.00', paymentMethod: 'CARD' }))
+    const sale = result.sale
+    assert.equal(sale.subtotal, '90.00'); assert.equal(sale.totalAmount, '81.00')
+    assert.deepEqual(sale.commercial, {
+      receiptNumber: 1, paymentMethod: 'CARD', customer: null, discountAmount: '9.00', discountPercent: '10.00',
+      lbpRateAtSale: '89500.00', paidAt: null,
+    })
+    assert.equal(sale.items[0].unitSoldPrice, '27.00'); assert.equal(sale.items[0].listUnitPrice, '30.00'); assert.equal(sale.items[0].discountAmount, '9.00')
+    const row = store.state.sales[0]
+    assert.equal(row.discountAmount.toFixed(2), '9.00'); assert.equal(row.paymentMethod, 'CARD'); assert.equal(row.lbpRateAtSale.toFixed(2), '89500.00')
+    assert.equal(row.subtotal.sub(row.totalAmount).toFixed(2), row.discountAmount.toFixed(2), 'the database check subtotal - total = discount holds')
+    assert.equal(store.state.accounts.get(accountA)!.lastReceiptNumber, 1)
+  })
+
+  test('a price at or above the catalog price is not a discount, and a percent with no real discount is not stored', async () => {
+    const above = await createSaleDependencies(new SaleDouble().asClient()).createSale(accountA, ownerA, key, owner({}, '35.00'))
+    assert.equal(above.sale.subtotal, '105.00'); assert.equal(above.sale.totalAmount, '105.00')
+    assert.equal(above.sale.items[0].listUnitPrice, '35.00'); assert.equal(above.sale.items[0].discountAmount, '0.00')
+    assert.equal(above.sale.commercial.discountAmount, '0.00')
+    const same = await createSaleDependencies(new SaleDouble().asClient()).createSale(accountA, ownerA, key, owner({ discountPercent: '10.00' }, '30.00'))
+    assert.equal(same.sale.commercial.discountPercent, null); assert.equal(same.sale.commercial.discountAmount, '0.00')
+  })
+
+  test('a warehouse user cannot give a discount and still pays the catalog price', async () => {
+    const store = new SaleDouble()
+    const service = createSaleDependencies(store.asClient())
+    await assert.rejects(service.createSale(accountA, warehouseA, key, owner({ discountPercent: '5.00' }, '30.00')), (e) => expectHttp(e, 403, 'SALE_DISCOUNT_FORBIDDEN'))
+    assert.equal(store.state.sales.length, 0); assert.equal(store.state.accounts.get(accountA)!.lastReceiptNumber, 0)
+    const ok = await service.createSale(accountA, warehouseA, key, owner({ paymentMethod: 'WHISH_OMT' }, '30.00'))
+    assert.equal(ok.sale.commercial.discountAmount, '0.00'); assert.equal(ok.sale.commercial.paymentMethod, 'WHISH_OMT')
+  })
+
+  test('debt needs a customer name; the customer is stored and the debt starts unpaid', async () => {
+    const store = new SaleDouble()
+    const service = createSaleDependencies(store.asClient())
+    await assert.rejects(service.createSale(accountA, ownerA, key, owner({ paymentMethod: 'DEBT' })), (e) => expectHttp(e, 422, 'SALE_DEBT_CUSTOMER_REQUIRED'))
+    assert.equal(store.state.sales.length, 0)
+    const debt = await service.createSale(accountA, ownerA, key, owner({ paymentMethod: 'DEBT', customer: { name: 'Rana Haddad', phone: '03 123 456' } }))
+    assert.equal(debt.sale.commercial.paymentMethod, 'DEBT'); assert.deepEqual(debt.sale.commercial.customer, { name: 'Rana Haddad', phone: '03 123 456' })
+    assert.equal(debt.sale.commercial.paidAt, null)
+    assert.equal(store.state.sales[0].paidAt ?? null, null)
+  })
+
+  test('receipt numbers are sequential per account, roll back with a failed sale, and stay serialized under concurrency', async () => {
+    const store = new SaleDouble()
+    const service = createSaleDependencies(store.asClient())
+    const numbers: (number | null)[] = []
+    for (let index = 0; index < 3; index += 1) numbers.push((await service.createSale(accountA, ownerA, randomUUID(), { items: [{ variantId: variantA, quantity: 1, unitSoldPrice: '30.00' }] })).sale.commercial.receiptNumber)
+    assert.deepEqual(numbers, [1, 2, 3])
+    const other = await service.createSale(accountB, ownerB, randomUUID(), { items: [{ variantId: variantOther, quantity: 1, unitSoldPrice: '1.00' }] })
+    assert.equal(other.sale.commercial.receiptNumber, 1, 'another account has its own sequence')
+    assert.equal(other.sale.commercial.lbpRateAtSale, null, 'no rate snapshot for an account that does not sell in USD')
+
+    store.failAt = 'movement'
+    await assert.rejects(service.createSale(accountA, ownerA, randomUUID(), { items: [{ variantId: variantA, quantity: 1, unitSoldPrice: '30.00' }] }))
+    store.failAt = null
+    assert.equal(store.state.accounts.get(accountA)!.lastReceiptNumber, 3, 'a failed sale does not burn a number')
+    const next = await service.createSale(accountA, ownerA, randomUUID(), { items: [{ variantId: variantA, quantity: 1, unitSoldPrice: '30.00' }] })
+    assert.equal(next.sale.commercial.receiptNumber, 4)
+
+    const concurrent = new SaleDouble()
+    const results = await Promise.all([1, 2, 3, 4].map(() => createSaleDependencies(concurrent.asClient()).createSale(accountA, ownerA, randomUUID(), { items: [{ variantId: variantA, quantity: 1, unitSoldPrice: '30.00' }] })))
+    assert.deepEqual(results.map((entry) => entry.sale.commercial.receiptNumber).sort(), [1, 2, 3, 4])
+    assert.equal(new Set(concurrent.state.sales.map((row) => row.receiptNumber)).size, 4)
+  })
+
+  test('the rate is a snapshot: no rate set means no snapshot', async () => {
+    const store = new SaleDouble()
+    store.state.accounts.get(accountA)!.lbpPerUsd = null
+    const result = await createSaleDependencies(store.asClient()).createSale(accountA, ownerA, key, owner({}, '30.00'))
+    assert.equal(result.sale.commercial.lbpRateAtSale, null)
+  })
+
+  test('reusing an idempotency key with another payment method or customer is a conflict', async () => {
+    const store = new SaleDouble()
+    const service = createSaleDependencies(store.asClient())
+    await service.createSale(accountA, ownerA, key, owner({}, '30.00'))
+    await assert.rejects(service.createSale(accountA, ownerA, key, owner({ paymentMethod: 'CARD' }, '30.00')), (e) => expectHttp(e, 409, 'SALE_IDEMPOTENCY_CONFLICT'))
+    const replay = await service.createSale(accountA, ownerA, key, owner({}, '30.00'))
+    assert.equal(replay.idempotentReplay, true); assert.equal(replay.sale.commercial.receiptNumber, 1)
+    assert.equal(store.state.accounts.get(accountA)!.lastReceiptNumber, 1, 'a replay does not take another number')
+  })
+
+  test('history filters by payment method and by unpaid debt, inside the tenant', async () => {
+    assert.equal(parseSaleHistoryQuery({ paymentMethod: 'DEBT' }).paymentMethod, 'DEBT')
+    assert.equal(parseSaleHistoryQuery({ unpaid: 'true' }).unpaid, true)
+    for (const bad of [{ paymentMethod: 'PAYPAL' }, { unpaid: 'yes' }, { unpaid: 'true', paymentMethod: 'CARD' }, { unpaid: 'true', status: 'VOIDED' }]) {
+      assert.throws(() => parseSaleHistoryQuery(bad), (e) => expectHttp(e, 422, 'INVALID_SALE_FILTER'))
+    }
+    const store = new HistoryDouble()
+    store.sales[0].paymentMethod = 'DEBT'; store.sales[0].customerName = 'Rana'; store.sales[0].paidAt = null
+    const service = createSaleDependencies(store.asClient())
+    assert.deepEqual((await service.listSales(accountA, { unpaid: true, limit: 25 })).sales.map((sale) => sale.id), [saleA])
+    assert.deepEqual((await service.listSales(accountA, { paymentMethod: 'DEBT', limit: 25 })).sales.map((sale) => sale.id), [saleA])
+    assert.deepEqual((await service.listSales(accountA, { paymentMethod: 'CARD', limit: 25 })).sales, [])
+    const row = (await service.listSales(accountA, { unpaid: true, limit: 25 })).sales[0]
+    assert.equal(row.paymentMethod, 'DEBT'); assert.equal(row.customerName, 'Rana'); assert.equal(row.paidAt, null); assert.equal(row.receiptNumber, null)
+    store.sales[0].paidAt = new Date('2026-09-24T10:00:00.000Z')
+    assert.deepEqual((await service.listSales(accountA, { unpaid: true, limit: 25 })).sales, [])
+    assert.deepEqual((await service.listSales('99999999-0000-4000-8000-000000000009', { unpaid: true, limit: 25 })).sales, [])
+  })
+
+  test('detail shows the stored payment, discount and settlement fields', async () => {
+    const store = new HistoryDouble()
+    Object.assign(store.sales[0], {
+      receiptNumber: 12, paymentMethod: 'DEBT', customerName: 'Rana', customerPhone: '03', discountAmount: new Prisma.Decimal('5.00'),
+      discountPercent: new Prisma.Decimal('8.33'), lbpRateAtSale: new Prisma.Decimal('89500.00'),
+      paidAt: new Date('2026-09-24T10:00:00.000Z'), paidByName: 'Ada Owner', paidByCode: null,
+    })
+    const detail = await createSaleDependencies(store.asClient()).getSale(accountA, UserRole.OWNER, saleA)
+    assert.deepEqual(detail.sale.commercial, {
+      receiptNumber: 12, paymentMethod: 'DEBT', customer: { name: 'Rana', phone: '03' }, discountAmount: '5.00', discountPercent: '8.33',
+      lbpRateAtSale: '89500.00', paidAt: new Date('2026-09-24T10:00:00.000Z'), paidBy: { name: 'Ada Owner', employeeCode: null },
+    })
+    const old = await createSaleDependencies(new HistoryDouble().asClient()).getSale(accountA, UserRole.WAREHOUSE, saleB)
+    assert.equal(old.sale.commercial.receiptNumber, null, 'old sales keep no receipt number'); assert.equal(old.sale.commercial.paymentMethod, 'CASH')
+    assert.equal(old.sale.items[0].listUnitPrice, null)
+  })
+})
+
+class PayDouble {
+  sale: Row = {
+    id: saleA, accountId: accountA, status: SaleStatus.COMPLETED, paymentMethod: 'DEBT', currency: 'USD', totalAmount: new Prisma.Decimal('45.00'),
+    receiptNumber: 7, customerName: 'Rana', customerPhone: '03 123 456', paidAt: null, paidByName: null, paidByCode: null,
+  }
+  actorRole: UserRole = UserRole.OWNER
+  actorActive = true
+  updates = 0
+  locks: string[] = []
+
+  asClient(): PrismaClient {
+    const store = this
+    const client = {
+      async $transaction<T>(callback: (transaction: unknown) => Promise<T>): Promise<T> { return callback(client) },
+      async $queryRaw(sql: Prisma.Sql) {
+        const values = sql.values as string[]
+        if (sql.sql.includes('FROM "Account"')) { store.locks.push('Account'); return values[0] === accountA ? [{ id: accountA }] : [] }
+        if (sql.sql.includes('FROM "User"')) {
+          store.locks.push('User')
+          return values[1] === accountA ? [{ id: values[0], sellerName: 'Ada Owner', employeeCode: null, role: store.actorRole, isActive: store.actorActive }] : []
+        }
+        store.locks.push('Sale')
+        return values[0] === store.sale.id && values[1] === store.sale.accountId ? [{ ...store.sale }] : []
+      },
+      sale: {
+        async update({ where, data }: Row) {
+          assert.equal(where.id_accountId.accountId, accountA)
+          Object.assign(store.sale, data); store.updates += 1
+          return { id: store.sale.id }
+        },
+      },
+    }
+    return client as unknown as PrismaClient
+  }
+}
+
+describe('Marking a debt sale as paid', () => {
+  const body = { confirm: true as const }
+
+  test('an OWNER settles an unpaid debt once; repeating returns the stored settlement', async () => {
+    const store = new PayDouble()
+    const service = createSaleDependencies(store.asClient())
+    const first = await service.markSalePaid(accountA, ownerA, saleA, body)
+    assert.equal(first.idempotentReplay, false)
+    assert.equal(first.sale.paymentMethod, 'DEBT'); assert.equal(first.sale.totalAmount, '45.00'); assert.equal(first.sale.receiptNumber, 7)
+    assert.deepEqual(first.sale.customer, { name: 'Rana', phone: '03 123 456' }); assert.deepEqual(first.sale.paidBy, { name: 'Ada Owner', employeeCode: null })
+    assert.ok(first.sale.paidAt instanceof Date)
+    assert.deepEqual(store.locks, ['Account', 'User', 'Sale'], 'same lock order as creating a sale')
+    const again = await service.markSalePaid(accountA, ownerA, saleA, body)
+    assert.equal(again.idempotentReplay, true); assert.equal(again.sale.paidAt.getTime(), first.sale.paidAt.getTime())
+    assert.equal(store.updates, 1, 'the settlement is written once')
+  })
+
+  test('refuses a non-owner, an inactive owner, a non-debt sale, a voided sale and another account\'s sale', async () => {
+    for (const mutate of [(s: PayDouble) => { s.actorRole = UserRole.WAREHOUSE }, (s: PayDouble) => { s.actorActive = false }]) {
+      const store = new PayDouble(); mutate(store)
+      await assert.rejects(createSaleDependencies(store.asClient()).markSalePaid(accountA, ownerA, saleA, body), (e) => expectHttp(e, 403, 'SALE_PAY_ACTOR_UNAVAILABLE'))
+      assert.equal(store.updates, 0)
+    }
+    const cash = new PayDouble(); cash.sale.paymentMethod = 'CASH'
+    await assert.rejects(createSaleDependencies(cash.asClient()).markSalePaid(accountA, ownerA, saleA, body), (e) => expectHttp(e, 409, 'SALE_NOT_DEBT'))
+    const voided = new PayDouble(); voided.sale.status = SaleStatus.VOIDED
+    await assert.rejects(createSaleDependencies(voided.asClient()).markSalePaid(accountA, ownerA, saleA, body), (e) => expectHttp(e, 409, 'SALE_PAY_NOT_ALLOWED'))
+    assert.equal(voided.updates, 0)
+    const foreign = new PayDouble(); foreign.sale.accountId = accountB
+    await assert.rejects(createSaleDependencies(foreign.asClient()).markSalePaid(accountA, ownerA, saleA, body), (e) => expectHttp(e, 404, 'SALE_NOT_FOUND'))
+    await assert.rejects(createSaleDependencies(new PayDouble().asClient()).markSalePaid(accountA, ownerA, saleB, body), (e) => expectHttp(e, 404, 'SALE_NOT_FOUND'))
+  })
+
+  test('the pay route needs an OWNER, a valid id and { confirm: true }', async () => {
+    const store = new PayDouble()
+    const sales = createSaleDependencies(store.asClient())
+    await withServer(UserRole.OWNER, sales, async (base) => {
+      const options = (payload: unknown) => ({ method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      assert.equal((await fetch(`${base}/api/sales/${saleA}/pay`, options({ confirm: true }))).status, 201)
+      assert.equal((await fetch(`${base}/api/sales/${saleA}/pay`, options({ confirm: true }))).status, 200)
+      for (const bad of [{}, { confirm: false }, { confirm: 'yes' }, { confirm: true, amount: '1.00' }]) {
+        const response = await fetch(`${base}/api/sales/${saleA}/pay`, options(bad))
+        assert.equal(response.status, 422); assert.equal((await response.json() as Row).error.code, 'INVALID_SALE_PAY_INPUT')
+      }
+      assert.equal((await fetch(`${base}/api/sales/not-a-uuid/pay`, options({ confirm: true }))).status, 422)
+    })
+    await withServer(UserRole.WAREHOUSE, createSaleDependencies(new PayDouble().asClient()), async (base) => {
+      const response = await fetch(`${base}/api/sales/${saleA}/pay`, { method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+      assert.equal(response.status, 403)
+    })
+  })
 })

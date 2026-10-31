@@ -1,13 +1,17 @@
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
-import { InventoryMovementType, SaleStatus, UserRole } from '../generated/prisma/enums.js'
+import { InventoryMovementType, PaymentMethod, SaleStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import { canonicalSaleItems, encodeSaleCursor, saleFingerprint } from './sale.schemas.js'
 import type {
+  PaymentMethodValue,
+  SaleCommercialFields,
   SaleDependencies,
   SaleDetailView,
   SaleHistoryQuery,
   SaleInput,
   SaleOperationMetadata,
+  SalePayInput,
+  SalePayView,
   SaleTransaction,
   SaleTransactionContext,
   SaleTransactionResult,
@@ -29,6 +33,14 @@ const persistedSaleSelect = {
   sellerNameAtSale: true,
   sellerCodeAtSale: true,
   requestFingerprint: true,
+  receiptNumber: true,
+  paymentMethod: true,
+  customerName: true,
+  customerPhone: true,
+  discountAmount: true,
+  discountPercent: true,
+  lbpRateAtSale: true,
+  paidAt: true,
   items: {
     orderBy: { id: 'asc' as const },
     select: {
@@ -39,6 +51,8 @@ const persistedSaleSelect = {
       colorAtSale: true,
       sizeAtSale: true,
       quantity: true,
+      listUnitPrice: true,
+      discountAmount: true,
       unitSoldPrice: true,
       lineTotal: true,
     },
@@ -53,6 +67,14 @@ const transactionSaleSelect = {
   createdAt: true,
   sellerNameAtSale: true,
   sellerCodeAtSale: true,
+  receiptNumber: true,
+  paymentMethod: true,
+  customerName: true,
+  customerPhone: true,
+  discountAmount: true,
+  discountPercent: true,
+  lbpRateAtSale: true,
+  paidAt: true,
   items: {
     orderBy: { id: 'asc' as const },
     select: {
@@ -65,6 +87,8 @@ const transactionSaleSelect = {
       colorAtSale: true,
       sizeAtSale: true,
       quantity: true,
+      listUnitPrice: true,
+      discountAmount: true,
       unitSoldPrice: true,
       unitCostAtSale: true,
       lineTotal: true,
@@ -74,18 +98,23 @@ const transactionSaleSelect = {
 const historySaleSelect = {
   id: true, status: true, currency: true, subtotal: true, totalAmount: true, createdAt: true,
   sellerNameAtSale: true, sellerCodeAtSale: true,
+  receiptNumber: true, paymentMethod: true, customerName: true, discountAmount: true, paidAt: true,
   _count: { select: { items: true } },
 } as const
 const detailSaleSelect = {
   id: true, status: true, currency: true, subtotal: true, totalAmount: true, createdAt: true,
   sellerNameAtSale: true, sellerCodeAtSale: true,
   voidedAt: true, voidedByName: true, voidedByCode: true, voidReason: true,
+  receiptNumber: true, paymentMethod: true, customerName: true, customerPhone: true,
+  discountAmount: true, discountPercent: true, lbpRateAtSale: true,
+  paidAt: true, paidByName: true, paidByCode: true,
   items: {
     orderBy: { id: 'asc' as const },
     select: {
       id: true, productId: true, variantId: true,
       productNameAtSale: true, categoryNameAtSale: true, skuAtSale: true,
       colorAtSale: true, sizeAtSale: true, quantity: true,
+      listUnitPrice: true, discountAmount: true,
       unitSoldPrice: true, unitCostAtSale: true, lineTotal: true,
     },
   },
@@ -119,7 +148,25 @@ type PersistedVoidSale = Prisma.SaleGetPayload<{ select: typeof voidSaleSelect }
 type VoidSaleItem = Prisma.SaleItemGetPayload<{ select: typeof voidItemSelect }>
 type SaleReader = Pick<PrismaClient, 'sale'>
 type AdvisoryVariant = { id: string; productId: string }
-type LockedAccount = { id: string; baseCurrency: string }
+type LockedAccount = {
+  id: string
+  baseCurrency: string
+  lastReceiptNumber?: number | null
+  lbpPerUsd?: Prisma.Decimal | string | null
+}
+type LockedPaySale = {
+  id: string
+  status: SaleStatus
+  paymentMethod: PaymentMethodValue
+  currency: string
+  totalAmount: Prisma.Decimal | string
+  receiptNumber: number | null
+  customerName: string | null
+  customerPhone: string | null
+  paidAt: Date | null
+  paidByName: string | null
+  paidByCode: string | null
+}
 type LockedSeller = {
   id: string
   sellerName: string
@@ -158,6 +205,29 @@ function unavailable(): HttpError {
   return new HttpError(404, 'SALE_VARIANT_UNAVAILABLE', 'A requested Variant is unavailable')
 }
 
+type CommercialSource = {
+  readonly receiptNumber: number | null
+  readonly paymentMethod: PaymentMethodValue
+  readonly customerName: string | null
+  readonly customerPhone: string | null
+  readonly discountAmount: Prisma.Decimal
+  readonly discountPercent: Prisma.Decimal | null
+  readonly lbpRateAtSale: Prisma.Decimal | null
+  readonly paidAt: Date | null
+}
+
+function commercialFields(sale: CommercialSource): SaleCommercialFields {
+  return {
+    receiptNumber: sale.receiptNumber,
+    paymentMethod: sale.paymentMethod,
+    customer: sale.customerName ? { name: sale.customerName, phone: sale.customerPhone } : null,
+    discountAmount: sale.discountAmount.toFixed(2),
+    discountPercent: sale.discountPercent === null ? null : sale.discountPercent.toFixed(2),
+    lbpRateAtSale: sale.lbpRateAtSale === null ? null : sale.lbpRateAtSale.toFixed(2),
+    paidAt: sale.paidAt,
+  }
+}
+
 function toView(sale: PersistedSale | SaleTransactionResult, idempotentReplay: boolean): SaleView {
   return {
     sale: {
@@ -168,6 +238,7 @@ function toView(sale: PersistedSale | SaleTransactionResult, idempotentReplay: b
       totalAmount: sale.totalAmount.toFixed(2),
       createdAt: sale.createdAt,
       seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+      commercial: commercialFields(sale),
       items: sale.items.map((item) => ({
         id: item.id,
         productName: item.productNameAtSale,
@@ -177,6 +248,8 @@ function toView(sale: PersistedSale | SaleTransactionResult, idempotentReplay: b
         size: item.sizeAtSale,
         quantity: item.quantity,
         unitSoldPrice: item.unitSoldPrice.toFixed(2),
+        listUnitPrice: item.listUnitPrice === null ? null : item.listUnitPrice.toFixed(2),
+        discountAmount: item.discountAmount.toFixed(2),
         lineTotal: item.lineTotal.toFixed(2),
       })),
     },
@@ -234,7 +307,9 @@ function detailView(
       id: item.id, productId: item.productId, variantId: item.variantId,
       productName: item.productNameAtSale, categoryName: item.categoryNameAtSale,
       sku: item.skuAtSale, color: item.colorAtSale, size: item.sizeAtSale,
-      quantity: item.quantity, unitSoldPrice: item.unitSoldPrice.toFixed(2), lineTotal: item.lineTotal.toFixed(2),
+      quantity: item.quantity, unitSoldPrice: item.unitSoldPrice.toFixed(2),
+      listUnitPrice: item.listUnitPrice === null ? null : item.listUnitPrice.toFixed(2),
+      discountAmount: item.discountAmount.toFixed(2), lineTotal: item.lineTotal.toFixed(2),
       returnedQuantity, remainingReturnableQuantity: item.quantity - returnedQuantity,
     }
     if (role !== UserRole.OWNER) return base
@@ -268,6 +343,10 @@ function detailView(
       id: sale.id, status: sale.status, currency: sale.currency,
       subtotal: sale.subtotal.toFixed(2), totalAmount: sale.totalAmount.toFixed(2), createdAt: sale.createdAt,
       seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+      commercial: {
+        ...commercialFields(sale),
+        paidBy: sale.paidAt && sale.paidByName ? { name: sale.paidByName, employeeCode: sale.paidByCode } : null,
+      },
       void: voidInfo,
       returnSummary: {
         hasReturns: returnCount > 0,
@@ -339,15 +418,28 @@ export async function createSaleInTransaction(
   const { accountId, soldById } = context
   const { idempotencyKey, requestFingerprint } = operation
   const items = canonicalSaleItems(input.items)
+  const paymentMethod: PaymentMethodValue = input.paymentMethod ?? PaymentMethod.CASH
+  if (paymentMethod === PaymentMethod.DEBT && !input.customer?.name) {
+    throw new HttpError(422, 'SALE_DEBT_CUSTOMER_REQUIRED', 'A debt sale needs the customer name')
+  }
   const variantIds = items.map((item) => item.variantId)
 
   const accounts = await transaction.$queryRaw<LockedAccount[]>(
-    Prisma.sql`SELECT "id", "baseCurrency" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
+    Prisma.sql`SELECT "id", "baseCurrency", "lastReceiptNumber", "lbpPerUsd" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
   )
   const account = accounts[0]
   if (!account || !/^[A-Z]{3}$/.test(account.baseCurrency)) {
     throw new HttpError(409, 'SALE_ACCOUNT_UNAVAILABLE', 'Sale Account is unavailable')
   }
+
+  // The Account row is locked above, so receipt numbers are handed out one at a time per account.
+  const receiptNumber = (account.lastReceiptNumber ?? 0) + 1
+  if (!Number.isSafeInteger(receiptNumber) || receiptNumber > maxStock) {
+    throw new HttpError(409, 'SALE_RECEIPT_NUMBER_EXHAUSTED', 'The receipt number range of this Account is exhausted')
+  }
+  const lbpRateAtSale = account.baseCurrency === 'USD' && account.lbpPerUsd !== null && account.lbpPerUsd !== undefined
+    ? decimal(account.lbpPerUsd)
+    : null
 
   const sellers = await transaction.$queryRaw<LockedSeller[]>(
     Prisma.sql`SELECT "id", btrim(concat_ws(' ', "firstName", "lastName")) AS "sellerName", "employeeCode", "role", "isActive" FROM "User" WHERE "id" = ${soldById}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
@@ -355,6 +447,9 @@ export async function createSaleInTransaction(
   const seller = sellers[0]
   if (!seller || !seller.isActive || (seller.role !== UserRole.OWNER && seller.role !== UserRole.WAREHOUSE)) {
     throw new HttpError(403, 'SALE_SELLER_UNAVAILABLE', 'Seller is not authorized to create Sales')
+  }
+  if (seller.role === UserRole.WAREHOUSE && input.discountPercent) {
+    throw new HttpError(403, 'SALE_DISCOUNT_FORBIDDEN', 'Only an OWNER may give a discount')
   }
 
   // This non-locking relationship lookup uses the caller's transaction state;
@@ -390,6 +485,7 @@ export async function createSaleInTransaction(
   const variantById = new Map(lockedVariants.map((variant) => [variant.id, variant]))
 
   let subtotal = new Prisma.Decimal(0)
+  let totalAmount = new Prisma.Decimal(0)
   const trustedLines = items.map((item) => {
     const variant = variantById.get(item.variantId)
     if (!variant) throw unavailable()
@@ -416,12 +512,24 @@ export async function createSaleInTransaction(
     if (lineTotal.decimalPlaces() > 2 || lineTotal.gt(maxMoney)) {
       throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
     }
-    subtotal = subtotal.add(lineTotal)
-    if (subtotal.gt(maxMoney)) {
+    // The discount is derived from the catalog price, never trusted from the client: a unit price below the
+    // catalog price is a discount; a price at or above it is not.
+    const catalogPrice = variant.sellingPrice === null ? null : decimal(variant.sellingPrice)
+    const listUnitPrice = catalogPrice !== null && catalogPrice.gt(unitSoldPrice) ? catalogPrice : unitSoldPrice
+    const discountAmount = listUnitPrice.sub(unitSoldPrice).mul(item.quantity)
+    const listLineTotal = listUnitPrice.mul(item.quantity)
+    if (listLineTotal.gt(maxMoney)) {
       throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
     }
-    return { item, variant, product, category, unitSoldPrice, unitCostAtSale: variant.lastPurchaseCost === null ? null : decimal(variant.lastPurchaseCost), lineTotal }
+    totalAmount = totalAmount.add(lineTotal)
+    subtotal = subtotal.add(listLineTotal)
+    if (subtotal.gt(maxMoney) || totalAmount.gt(maxMoney)) {
+      throw new HttpError(422, 'SALE_TOTAL_OVERFLOW', 'Sale total exceeds the supported monetary range')
+    }
+    return { item, variant, product, category, unitSoldPrice, listUnitPrice, discountAmount, unitCostAtSale: variant.lastPurchaseCost === null ? null : decimal(variant.lastPurchaseCost), lineTotal }
   })
+  const discountAmount = subtotal.sub(totalAmount)
+  const discountPercent = discountAmount.gt(0) && input.discountPercent ? new Prisma.Decimal(input.discountPercent) : null
 
   const sale = await transaction.sale.create({
     data: {
@@ -434,8 +542,20 @@ export async function createSaleInTransaction(
       status: SaleStatus.COMPLETED,
       currency: account.baseCurrency,
       subtotal,
-      totalAmount: subtotal,
+      totalAmount,
+      receiptNumber,
+      paymentMethod,
+      customerName: input.customer?.name ?? null,
+      customerPhone: input.customer?.phone ?? null,
+      discountAmount,
+      discountPercent,
+      lbpRateAtSale,
     },
+    select: { id: true },
+  })
+  await transaction.account.update({
+    where: { id: accountId },
+    data: { lastReceiptNumber: receiptNumber },
     select: { id: true },
   })
 
@@ -453,6 +573,8 @@ export async function createSaleInTransaction(
         colorAtSale: line.variant.color,
         sizeAtSale: line.variant.size,
         quantity: line.item.quantity,
+        listUnitPrice: line.listUnitPrice,
+        discountAmount: line.discountAmount,
         unitSoldPrice: line.unitSoldPrice,
         unitCostAtSale: line.unitCostAtSale,
         lineTotal: line.lineTotal,
@@ -514,7 +636,7 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
 
   async function performSale(accountId: string, soldById: string, idempotencyKey: string, input: SaleInput): Promise<SaleView> {
     const items = canonicalSaleItems(input.items)
-    const fingerprint = saleFingerprint(accountId, soldById, items)
+    const fingerprint = saleFingerprint(accountId, soldById, items, input)
     const existing = await findSale(prisma, accountId, idempotencyKey)
     if (existing) return replay(existing, fingerprint)
 
@@ -534,7 +656,7 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         const sale = await createSaleInTransaction(
           transaction,
           { accountId, soldById },
-          { items },
+          { ...input, items },
           { idempotencyKey, requestFingerprint: fingerprint },
         )
         return { kind: 'created' as const, sale }
@@ -566,6 +688,8 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         ...(query.status ? { status: query.status } : {}),
         ...(query.soldById ? { soldById: query.soldById } : {}),
         ...(query.returned ? { returns: { some: {} } } : {}),
+        ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
+        ...(query.unpaid ? { paymentMethod: PaymentMethod.DEBT, paidAt: null, status: SaleStatus.COMPLETED } : {}),
         ...(query.from || query.to ? {
           createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) },
         } : {}),
@@ -598,6 +722,11 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
           id: sale.id, status: sale.status, currency: sale.currency,
           subtotal: sale.subtotal.toFixed(2), totalAmount: sale.totalAmount.toFixed(2), createdAt: sale.createdAt,
           seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
+          receiptNumber: sale.receiptNumber,
+          paymentMethod: sale.paymentMethod,
+          customerName: sale.customerName,
+          discountAmount: sale.discountAmount.toFixed(2),
+          paidAt: sale.paidAt,
           itemCount: sale._count.items,
           totalUnits: unitsBySale.get(sale.id) ?? 0,
           hasReturns: returnedBySale.has(sale.id),
@@ -779,5 +908,67 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
     }
   }
 
-  return { createSale, listSales, getSale, voidSale }
+  async function performPay(accountId: string, paidById: string, saleId: string): Promise<SalePayView> {
+    return prisma.$transaction(async (transaction) => {
+      // Same lock order as creating a Sale: Account, then the acting user, then the Sale.
+      const accounts = await transaction.$queryRaw<{ id: string }[]>(
+        Prisma.sql`SELECT "id" FROM "Account" WHERE "id" = ${accountId}::uuid FOR UPDATE`,
+      )
+      if (!accounts[0]) throw new HttpError(409, 'SALE_PAY_ACCOUNT_UNAVAILABLE', 'Sale Account is unavailable')
+
+      const actors = await transaction.$queryRaw<(LockedSeller & { actorName?: string })[]>(
+        Prisma.sql`SELECT "id", btrim(concat_ws(' ', "firstName", "lastName")) AS "sellerName", "employeeCode", "role", "isActive" FROM "User" WHERE "id" = ${paidById}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
+      )
+      const actor = actors[0]
+      if (!actor || !actor.isActive || actor.role !== UserRole.OWNER) {
+        throw new HttpError(403, 'SALE_PAY_ACTOR_UNAVAILABLE', 'Only an active OWNER may mark a debt as paid')
+      }
+
+      const rows = await transaction.$queryRaw<LockedPaySale[]>(
+        Prisma.sql`SELECT "id", "status", "paymentMethod", "currency", "totalAmount", "receiptNumber", "customerName", "customerPhone", "paidAt", "paidByName", "paidByCode" FROM "Sale" WHERE "id" = ${saleId}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`,
+      )
+      const sale = rows[0]
+      if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Sale does not exist')
+      if (sale.paymentMethod !== PaymentMethod.DEBT) {
+        throw new HttpError(409, 'SALE_NOT_DEBT', 'Only a debt sale can be marked as paid')
+      }
+      const view = (paidAt: Date, name: string, code: string | null, replay: boolean): SalePayView => ({
+        sale: {
+          id: sale.id,
+          status: sale.status,
+          currency: sale.currency,
+          totalAmount: decimal(sale.totalAmount).toFixed(2),
+          receiptNumber: sale.receiptNumber,
+          paymentMethod: PaymentMethod.DEBT,
+          customer: sale.customerName ? { name: sale.customerName, phone: sale.customerPhone } : null,
+          paidAt,
+          paidBy: { name, employeeCode: code },
+        },
+        idempotentReplay: replay,
+      })
+      if (sale.paidAt) return view(sale.paidAt, sale.paidByName ?? '', sale.paidByCode, true)
+      if (sale.status !== SaleStatus.COMPLETED) {
+        throw new HttpError(409, 'SALE_PAY_NOT_ALLOWED', 'A voided sale cannot be marked as paid')
+      }
+      const paidAt = new Date()
+      await transaction.sale.update({
+        where: { id_accountId: { id: saleId, accountId } },
+        data: { paidAt, paidById, paidByName: actor.sellerName, paidByCode: actor.employeeCode },
+        select: { id: true },
+      })
+      return view(paidAt, actor.sellerName, actor.employeeCode, false)
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
+  }
+
+  async function markSalePaid(accountId: string, paidById: string, saleId: string, input: SalePayInput): Promise<SalePayView> {
+    void input
+    try {
+      return await performPay(accountId, paidById, saleId)
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(503, 'SALE_PAY_UNAVAILABLE', 'The payment could not be saved')
+    }
+  }
+
+  return { createSale, listSales, getSale, voidSale, markSalePaid }
 }

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { Prisma } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import { SaleStatus } from '../generated/prisma/enums.js'
-import type { SaleHistoryQuery, SaleInput, SaleLineInput, SaleVoidInput } from './sale.types.js'
+import type { PaymentMethodValue, SaleCustomerInput, SaleHistoryQuery, SaleInput, SaleLineInput, SalePayInput, SaleVoidInput } from './sale.types.js'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const pricePattern = /^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/
@@ -10,6 +10,11 @@ const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/
 export const maxSaleLines = 100
 export const maxSaleQuantity = 1_000_000
 export const maxSaleVoidReasonCharacters = 2_000
+export const maxCustomerNameCharacters = 120
+export const maxCustomerPhoneCharacters = 30
+export const PAYMENT_METHODS: readonly PaymentMethodValue[] = ['CASH', 'CARD', 'WHISH_OMT', 'DEBT']
+const percentPattern = /^(?:0|[1-9]\d?|100)(?:\.\d{1,2})?$/
+const phonePattern = /^[+()\d][\d\s().-]*$/
 
 function invalidFilter(message: string): never {
   throw new HttpError(422, 'INVALID_SALE_FILTER', message)
@@ -88,9 +93,19 @@ export function parseSaleVoidInput(body: unknown): SaleVoidInput {
 }
 
 export function parseSaleHistoryQuery(query: Record<string, unknown>): SaleHistoryQuery {
-  const allowed = ['status', 'soldById', 'from', 'to', 'cursor', 'limit', 'returned']
+  const allowed = ['status', 'soldById', 'from', 'to', 'cursor', 'limit', 'returned', 'paymentMethod', 'unpaid']
   if (Object.keys(query).some((key) => !allowed.includes(key))) invalidFilter('Unsupported Sale filter')
   if (query.returned !== undefined && query.returned !== 'true') invalidFilter('returned must be true')
+  if (query.unpaid !== undefined && query.unpaid !== 'true') invalidFilter('unpaid must be true')
+  let paymentMethod: PaymentMethodValue | undefined
+  if (query.paymentMethod !== undefined) {
+    if (typeof query.paymentMethod !== 'string' || !PAYMENT_METHODS.includes(query.paymentMethod as PaymentMethodValue)) invalidFilter('Invalid payment method')
+    paymentMethod = query.paymentMethod as PaymentMethodValue
+  }
+  if (query.unpaid === 'true') {
+    if (paymentMethod && paymentMethod !== 'DEBT') invalidFilter('unpaid only applies to DEBT sales')
+    if (query.status === SaleStatus.VOIDED) invalidFilter('unpaid only applies to COMPLETED sales')
+  }
   let status: SaleHistoryQuery['status']
   if (query.status !== undefined) {
     if (query.status !== SaleStatus.COMPLETED && query.status !== SaleStatus.VOIDED) invalidFilter('Invalid Sale status')
@@ -105,6 +120,8 @@ export function parseSaleHistoryQuery(query: Record<string, unknown>): SaleHisto
     ...(status ? { status } : {}), ...(soldById ? { soldById } : {}),
     ...(from ? { from } : {}), ...(to ? { to } : {}), ...(cursor ? { cursor } : {}),
     ...(query.returned === 'true' ? { returned: true as const } : {}),
+    ...(paymentMethod ? { paymentMethod } : {}),
+    ...(query.unpaid === 'true' ? { unpaid: true as const } : {}),
     limit: parseLimit(query.limit),
   }
 }
@@ -153,13 +170,58 @@ function parseLine(value: unknown): SaleLineInput {
   }
 }
 
+function parseCustomer(value: unknown): SaleCustomerInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new HttpError(422, 'INVALID_SALE_CUSTOMER', 'customer must be an object')
+  }
+  const customer = value as Record<string, unknown>
+  if (Object.keys(customer).some((key) => key !== 'name' && key !== 'phone')) {
+    throw new HttpError(422, 'INVALID_SALE_CUSTOMER', 'Only name and phone are allowed')
+  }
+  if (typeof customer.name !== 'string') throw new HttpError(422, 'INVALID_SALE_CUSTOMER', 'customer name must be a string')
+  const name = customer.name.normalize('NFC').trim()
+  if (!name || [...name].length > maxCustomerNameCharacters) {
+    throw new HttpError(422, 'INVALID_SALE_CUSTOMER', `customer name must be 1 to ${maxCustomerNameCharacters} characters`)
+  }
+  let phone: string | null = null
+  if (customer.phone !== undefined && customer.phone !== null && customer.phone !== '') {
+    if (typeof customer.phone !== 'string') throw new HttpError(422, 'INVALID_SALE_CUSTOMER', 'customer phone must be a string')
+    const trimmed = customer.phone.trim()
+    if ([...trimmed].length > maxCustomerPhoneCharacters || !phonePattern.test(trimmed)) {
+      throw new HttpError(422, 'INVALID_SALE_CUSTOMER', 'customer phone is not a valid phone number')
+    }
+    phone = trimmed
+  }
+  return { name, phone }
+}
+
 export function parseSaleInput(body: unknown): SaleInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new HttpError(422, 'INVALID_SALE_INPUT', 'Sale input must be an object')
   }
   const input = body as Record<string, unknown>
-  if (Object.keys(input).some((key) => key !== 'items') || !Object.hasOwn(input, 'items') || !Array.isArray(input.items)) {
-    throw new HttpError(422, 'INVALID_SALE_INPUT', 'Only an items array is allowed')
+  const allowedKeys = ['items', 'paymentMethod', 'customer', 'discountPercent']
+  if (Object.keys(input).some((key) => !allowedKeys.includes(key)) || !Object.hasOwn(input, 'items') || !Array.isArray(input.items)) {
+    throw new HttpError(422, 'INVALID_SALE_INPUT', 'Only items, paymentMethod, customer and discountPercent are allowed')
+  }
+  let paymentMethod: PaymentMethodValue = 'CASH'
+  if (input.paymentMethod !== undefined) {
+    if (typeof input.paymentMethod !== 'string' || !PAYMENT_METHODS.includes(input.paymentMethod as PaymentMethodValue)) {
+      throw new HttpError(422, 'INVALID_SALE_PAYMENT_METHOD', 'paymentMethod must be CASH, CARD, WHISH_OMT or DEBT')
+    }
+    paymentMethod = input.paymentMethod as PaymentMethodValue
+  }
+  const customer = input.customer === undefined || input.customer === null ? undefined : parseCustomer(input.customer)
+  if (paymentMethod === 'DEBT' && !customer) {
+    throw new HttpError(422, 'SALE_DEBT_CUSTOMER_REQUIRED', 'A debt sale needs the customer name')
+  }
+  let discountPercent: string | undefined
+  if (input.discountPercent !== undefined) {
+    if (typeof input.discountPercent !== 'string' || !percentPattern.test(input.discountPercent)) {
+      throw new HttpError(422, 'INVALID_SALE_DISCOUNT', 'discountPercent must be a decimal string from 0 to 100 with at most two places')
+    }
+    const percent = new Prisma.Decimal(input.discountPercent)
+    if (percent.gt(0)) discountPercent = percent.toFixed(2)
   }
   if (input.items.length === 0) {
     throw new HttpError(422, 'SALE_CART_EMPTY', 'Sale cart must contain at least one item')
@@ -175,14 +237,37 @@ export function parseSaleInput(body: unknown): SaleInput {
     }
     seen.add(item.variantId)
   }
-  return { items }
+  return {
+    items,
+    ...(paymentMethod !== 'CASH' ? { paymentMethod } : {}),
+    ...(customer ? { customer } : {}),
+    ...(discountPercent ? { discountPercent } : {}),
+  }
+}
+
+export function parseSalePayInput(body: unknown): SalePayInput {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpError(422, 'INVALID_SALE_PAY_INPUT', 'Sale payment input must be an object')
+  }
+  const input = body as Record<string, unknown>
+  if (Object.keys(input).some((key) => key !== 'confirm') || input.confirm !== true) {
+    throw new HttpError(422, 'INVALID_SALE_PAY_INPUT', 'Only confirm: true is allowed')
+  }
+  return { confirm: true }
 }
 
 export function canonicalSaleItems(items: readonly SaleLineInput[]): readonly SaleLineInput[] {
   return [...items].sort((left, right) => left.variantId.localeCompare(right.variantId))
 }
 
-export function saleFingerprint(accountId: string, soldById: string, items: readonly SaleLineInput[]): string {
+// The commercial extras join the fingerprint only when they are not the default (CASH, no customer, no discount), so
+// the fingerprint of a plain cash Sale is the same as before these fields existed.
+export function saleFingerprint(
+  accountId: string,
+  soldById: string,
+  items: readonly SaleLineInput[],
+  extras: Pick<SaleInput, 'paymentMethod' | 'customer' | 'discountPercent'> = {},
+): string {
   const canonical = {
     accountId: accountId.toLowerCase(),
     soldById: soldById.toLowerCase(),
@@ -191,6 +276,9 @@ export function saleFingerprint(accountId: string, soldById: string, items: read
       quantity: item.quantity,
       unitSoldPrice: item.unitSoldPrice,
     })),
+    ...(extras.paymentMethod && extras.paymentMethod !== 'CASH' ? { paymentMethod: extras.paymentMethod } : {}),
+    ...(extras.customer ? { customer: { name: extras.customer.name, phone: extras.customer.phone } } : {}),
+    ...(extras.discountPercent ? { discountPercent: extras.discountPercent } : {}),
   }
   return createHash('sha256').update(JSON.stringify(canonical), 'utf8').digest('hex')
 }

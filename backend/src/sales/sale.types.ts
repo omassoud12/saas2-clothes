@@ -6,8 +6,35 @@ export interface SaleLineInput {
   readonly unitSoldPrice: string
 }
 
+export type PaymentMethodValue = 'CASH' | 'CARD' | 'WHISH_OMT' | 'DEBT'
+
+export interface SaleCustomerInput {
+  readonly name: string
+  readonly phone: string | null
+}
+
 export interface SaleInput {
   readonly items: readonly SaleLineInput[]
+  /** Defaults to CASH. */
+  readonly paymentMethod?: PaymentMethodValue
+  /** Required (name) for DEBT. */
+  readonly customer?: SaleCustomerInput
+  /** Percent the OWNER chose at the till, 0-100 with two decimals. The money discount is derived from catalog prices. */
+  readonly discountPercent?: string
+}
+
+export interface SalePayInput {
+  readonly confirm: true
+}
+
+export interface SaleCommercialFields {
+  readonly receiptNumber: number | null
+  readonly paymentMethod: PaymentMethodValue
+  readonly customer: { readonly name: string; readonly phone: string | null } | null
+  readonly discountAmount: string
+  readonly discountPercent: string | null
+  readonly lbpRateAtSale: string | null
+  readonly paidAt: Date | null
 }
 
 export interface SaleHistoryQuery {
@@ -18,6 +45,9 @@ export interface SaleHistoryQuery {
   readonly cursor?: { readonly createdAt: Date; readonly id: string }
   /** Only Sales that have at least one Return. */
   readonly returned?: true
+  readonly paymentMethod?: PaymentMethodValue
+  /** Only COMPLETED DEBT Sales that are not paid yet. */
+  readonly unpaid?: true
   readonly limit: number
 }
 
@@ -29,6 +59,11 @@ export interface SaleListItem {
   readonly totalAmount: string
   readonly createdAt: Date
   readonly seller: { readonly name: string; readonly employeeCode: string | null }
+  readonly receiptNumber: number | null
+  readonly paymentMethod: PaymentMethodValue
+  readonly customerName: string | null
+  readonly discountAmount: string
+  readonly paidAt: Date | null
   readonly itemCount: number
   readonly totalUnits: number
   readonly hasReturns: boolean
@@ -44,6 +79,7 @@ export interface SaleDetailView {
     readonly totalAmount: string
     readonly createdAt: Date
     readonly seller: { readonly name: string; readonly employeeCode: string | null }
+    readonly commercial: SaleCommercialFields & { readonly paidBy: { readonly name: string; readonly employeeCode: string | null } | null }
     readonly void: null | {
       readonly voidedAt: Date
       readonly voidedByName: string
@@ -71,6 +107,8 @@ export interface SaleDetailView {
       readonly size: string | null
       readonly quantity: number
       readonly unitSoldPrice: string
+      readonly listUnitPrice: string | null
+      readonly discountAmount: string
       readonly lineTotal: string
       readonly returnedQuantity: number
       readonly remainingReturnableQuantity: number
@@ -99,6 +137,7 @@ export interface SaleView {
       readonly name: string
       readonly employeeCode: string | null
     }
+    readonly commercial: SaleCommercialFields
     readonly items: readonly {
       readonly id: string
       readonly productName: string
@@ -108,8 +147,25 @@ export interface SaleView {
       readonly size: string | null
       readonly quantity: number
       readonly unitSoldPrice: string
+      readonly listUnitPrice: string | null
+      readonly discountAmount: string
       readonly lineTotal: string
     }[]
+  }
+  readonly idempotentReplay: boolean
+}
+
+export interface SalePayView {
+  readonly sale: {
+    readonly id: string
+    readonly status: 'COMPLETED' | 'VOIDED'
+    readonly currency: string
+    readonly totalAmount: string
+    readonly receiptNumber: number | null
+    readonly paymentMethod: 'DEBT'
+    readonly customer: { readonly name: string; readonly phone: string | null } | null
+    readonly paidAt: Date
+    readonly paidBy: { readonly name: string; readonly employeeCode: string | null }
   }
   readonly idempotentReplay: boolean
 }
@@ -135,6 +191,14 @@ export interface SaleTransactionResult {
   readonly createdAt: Date
   readonly sellerNameAtSale: string
   readonly sellerCodeAtSale: string | null
+  readonly receiptNumber: number | null
+  readonly paymentMethod: PaymentMethodValue
+  readonly customerName: string | null
+  readonly customerPhone: string | null
+  readonly discountAmount: Prisma.Decimal
+  readonly discountPercent: Prisma.Decimal | null
+  readonly lbpRateAtSale: Prisma.Decimal | null
+  readonly paidAt: Date | null
   readonly items: readonly {
     readonly id: string
     readonly productId: string
@@ -145,6 +209,8 @@ export interface SaleTransactionResult {
     readonly colorAtSale: string | null
     readonly sizeAtSale: string | null
     readonly quantity: number
+    readonly listUnitPrice: Prisma.Decimal | null
+    readonly discountAmount: Prisma.Decimal
     readonly unitSoldPrice: Prisma.Decimal
     readonly unitCostAtSale: Prisma.Decimal | null
     readonly lineTotal: Prisma.Decimal
@@ -212,4 +278,11 @@ export interface SaleDependencies {
     saleId: string,
     input: SaleVoidInput,
   ): Promise<SaleVoidView>
+  /** OWNER only: marks an unpaid DEBT Sale as paid. Repeating it returns the stored settlement. */
+  markSalePaid(
+    accountId: string,
+    paidById: string,
+    saleId: string,
+    input: SalePayInput,
+  ): Promise<SalePayView>
 }

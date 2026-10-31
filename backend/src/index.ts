@@ -17,6 +17,7 @@ import {
 } from './product-images/r2-product-image-store.js'
 import { createProductDependencies } from './products/product.service.js'
 import { createReportDependencies } from './reports/report.service.js'
+import { createSettingsDependencies } from './settings/settings.js'
 import { createReturnDependencies } from './returns/return.service.js'
 import { createJsonLogger } from './runtime/logger.js'
 import {
@@ -74,6 +75,7 @@ async function start(): Promise<void> {
     const exchangeHistory = createExchangeHistoryDependencies(prisma)
     const expenses = createExpenseDependencies(prisma)
     const reports = createReportDependencies(prisma)
+    const settings = createSettingsDependencies(prisma)
     startupStage = 'app'
     const app = createApp(
       {
@@ -110,6 +112,7 @@ async function start(): Promise<void> {
         exchangeHistory,
         expenses,
         reports,
+        settings,
       },
       environment,
       {

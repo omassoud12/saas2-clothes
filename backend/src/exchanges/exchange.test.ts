@@ -270,7 +270,8 @@ class ExchangeDouble {
         return {
           id: replacementSaleId, status: SaleStatus.COMPLETED, currency: 'USD',
           subtotal: new Prisma.Decimal(store.replacementAmount), totalAmount: new Prisma.Decimal(store.replacementAmount), createdAt: now,
-          sellerNameAtSale: 'Ada Owner', sellerCodeAtSale: null, items: [{id:replacementItemId,productId,variantId,productNameAtSale:'Replacement',categoryNameAtSale:'Shirts',skuAtSale:'NEW',colorAtSale:'Black',sizeAtSale:'M',quantity:1,unitSoldPrice:new Prisma.Decimal(store.replacementAmount),unitCostAtSale:null,lineTotal:new Prisma.Decimal(store.replacementAmount)}],
+          sellerNameAtSale: 'Ada Owner', sellerCodeAtSale: null, receiptNumber: 1, paymentMethod: 'CASH', customerName: null, customerPhone: null,
+          discountAmount: new Prisma.Decimal(0), discountPercent: null, lbpRateAtSale: null, paidAt: null, items: [{id:replacementItemId,listUnitPrice:null,discountAmount:new Prisma.Decimal(0),productId,variantId,productNameAtSale:'Replacement',categoryNameAtSale:'Shirts',skuAtSale:'NEW',colorAtSale:'Black',sizeAtSale:'M',quantity:1,unitSoldPrice:new Prisma.Decimal(store.replacementAmount),unitCostAtSale:null,lineTotal:new Prisma.Decimal(store.replacementAmount)}],
         }
       },
     } as never

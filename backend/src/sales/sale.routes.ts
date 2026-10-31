@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { createRequireAuth, createRequireTenant, requireRole } from '../auth/auth.middleware.js'
 import type { AuthDependencies } from '../auth/auth.types.js'
 import { UserRole } from '../generated/prisma/enums.js'
-import { createSale, getSale, listSales, voidSale } from './sale.controller.js'
+import { createSale, getSale, listSales, paySale, voidSale } from './sale.controller.js'
 import type { SaleDependencies } from './sale.types.js'
 import { createReturn, listReturns } from '../returns/return.controller.js'
 import type { ReturnDependencies } from '../returns/return.types.js'
@@ -23,6 +23,7 @@ export function createSaleRouter(
   if (exchanges) registerExchangeRoutes(router, exchanges)
   router.post('/:saleId/returns', createReturn(returns))
   router.post('/:saleId/void', requireRole(UserRole.OWNER), voidSale(sales))
+  router.post('/:saleId/pay', requireRole(UserRole.OWNER), paySale(sales))
   router.post('/', createSale(sales))
   return router
 }
