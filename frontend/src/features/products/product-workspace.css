@@ -1,7 +1,7 @@
 /* Entry and product management share the existing retail tokens. */
 .entry-page { width: 100%; max-width: 920px; margin-inline: auto; }
 .entry-page .product-create-panel { max-width: none; }
-.entry-page .product-create-fields > legend:not(.sr-only) { font-size: var(--font-size-base); font-weight: 700; margin-bottom: 10px; }
+.entry-page .product-create-fields > legend:not(.sr-only) { font-size: var(--font-size-base); font-weight: var(--font-weight-bold); margin-bottom: 10px; }
 .entry-page .product-create-form { gap: 18px; }
 .entry-page .product-create-form :is(button,input,select), .inventory-page button { min-height: 44px; }
 .entry-page summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
@@ -85,7 +85,7 @@
 .products-page .receipt-form, .products-page .stock-inspection, .products-page .count-check { display: block; }
 .products-page .receipt-matrix input { width: 78px; }
 .receipt-mobile-color { margin: 14px 0; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); min-width: 0; }
-.receipt-mobile-color legend { font-weight: 650; padding-inline: 4px; }
+.receipt-mobile-color legend { font-weight: var(--font-weight-medium); padding-inline: 4px; }
 .receipt-mobile-color legend { max-width: 100%; overflow-wrap: anywhere; }
 .receipt-mobile-color > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .receipt-mobile-color label { min-width: 0; }

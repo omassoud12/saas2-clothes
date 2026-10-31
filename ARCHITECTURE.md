@@ -106,6 +106,16 @@ Frontend foundation:
   badges, page headings, empty/error/loading states, modal foundations, and
   responsive table containment. Business pages are lazy-loaded at route level
   to keep catalog and inventory code out of the initial bundle.
+- Visual design comes from one token file, `frontend/src/styles/tokens.css`
+  (colors with their contrast notes, type scale, spacing, radius, shadows,
+  touch size), taken from the Sell screen. Page stylesheets read tokens with
+  `var(--...)` and carry no hex or rgb colors; `tokens-audit.test.js` and
+  `styles-audit.test.js` fail on a hardcoded color, a font under 12px, a text
+  field under 16px or a button under 44px in the listed stylesheets
+  (`styles-audit-files.js`). One stylesheet per area lives under
+  `frontend/src/styles/` (landing, auth, admin, dashboard, finance,
+  categories, lifecycle, product-base, shell-phone); `index.css` holds the
+  shared foundation, `components/ui` styles and the desktop shell.
 - The Products UI reuses the authenticated profile Account currency for
   decimal-string presentation only. It never guesses a missing currency or
   performs financial arithmetic in JavaScript. OWNER variant mutations may

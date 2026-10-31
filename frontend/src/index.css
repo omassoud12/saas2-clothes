@@ -12,7 +12,7 @@ main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; }
   background: color-mix(in srgb, var(--color-surface) 78%, transparent);
   box-shadow: var(--shadow-card);
 }
-.eyebrow { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.eyebrow { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-heavy); letter-spacing: .15em; text-transform: uppercase; }
 h1 { margin: .7rem 0 1rem; max-width: 540px; font-size: var(--font-size-3xl); font-weight: var(--font-weight-heavy); line-height: 1.15; letter-spacing: -.02em; }
 p { color: var(--color-text-muted); font-size: var(--font-size-base); line-height: 1.55; }
 /* Public product landing */
@@ -61,7 +61,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: var(--color-surface-soft);
   color: var(--color-text);
   font-size: var(--font-size-sm);
-  font-weight: 850;
+  font-weight: var(--font-weight-heavy);
   letter-spacing: .08em;
 }
 .spinner {
@@ -130,7 +130,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: var(--color-surface-soft);
   color: var(--color-text);
   font-size: var(--font-size-2xl);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 .ui-state h2 { margin: 1rem 0 .35rem; color: var(--color-text); font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); }
 .ui-state p { max-width: 540px; margin: 0; font-size: var(--font-size-base); }
@@ -194,7 +194,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: var(--color-surface-soft);
   color: var(--color-text);
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 .business-brand div { display: grid; min-width: 0; gap: .15rem; }
 .business-brand strong, .business-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -237,11 +237,17 @@ button:disabled { cursor: wait; opacity: .65; }
   background: color-mix(in srgb, var(--color-surface-soft) 13%, transparent);
   color: var(--color-primary-contrast);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
 }
 .sidebar-store-copy { display: grid; min-width: 0; gap: .12rem; }
-.sidebar-store-copy small { color: var(--color-on-primary-muted); font-size: var(--font-size-xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.sidebar-store-copy small {
+  color: var(--color-on-primary-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-heavy);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
 .sidebar-store-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-base); }
 .sidebar-role-badge {
   border-radius: var(--radius-pill);
@@ -249,7 +255,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: color-mix(in srgb, var(--color-surface-soft) 10%, transparent);
   color: var(--color-on-primary-muted);
   font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-weight: var(--font-weight-heavy);
   letter-spacing: .06em;
   text-transform: uppercase;
 }
@@ -257,7 +263,7 @@ button:disabled { cursor: wait; opacity: .65; }
   margin: 0 .8rem .42rem;
   color: var(--color-on-primary-muted);
   font-size: var(--font-size-xs);
-  font-weight: 850;
+  font-weight: var(--font-weight-heavy);
   letter-spacing: .12em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -274,7 +280,7 @@ button:disabled { cursor: wait; opacity: .65; }
   padding: .7rem .85rem;
   color: var(--color-on-primary-muted);
   font-size: var(--font-size-base);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-decoration: none;
   transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
@@ -295,7 +301,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: color-mix(in srgb, var(--color-surface-soft) 4%, transparent);
   color: var(--color-primary-contrast);
   font-size: var(--font-size-base);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-align: left;
 }
 .sidebar-logout-button:hover { background: color-mix(in srgb, var(--color-surface-soft) 9%, transparent); }
@@ -320,7 +326,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .business-header-title span, .business-user-copy span {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-weight: var(--font-weight-heavy);
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -442,7 +448,7 @@ button:disabled { cursor: wait; opacity: .65; }
   background: var(--color-surface-active);
   color: var(--color-primary);
   font-size: var(--font-size-xs);
-  font-weight: 850;
+  font-weight: var(--font-weight-heavy);
   white-space: nowrap;
 }
 .product-status.is-inactive { background: var(--color-surface-soft); color: var(--color-danger); }
@@ -452,7 +458,7 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 /* Point of sale */
 .pos-catalog-state { display: grid; min-height: 180px; place-items: center; align-content: center; text-align: center; }
-.pos-catalog-state h2 { margin: 0 0 .35rem; color: var(--color-text); font-weight: 500; }
+.pos-catalog-state h2 { margin: 0 0 .35rem; color: var(--color-text); font-weight: var(--font-weight-medium); }
 /* Sale lifecycle */
 .lifecycle-flow { display: grid; gap: 1rem; }
 /* Owner finance */

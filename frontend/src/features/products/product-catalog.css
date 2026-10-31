@@ -41,9 +41,9 @@
 .product-management .product-catalog-list .product-row-count { font-size: var(--font-size-sm); padding: 0; }
 .product-management .product-catalog-list :is(.product-cell-label,.product-row-count-suffix) { display: none; }
 .product-management .product-catalog-list .product-row-stock { font-size: var(--font-size-sm); text-align: left; line-height: 1.4; }
-.product-management .product-catalog-list .product-row-stock.is-empty { color: var(--color-danger); font-weight: 600; }
+.product-management .product-catalog-list .product-row-stock.is-empty { color: var(--color-danger); font-weight: var(--font-weight-medium); }
 .product-management .product-catalog-list .product-row-inactive-stock { display: block; color: var(--color-text-muted); font-size: var(--font-size-xs); }
-.product-management .product-catalog-list .product-row-price { font-size: var(--font-size-sm); line-height: 1.4; font-weight: 600; }
+.product-management .product-catalog-list .product-row-price { font-size: var(--font-size-sm); line-height: 1.4; font-weight: var(--font-weight-medium); }
 .product-management .product-catalog-list .product-card .product-status { justify-self: start; padding: 4px 8px; font-size: var(--font-size-xs); }
 .product-management .product-catalog-list .product-card .product-row-open { display: block; align-self: center; }
 .product-management .product-catalog-list .product-card-open { min-width: 64px; min-height: 44px; padding: 8px; border: 0; color: var(--color-primary); gap: 4px; }

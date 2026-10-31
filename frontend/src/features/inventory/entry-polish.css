@@ -7,10 +7,10 @@
   margin-bottom: 6px;
   font-size: var(--font-size-xs);
   letter-spacing: .1em;
-  font-weight: 650;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text);
 }
-.entry-polish .inventory-page-header h1 { font-size: var(--font-size-3xl); font-weight: 700; margin: 0 0 8px; }
+.entry-polish .inventory-page-header h1 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); margin: 0 0 8px; }
 .entry-polish .inventory-header-copy p { max-width: 620px; color: var(--color-text-muted); font-size: var(--font-size-base); line-height: 1.5; }
 .entry-polish .entry-view-products {
   display: inline-flex;
@@ -39,8 +39,8 @@
 .entry-polish .product-create-form > * { min-width: 0; }
 .entry-polish .product-info-fields .product-form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
 .entry-polish .product-create-form fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
-.entry-polish .product-create-fields > legend:not(.sr-only) { font-size: var(--font-size-lg); font-weight: 650; padding: 0; margin: 0 0 16px; }
-.entry-polish .product-create-form label { font-size: var(--font-size-sm); font-weight: 600; margin-bottom: 8px; }
+.entry-polish .product-create-fields > legend:not(.sr-only) { font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); padding: 0; margin: 0 0 16px; }
+.entry-polish .product-create-form label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); margin-bottom: 8px; }
 .entry-page.entry-polish .product-create-form :is(input:not([type=file]),select) {
   height: 44px;
   min-height: 44px;
@@ -59,7 +59,7 @@
   width: fit-content;
   list-style: none;
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -72,7 +72,7 @@
 .entry-polish .product-color-options:empty { display: none; }
 .entry-polish .product-create-form .product-create-option { padding: 16px 0 0; border-top: 1px solid var(--color-border); border-radius: 0; background: transparent; }
 .entry-polish .product-color-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.entry-polish .product-color-heading strong { font-size: var(--font-size-base); font-weight: 600; }
+.entry-polish .product-color-heading strong { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); }
 .entry-polish .product-size-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .entry-page.entry-polish .product-create-form .product-size-buttons button { min-width: 44px; min-height: 44px; padding: 8px 12px; }
 .entry-polish .product-size-buttons button[aria-pressed=true] { background: var(--color-primary); border-color: var(--color-primary); color: white; }
@@ -103,11 +103,11 @@
 .entry-polish .product-create-footer button[type=submit]:hover:not(:disabled) { background: var(--color-primary-strong); }
 .entry-polish .product-create-footer .secondary-action { background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
 .entry-polish .receipt-steps { display: flex; flex-wrap: nowrap; align-items: center; gap: 0; width: 100%; max-width: none; margin: 0 0 24px; padding: 0; }
-.entry-polish .receipt-steps li { min-width: 0; flex: 1; gap: 8px; font-size: var(--font-size-sm); font-weight: 500; color: var(--color-text-muted); }
+.entry-polish .receipt-steps li { min-width: 0; flex: 1; gap: 8px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-muted); }
 .entry-polish .receipt-steps li:not(:last-child)::after { content: ''; height: 1px; min-width: 8px; flex: 1; margin: 0 16px 0 8px; background: var(--color-surface-active); }
 .entry-polish .receipt-steps li:last-child { flex: 0 0 auto; }
 .entry-polish .receipt-steps li > span { flex: 0 0 24px; width: 24px; height: 24px; background: white; border-color: var(--color-border-strong); }
-.entry-polish .receipt-steps li.is-current { color: var(--color-primary); font-weight: 650; }
+.entry-polish .receipt-steps li.is-current { color: var(--color-primary); font-weight: var(--font-weight-medium); }
 .entry-polish .receipt-steps li.is-current > span { color: white; background: var(--color-primary); border-color: var(--color-primary); }
 .entry-polish .receipt-steps li.is-complete { color: var(--color-success); }
 .entry-polish .receipt-steps li.is-complete > span { color: var(--color-success); background: var(--color-success-soft); border-color: var(--color-border-strong); }

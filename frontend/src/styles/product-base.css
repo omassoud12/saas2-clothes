@@ -36,7 +36,7 @@
 .product-inline-error .text-button { margin-left: .35rem; }
 .product-state { display: grid; min-height: 190px; place-items: center; align-content: center; text-align: center; }
 .product-state .spinner { margin: 0 0 .65rem; }
-.product-state h2, .product-panel h2 { margin: .3rem 0 .5rem; color: var(--color-text); font-size: var(--font-size-2xl); font-weight: 500; }
+.product-state h2, .product-panel h2 { margin: .3rem 0 .5rem; color: var(--color-text); font-size: var(--font-size-2xl); font-weight: var(--font-weight-medium); }
 .product-state p, .product-panel p { margin: .3rem 0 .85rem; font-size: var(--font-size-base); }
 .product-list-summary, .product-pagination {
   display: flex;
@@ -45,7 +45,7 @@
   gap: .75rem;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-  font-weight: 750;
+  font-weight: var(--font-weight-bold);
 }
 .product-list-summary .text-button { justify-self: auto; }
 .product-pagination { justify-content: center; }
@@ -80,7 +80,7 @@
 .product-form, .product-image-form { display: grid; gap: .7rem; margin: .4rem 0 0; border-top: 1px solid var(--color-border); padding-top: 1rem; }
 .product-form-grid small { display: block; margin-top: .3rem; color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .product-muted { color: var(--color-text-muted); }
-.product-muted a { color: var(--color-primary); font-weight: 750; }
+.product-muted a { color: var(--color-primary); font-weight: var(--font-weight-bold); }
 .product-danger-button { border: 1px solid var(--color-border); background: var(--color-background); color: var(--color-danger); }
 .product-image-preview { display: grid; width: min(180px, 100%); gap: .4rem; color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .product-image-preview img { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--radius-md); object-fit: cover; }
@@ -104,7 +104,7 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
-.restock-dialog h2 { margin: .3rem 0 .5rem; color: var(--color-text); font-size: var(--font-size-2xl); font-weight: 500; }
+.restock-dialog h2 { margin: .3rem 0 .5rem; color: var(--color-text); font-size: var(--font-size-2xl); font-weight: var(--font-weight-medium); }
 .restock-dialog .product-form { margin-top: .8rem; }
 .restock-dialog textarea { width: 100%; resize: vertical; }
 .restock-dialog small { color: var(--color-text-muted); }
@@ -127,7 +127,7 @@
 .inventory-mismatch { border-color: var(--color-border); background: var(--color-background); }
 .inventory-stock-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .7rem 0 0; }
 .inventory-stock-comparison dt { color: var(--color-text-muted); font-size: var(--font-size-xs); }
-.inventory-stock-comparison dd { margin: .2rem 0 0; font-weight: 750; }
+.inventory-stock-comparison dd { margin: .2rem 0 0; font-weight: var(--font-weight-bold); }
 @media (max-width: 1000px) {
   .product-catalog-layout { grid-template-columns: 1fr; }
 }
@@ -175,7 +175,7 @@
   .inventory-audit-filters { grid-template-columns: 1fr; }
   .inventory-stock-comparison { grid-template-columns: 1fr; }
 }
-.product-optional summary { cursor: pointer; padding: .5rem 0; color: var(--color-text); font-weight: 650; font-size: var(--font-size-base); }
+.product-optional summary { cursor: pointer; padding: .5rem 0; color: var(--color-text); font-weight: var(--font-weight-medium); font-size: var(--font-size-base); }
 .product-optional summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; }
 .product-optional > div { margin-top: .7rem; }
 .product-form-grid > .product-optional { grid-column: 1 / -1; }
@@ -185,7 +185,7 @@
   .products-page .product-detail-column { grid-row: 1; }
 }
 .product-create-fields { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
-.product-create-fields legend, .product-create-option legend { font-weight: 750; color: var(--color-primary); padding: 0 .35rem; }
+.product-create-fields legend, .product-create-option legend { font-weight: var(--font-weight-bold); color: var(--color-primary); padding: 0 .35rem; }
 .product-create-fields legend { padding: 0 0 .7rem; }
 .product-create-option { min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-background); }
 .product-create-footer { border-top: 1px solid var(--color-border); padding-top: 1rem; }
