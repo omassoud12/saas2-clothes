@@ -859,7 +859,11 @@ derive the Account from authenticated tenant context. The list supports
 optional status, seller, and `createdAt` timestamp-range filters and uses a
 bounded cursor ordered by `createdAt DESC, id DESC` (default 25, maximum 100).
 It returns stored Sale totals and seller snapshots plus line and unit counts,
-without cost or profit data.
+without cost or profit data. Each list item also carries `hasReturns` and
+`totalReturnedAmount` (the sum of stored ReturnItem refund amounts, read with
+one grouped query for the whole page), and the optional `returned=true` filter
+keeps only Sales that have at least one Return. These are derived read-only
+values; `Sale.status` is unchanged.
 
 Sale detail uses the immutable seller and SaleItem catalog snapshots rather
 than current User, Product, Category, or ProductVariant values. OWNER detail

@@ -8,6 +8,7 @@ This folder contains the responsive Sales/POS screen.
 - `mock-sales-data.js`: test fixtures only; production rendering does not import or display them.
 - `mock-sales-storage.js`: persists only the unfinished cart and a checkout that may not have reached the server (with its Idempotency-Key), per account and user. Catalog records and receipts are never copied to browser storage.
 - `mock-sales-model.js`: pure cart, stock, totals, stock-badge and compact money operations.
+- `SalesHistory.jsx` and `history-flow.js`: the Sales history page (`/app/history`): Today / Yesterday / This week / Custom periods in the shop's local days, status filters (All, Completed, Voided, Returned), "Load more" paging, and a receipt sheet with Share and Print. Amounts in the list are shown to OWNER only; the receipt sheet shows amounts to both roles.
 - `pos-checkout.js`: cart to `POST /api/sales` mapping, checkout error handling and cart/catalog comparison.
 - `MockSalesScreen.jsx`: real catalog loading, page composition, filtering, voice search and UI state.
 - `MockSalesSheets.jsx`: product picker, cart and today's-sales bottom sheets. Category and product management live in Products and Categories, not here.

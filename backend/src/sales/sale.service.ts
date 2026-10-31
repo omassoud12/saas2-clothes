@@ -565,6 +565,7 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         accountId,
         ...(query.status ? { status: query.status } : {}),
         ...(query.soldById ? { soldById: query.soldById } : {}),
+        ...(query.returned ? { returns: { some: {} } } : {}),
         ...(query.from || query.to ? {
           createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) },
         } : {}),
@@ -584,6 +585,13 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
         _sum: { quantity: true },
       }) : []
       const unitsBySale = new Map(totals.map((total) => [total.saleId, safeUnits(total._sum.quantity ?? 0)]))
+      // One grouped read for the whole page (a Return always has at least one item), so there is no per-Sale query.
+      const returned = page.length ? await prisma.saleReturnItem.groupBy({
+        by: ['saleId'],
+        where: { accountId, saleId: { in: page.map((sale) => sale.id) } },
+        _sum: { refundAmount: true },
+      }) : []
+      const returnedBySale = new Map(returned.map((row) => [row.saleId, row._sum.refundAmount ?? new Prisma.Decimal(0)]))
       const last = page.at(-1)
       return {
         sales: page.map((sale: HistorySale) => ({
@@ -592,6 +600,8 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
           seller: { name: sale.sellerNameAtSale, employeeCode: sale.sellerCodeAtSale },
           itemCount: sale._count.items,
           totalUnits: unitsBySale.get(sale.id) ?? 0,
+          hasReturns: returnedBySale.has(sale.id),
+          totalReturnedAmount: (returnedBySale.get(sale.id) ?? new Prisma.Decimal(0)).toFixed(2),
         })),
         nextCursor: rows.length > query.limit && last ? encodeSaleCursor(last.createdAt, last.id) : null,
       }

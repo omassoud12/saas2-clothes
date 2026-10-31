@@ -244,6 +244,7 @@ class HistoryDouble {
   readonly returnItems: Row[] = []
   readonly exchanges: Row[] = []
   groupQueries = 0
+  returnGroupQueries = 0
 
   asClient(): PrismaClient {
     const store = this
@@ -253,6 +254,7 @@ class HistoryDouble {
           let rows = store.sales.filter((sale) => sale.accountId === where.accountId)
           if (where.status) rows = rows.filter((sale) => sale.status === where.status)
           if (where.soldById) rows = rows.filter((sale) => sale.soldById === where.soldById)
+          if (where.returns?.some) rows = rows.filter((sale) => store.returns.some((row) => row.accountId === sale.accountId && row.saleId === sale.id))
           if (where.createdAt?.gte) rows = rows.filter((sale) => sale.createdAt >= where.createdAt.gte)
           if (where.createdAt?.lte) rows = rows.filter((sale) => sale.createdAt <= where.createdAt.lte)
           if (where.OR) {
@@ -284,7 +286,14 @@ class HistoryDouble {
         },
       },
       saleReturnItem: {
-        async groupBy({ where }: Row) {
+        async groupBy({ by, where }: Row) {
+          if (by.length === 1 && by[0] === 'saleId') {
+            store.returnGroupQueries += 1
+            return where.saleId.in.flatMap((id: string) => {
+              const rows = store.returnItems.filter((row) => row.accountId === where.accountId && row.saleId === id)
+              return rows.length ? [{ saleId: id, _sum: { refundAmount: rows.reduce((sum, row) => sum.add(row.refundAmount), new Prisma.Decimal(0)) } }] : []
+            })
+          }
           const relevant = store.returnItems.filter((row) => row.accountId === where.accountId && row.saleId === where.saleId)
           const byItem = new Map<string, Row[]>()
           for (const row of relevant) byItem.set(row.saleItemId, [...(byItem.get(row.saleItemId) ?? []), row])
@@ -351,9 +360,15 @@ describe('Sale history validation', () => {
       { status: 'RETURNED' }, { soldById: 'bad' }, { from: '2026-09-01' },
       { from: '2026-09-02T00:00:00Z', to: '2026-09-01T00:00:00Z' },
       { limit: '0' }, { limit: '101' }, { limit: '1.5' }, { accountId: accountA },
+      { returned: 'false' }, { returned: '1' }, { returned: true }, { returned: ['true'] },
     ]) assert.throws(() => parseSaleHistoryQuery(query), (e) => expectHttp(e, 422, 'INVALID_SALE_FILTER'))
     assert.equal(parseSaleId(saleA), saleA)
     assert.throws(() => parseSaleId('bad'), (e) => expectHttp(e, 422, 'INVALID_SALE_ID'))
+  })
+
+  test('accepts only returned=true, and leaves the filter out otherwise', () => {
+    assert.equal(parseSaleHistoryQuery({ returned: 'true' }).returned, true)
+    assert.equal('returned' in parseSaleHistoryQuery({}), false)
   })
 
   test('round-trips a stable two-field cursor and rejects malformed cursors', () => {
@@ -423,6 +438,28 @@ describe('Sale history service', () => {
     const replacement = await service.getSale(accountA, UserRole.WAREHOUSE, saleB)
     assert.deepEqual(replacement.sale.exchangeSummary, { originalExchangeCount: 0, replacementForExchangeId: firstId })
     assert.equal((await service.listSales(accountA, { limit: 25 })).sales.length, 2)
+  })
+
+  test('marks Sales that have Returns in the list with one grouped read, and filters by returned=true inside the tenant', async () => {
+    const store = new HistoryDouble()
+    store.returns.push({ id: randomUUID(), accountId: accountA, saleId: saleA }, { id: randomUUID(), accountId: accountA, saleId: saleA })
+    store.returnItems.push(
+      { accountId: accountA, saleId: saleA, saleItemId: store.items[0].id, quantity: 1, refundAmount: new Prisma.Decimal('30.00') },
+      { accountId: accountA, saleId: saleA, saleItemId: store.items[0].id, quantity: 1, refundAmount: new Prisma.Decimal('29.99') },
+      // Another Account's Return for the same sale id must never count here.
+      { accountId: '99999999-0000-4000-8000-000000000009', saleId: saleA, saleItemId: store.items[0].id, quantity: 1, refundAmount: new Prisma.Decimal('500.00') },
+    )
+    const service = createSaleDependencies(store.asClient())
+    const all = await service.listSales(accountA, { limit: 25 })
+    assert.deepEqual(all.sales.map(({ id, hasReturns, totalReturnedAmount }) => ({ id, hasReturns, totalReturnedAmount })), [
+      { id: saleB, hasReturns: false, totalReturnedAmount: '0.00' },
+      { id: saleA, hasReturns: true, totalReturnedAmount: '59.99' },
+    ])
+    assert.equal(store.returnGroupQueries, 1, 'one grouped read for the whole page, not one per Sale')
+    assert.deepEqual((await service.listSales(accountA, { returned: true, limit: 25 })).sales.map((sale) => sale.id), [saleA])
+    assert.deepEqual((await service.listSales(accountA, { returned: true, status: SaleStatus.VOIDED, limit: 25 })).sales, [])
+    const none = await service.listSales('99999999-0000-4000-8000-000000000009', { returned: true, limit: 25 })
+    assert.deepEqual(none.sales, [])
   })
 
   test('derives one partial Return from stored ReturnItems', async () => {

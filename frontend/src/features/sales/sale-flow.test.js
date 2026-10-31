@@ -160,6 +160,19 @@ describe('Sales history frontend contract', () => {
     assert.equal(url.searchParams.get('from'), '2026-10-14T00:00:00.000Z')
   })
 
+  test('sends the end date, status and returned filters the history page uses', async () => {
+    let url
+    const fetchImpl = async (input) => { url = new URL(input, 'https://local.test'); return json(200, { sales: [], nextCursor: null }) }
+    await loadSaleHistory({ supabase, limit: 25, from: '2026-10-13T00:00:00.000Z', to: '2026-10-13T23:59:59.999Z', status: 'VOIDED', fetchImpl })
+    assert.deepEqual([...url.searchParams.keys()].sort(), ['from', 'limit', 'status', 'to'])
+    assert.equal(url.searchParams.get('status'), 'VOIDED')
+    await loadSaleHistory({ supabase, limit: 25, returned: true, fetchImpl })
+    assert.equal(url.searchParams.get('returned'), 'true'); assert.equal(url.searchParams.has('status'), false)
+    await loadSaleHistory({ supabase, limit: 25, fetchImpl })
+    assert.deepEqual([...url.searchParams.keys()], ['limit'])
+    assert.equal((await loadSaleHistory({ supabase, status: 'RETURNED', fetchImpl })).code, 'INVALID_SALE_STATUS')
+  })
+
   test('supports a smaller bounded history page for Dashboard reuse', async () => {
     let url
     await loadSaleHistory({ supabase, limit: 6, fetchImpl: async (input) => { url = new URL(input, 'https://local.test'); return json(200, { sales: [], nextCursor: null }) } })

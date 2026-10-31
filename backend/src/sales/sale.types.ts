@@ -16,6 +16,8 @@ export interface SaleHistoryQuery {
   readonly from?: Date
   readonly to?: Date
   readonly cursor?: { readonly createdAt: Date; readonly id: string }
+  /** Only Sales that have at least one Return. */
+  readonly returned?: true
   readonly limit: number
 }
 
@@ -29,6 +31,8 @@ export interface SaleListItem {
   readonly seller: { readonly name: string; readonly employeeCode: string | null }
   readonly itemCount: number
   readonly totalUnits: number
+  readonly hasReturns: boolean
+  readonly totalReturnedAmount: string
 }
 
 export interface SaleDetailView {

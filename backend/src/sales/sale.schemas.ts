@@ -88,8 +88,9 @@ export function parseSaleVoidInput(body: unknown): SaleVoidInput {
 }
 
 export function parseSaleHistoryQuery(query: Record<string, unknown>): SaleHistoryQuery {
-  const allowed = ['status', 'soldById', 'from', 'to', 'cursor', 'limit']
+  const allowed = ['status', 'soldById', 'from', 'to', 'cursor', 'limit', 'returned']
   if (Object.keys(query).some((key) => !allowed.includes(key))) invalidFilter('Unsupported Sale filter')
+  if (query.returned !== undefined && query.returned !== 'true') invalidFilter('returned must be true')
   let status: SaleHistoryQuery['status']
   if (query.status !== undefined) {
     if (query.status !== SaleStatus.COMPLETED && query.status !== SaleStatus.VOIDED) invalidFilter('Invalid Sale status')
@@ -103,6 +104,7 @@ export function parseSaleHistoryQuery(query: Record<string, unknown>): SaleHisto
   return {
     ...(status ? { status } : {}), ...(soldById ? { soldById } : {}),
     ...(from ? { from } : {}), ...(to ? { to } : {}), ...(cursor ? { cursor } : {}),
+    ...(query.returned === 'true' ? { returned: true as const } : {}),
     limit: parseLimit(query.limit),
   }
 }

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { buildReceipt, shareReceipt } from './pos-receipt.js'
+import { buildReceipt } from './pos-receipt.js'
+import { useReceiptActions } from './use-receipt-actions.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
 
 export function ReceiptView({ receipt, className = '' }) {
@@ -22,31 +23,20 @@ export function ReceiptView({ receipt, className = '' }) {
   </article>
 }
 
-const SHARE_BLOCKED_MESSAGE = 'Your browser blocked the share window. Allow pop-ups for this site and try again.'
+// The printed copy of a receipt, rendered into the print root from useReceiptActions.
+export function PrintCopy({ receipt, printRoot }) {
+  return printRoot ? createPortal(<ReceiptView receipt={receipt} className="is-print" />, printRoot) : null
+}
 
 export function SaleCompletedSheet({ completed, storeName = '', onNewSale }) {
   const receipt = useMemo(() => buildReceipt({ sale: completed.sale, summary: completed.summary, storeName }), [completed, storeName])
-  const [shareMessage, setShareMessage] = useState('')
-  // The printed copy is rendered next to #root so the print stylesheet can hide the whole app and print only the receipt.
-  const [printRoot] = useState(() => typeof document === 'undefined' ? null
-    : Object.assign(document.createElement('div'), { className: 'mock-pos-print-root' }))
-  useEffect(() => {
-    if (!printRoot) return undefined
-    document.body.append(printRoot)
-    return () => printRoot.remove()
-  }, [printRoot])
-
-  async function share() {
-    setShareMessage('')
-    const result = await shareReceipt(receipt)
-    if (!result.ok) setShareMessage(SHARE_BLOCKED_MESSAGE)
-  }
+  const { share, print, shareMessage, printRoot } = useReceiptActions(receipt)
 
   return <MockSalesSheet title="Sale completed" subtitle={`Receipt ${receipt.number}`} onClose={onNewSale}
     footer={<div className="mock-pos-receipt-actions">
       <div className="mock-pos-receipt-secondary">
         <button type="button" onClick={share}>Share on WhatsApp</button>
-        <button type="button" onClick={() => window.print()}>Print / PDF</button>
+        <button type="button" onClick={print}>Print / PDF</button>
       </div>
       <button type="button" className="mock-pos-primary" onClick={onNewSale}>New sale</button>
     </div>}>
@@ -54,6 +44,6 @@ export function SaleCompletedSheet({ completed, storeName = '', onNewSale }) {
       <p>{completed.replay ? 'Confirmed from the original attempt.' : 'The sale was saved.'}</p></div>
     <ReceiptView receipt={receipt} />
     {shareMessage && <p className="mock-pos-error" role="alert">{shareMessage}</p>}
-    {printRoot && createPortal(<ReceiptView receipt={receipt} className="is-print" />, printRoot)}
+    <PrintCopy receipt={receipt} printRoot={printRoot} />
   </MockSalesSheet>
 }
