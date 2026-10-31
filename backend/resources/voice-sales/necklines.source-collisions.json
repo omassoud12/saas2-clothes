@@ -1,0 +1,578 @@
+{
+  "scope": "Source-data audit only. Computed with an APPROXIMATION of existing SaaS2 shared normalizer (preserving ة); Codex must recompute using actual project normalizeText before activation.",
+  "style_aliases": {
+    "distinct_normalized_keys": 797,
+    "duplicate_normalized_keys": 10,
+    "cross_id_collision_count": 10,
+    "cross_id_collisions": [
+      {
+        "normalized_key": "bardot neckline",
+        "candidate_ids": [
+          "NECK_OFF_SHOULDER",
+          "NECK_BARDOT"
+        ],
+        "records": [
+          {
+            "index": 184,
+            "alias": "bardot neckline",
+            "id": "NECK_OFF_SHOULDER",
+            "group": "neckline_shape",
+            "source_normalized_key": "bardot neckline"
+          },
+          {
+            "index": 192,
+            "alias": "bardot neckline",
+            "id": "NECK_BARDOT",
+            "group": "neckline_shape",
+            "source_normalized_key": "bardot neckline"
+          }
+        ]
+      },
+      {
+        "normalized_key": "col roulé",
+        "candidate_ids": [
+          "NECK_TURTLE",
+          "COLLAR_TURTLE"
+        ],
+        "records": [
+          {
+            "index": 260,
+            "alias": "col roulé",
+            "id": "NECK_TURTLE",
+            "group": "neckline_shape",
+            "source_normalized_key": "col roule"
+          },
+          {
+            "index": 534,
+            "alias": "col roulé",
+            "id": "COLLAR_TURTLE",
+            "group": "collar_type",
+            "source_normalized_key": "col roule"
+          }
+        ]
+      },
+      {
+        "normalized_key": "sabrina neckline",
+        "candidate_ids": [
+          "NECK_BOAT",
+          "NECK_SABRINA"
+        ],
+        "records": [
+          {
+            "index": 155,
+            "alias": "sabrina neckline",
+            "id": "NECK_BOAT",
+            "group": "neckline_shape",
+            "source_normalized_key": "sabrina neckline"
+          },
+          {
+            "index": 159,
+            "alias": "Sabrina neckline",
+            "id": "NECK_SABRINA",
+            "group": "neckline_shape",
+            "source_normalized_key": "sabrina neckline"
+          }
+        ]
+      },
+      {
+        "normalized_key": "ربطة بالصدر",
+        "candidate_ids": [
+          "NECK_LACE_UP",
+          "NECK_TIE_FRONT"
+        ],
+        "records": [
+          {
+            "index": 372,
+            "alias": "ربطة بالصدر",
+            "id": "NECK_LACE_UP",
+            "group": "neckline_shape",
+            "source_normalized_key": "ربطه بالصدر"
+          },
+          {
+            "index": 383,
+            "alias": "ربطة بالصدر",
+            "id": "NECK_TIE_FRONT",
+            "group": "neckline_shape",
+            "source_normalized_key": "ربطه بالصدر"
+          }
+        ]
+      },
+      {
+        "normalized_key": "قبة رول",
+        "candidate_ids": [
+          "NECK_TURTLE",
+          "COLLAR_TURTLE"
+        ],
+        "records": [
+          {
+            "index": 263,
+            "alias": "قبة رول",
+            "id": "NECK_TURTLE",
+            "group": "neckline_shape",
+            "source_normalized_key": "قبه رول"
+          },
+          {
+            "index": 532,
+            "alias": "قبّة رول",
+            "id": "COLLAR_TURTLE",
+            "group": "collar_type",
+            "source_normalized_key": "قبه رول"
+          }
+        ]
+      },
+      {
+        "normalized_key": "قبة قميص",
+        "candidate_ids": [
+          "NECK_SHIRT",
+          "COLLAR_SHIRT"
+        ],
+        "records": [
+          {
+            "index": 427,
+            "alias": "قبّة قميص",
+            "id": "NECK_SHIRT",
+            "group": "neckline_shape",
+            "source_normalized_key": "قبه قميص"
+          },
+          {
+            "index": 443,
+            "alias": "قبّة قميص",
+            "id": "COLLAR_SHIRT",
+            "group": "collar_type",
+            "source_normalized_key": "قبه قميص"
+          }
+        ]
+      },
+      {
+        "normalized_key": "قبة كروس",
+        "candidate_ids": [
+          "NECK_WRAP",
+          "NECK_CROSS"
+        ],
+        "records": [
+          {
+            "index": 107,
+            "alias": "قبة كروس",
+            "id": "NECK_WRAP",
+            "group": "neckline_shape",
+            "source_normalized_key": "قبه كروس"
+          },
+          {
+            "index": 419,
+            "alias": "قبّة كروس",
+            "id": "NECK_CROSS",
+            "group": "neckline_shape",
+            "source_normalized_key": "قبه كروس"
+          }
+        ]
+      },
+      {
+        "normalized_key": "قبة مسننة",
+        "candidate_ids": [
+          "NECK_SCALLOP",
+          "COLLAR_POINT"
+        ],
+        "records": [
+          {
+            "index": 335,
+            "alias": "قبة مسننة",
+            "id": "NECK_SCALLOP",
+            "group": "neckline_shape",
+            "source_normalized_key": "قبه مسننه"
+          },
+          {
+            "index": 454,
+            "alias": "قبّة مسنّنة",
+            "id": "COLLAR_POINT",
+            "group": "collar_type",
+            "source_normalized_key": "قبه مسننه"
+          }
+        ]
+      },
+      {
+        "normalized_key": "ياقة رول",
+        "candidate_ids": [
+          "NECK_TURTLE",
+          "COLLAR_TURTLE"
+        ],
+        "records": [
+          {
+            "index": 259,
+            "alias": "ياقة رول",
+            "id": "NECK_TURTLE",
+            "group": "neckline_shape",
+            "source_normalized_key": "ياقه رول"
+          },
+          {
+            "index": 533,
+            "alias": "ياقة رول",
+            "id": "COLLAR_TURTLE",
+            "group": "collar_type",
+            "source_normalized_key": "ياقه رول"
+          }
+        ]
+      },
+      {
+        "normalized_key": "ياقة قميص",
+        "candidate_ids": [
+          "NECK_SHIRT",
+          "COLLAR_SHIRT"
+        ],
+        "records": [
+          {
+            "index": 428,
+            "alias": "ياقة قميص",
+            "id": "NECK_SHIRT",
+            "group": "neckline_shape",
+            "source_normalized_key": "ياقه قميص"
+          },
+          {
+            "index": 444,
+            "alias": "ياقة قميص",
+            "id": "COLLAR_SHIRT",
+            "group": "collar_type",
+            "source_normalized_key": "ياقه قميص"
+          }
+        ]
+      }
+    ]
+  },
+  "modifier_aliases": {
+    "distinct_normalized_keys": 197,
+    "duplicate_normalized_keys": 34,
+    "cross_id_collision_count": 3,
+    "cross_id_collisions": [
+      {
+        "normalized_key": "مبرومة",
+        "candidate_ids": [
+          "TRIM_RIBBED",
+          "TRIM_ROLLED"
+        ],
+        "records": [
+          {
+            "index": 61,
+            "alias": "مبرومة",
+            "id": "TRIM_RIBBED",
+            "group": "trim",
+            "source_normalized_key": "مبرومه"
+          },
+          {
+            "index": 62,
+            "alias": "مبروَمة",
+            "id": "TRIM_RIBBED",
+            "group": "trim",
+            "source_normalized_key": "مبرومه"
+          },
+          {
+            "index": 69,
+            "alias": "مبرومة",
+            "id": "TRIM_ROLLED",
+            "group": "trim",
+            "source_normalized_key": "مبرومه"
+          }
+        ]
+      },
+      {
+        "normalized_key": "نازلة",
+        "candidate_ids": [
+          "DEPTH_DEEP",
+          "HEIGHT_LOW"
+        ],
+        "records": [
+          {
+            "index": 6,
+            "alias": "نازلة",
+            "id": "DEPTH_DEEP",
+            "group": "depth",
+            "source_normalized_key": "نازله"
+          },
+          {
+            "index": 26,
+            "alias": "نازلة",
+            "id": "HEIGHT_LOW",
+            "group": "height",
+            "source_normalized_key": "نازله"
+          }
+        ]
+      },
+      {
+        "normalized_key": "واطية",
+        "candidate_ids": [
+          "DEPTH_DEEP",
+          "HEIGHT_LOW"
+        ],
+        "records": [
+          {
+            "index": 7,
+            "alias": "واطية",
+            "id": "DEPTH_DEEP",
+            "group": "depth",
+            "source_normalized_key": "واطيه"
+          },
+          {
+            "index": 27,
+            "alias": "واطية",
+            "id": "HEIGHT_LOW",
+            "group": "height",
+            "source_normalized_key": "واطيه"
+          }
+        ]
+      }
+    ]
+  },
+  "source_declared_ambiguities": [
+    {
+      "phrase": "قبّة مبرومة",
+      "candidates": "COLLAR_RIBBED|TRIM_ROLLED|NECK_CREW",
+      "reason": "May refer to rib-knit neck band or rolled edge; sometimes colloquial generic round collar. Ask or check catalog.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة مدورة",
+      "candidates": "NECK_ROUND|NECK_CREW|NECK_SCOOP",
+      "reason": "Round is generic; depth/width or catalog distinguishes.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبّة عالية",
+      "candidates": "NECK_HIGH|NECK_TURTLE|NECK_MOCK|NECK_FUNNEL",
+      "reason": "High neck alone does not imply folded roll.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "polo",
+      "candidates": "COLLAR_POLO|PRODUCT_POLO_SHIRT",
+      "reason": "May refer to product itself, not collar.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "بولو",
+      "candidates": "COLLAR_POLO|PRODUCT_POLO_SHIRT",
+      "reason": "Product type vs collar style.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة قميص",
+      "candidates": "COLLAR_SHIRT|NECK_SHIRT",
+      "reason": "Generic shirt collar or neck treatment.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "v",
+      "candidates": "NECK_V|SIZE/OTHER",
+      "reason": "Single letter requires neckline cue.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "u",
+      "candidates": "NECK_U|SIZE/OTHER",
+      "reason": "Single letter requires neckline cue.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "مربّعة",
+      "candidates": "NECK_SQUARE|PRODUCT_CUT",
+      "reason": "Need adjacent neckline keyword.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "سويت هارت",
+      "candidates": "NECK_SWEETHEART|GENERAL_PHRASE",
+      "reason": "Confirm clothing context.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "رول",
+      "candidates": "NECK_TURTLE|COLLAR_TURTLE|TRIM_ROLLED",
+      "reason": "Roll could refer to fold trim or folded high neck.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "مفتوحة",
+      "candidates": "NECK_OFF_SHOULDER|OPEN_FRONT|COLLAR_CAMP",
+      "reason": "Broad opening description, preserve modifier.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "كتف واحد",
+      "candidates": "NECK_ONE_SHOULDER|PRODUCT_DESIGN",
+      "reason": "Neckline design or garment description.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "كتاف مكشوفة",
+      "candidates": "NECK_OFF_SHOULDER|MOD_EXPOSURE",
+      "reason": "May be neckline, not sleeve length.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "ياقة صينية",
+      "candidates": "COLLAR_MANDARIN|COLLAR_BAND|COLLAR_NEHRU",
+      "reason": "Construction-dependent near synonyms.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبّة واقفة",
+      "candidates": "COLLAR_STAND|COLLAR_MANDARIN|NECK_MOCK",
+      "reason": "Need garment and height.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة كروس",
+      "candidates": "NECK_WRAP|NECK_CROSS|PRODUCT_WRAP",
+      "reason": "Crossing neck or wrap bodice.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "بدون قبة",
+      "candidates": "COLLAR_NO|NECK_ROUND",
+      "reason": "Usually collarless, NOT no neckline.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "نص رول",
+      "candidates": "NECK_MOCK|NECK_TURTLE",
+      "reason": "Often mock neck, verify actual height/fold.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "col rond",
+      "candidates": "NECK_ROUND|NECK_CREW",
+      "reason": "Round vs crew, confirm fit/depth.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "col mao",
+      "candidates": "COLLAR_MANDARIN|COLLAR_BAND",
+      "reason": "Related band collars.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "zip",
+      "candidates": "CLOSURE_ZIP|COLLAR_ZIP",
+      "reason": "Zip is closure, not geometric collar shape.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة فرو",
+      "candidates": "COLLAR_FUR|FABRIC_FUR",
+      "reason": "Neck trim vs product material.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة دانتيل",
+      "candidates": "COLLAR_LACE|MATERIAL_LACE",
+      "reason": "Neck trim vs fabric.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "فستان سترابلس",
+      "candidates": "NECK_STRAPLESS|PRODUCT_DRESS",
+      "reason": "Can coexist; must not replace dress type.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "قبة باتو",
+      "candidates": "NECK_BOAT|NECK_SABRINA",
+      "reason": "Closely related categories.",
+      "action": "context_or_catalog_confirmation",
+      "severity": "review"
+    },
+    {
+      "phrase": "bardot neckline",
+      "candidates": "NECK_BARDOT|NECK_OFF_SHOULDER",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "col roule",
+      "candidates": "COLLAR_TURTLE|NECK_TURTLE",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "sabrina neckline",
+      "candidates": "NECK_BOAT|NECK_SABRINA",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "ربطه بالصدر",
+      "candidates": "NECK_LACE_UP|NECK_TIE_FRONT",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "قبه رول",
+      "candidates": "COLLAR_TURTLE|NECK_TURTLE",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "قبه مسننه",
+      "candidates": "COLLAR_POINT|NECK_SCALLOP",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "ياقه رول",
+      "candidates": "COLLAR_TURTLE|NECK_TURTLE",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    },
+    {
+      "phrase": "ياقه قميص",
+      "candidates": "COLLAR_SHIRT|NECK_SHIRT",
+      "reason": "Same normalized alias mapped to multiple styles.",
+      "action": "disambiguate_by_product_and_attributes",
+      "severity": "collision"
+    }
+  ],
+  "known_cross_domain_review_terms": [
+    "polo",
+    "بولو",
+    "قبّة مبرومة",
+    "قبة مبرومة",
+    "قبّة عالية",
+    "قبة رول",
+    "جينز",
+    "v",
+    "u",
+    "كم",
+    "بدون قبة",
+    "قبة قميص"
+  ],
+  "policy": "Aliases may be active recognition evidence, but ambiguous aliases MUST preserve all interpretations and MUST NOT be silently converted to MATCHED. Actual catalog confirmation is mandatory."
+}

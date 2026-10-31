@@ -1,0 +1,223 @@
+{
+  "scope": "Intent-cue integration smoke fixtures. This is a test plan, not proof of live SaaS2 compatibility.",
+  "cases": [
+    {
+      "id": "shopping-request-leb",
+      "input": "بدي تي شيرت سودا XL قطعتين",
+      "expectIntentOneOf": [
+        "REQ_WANT"
+      ],
+      "assertions": [
+        "Request cue recognized",
+        "T-shirt/Black/XL/2 slots preserved for established parser",
+        "No sale or stock mutation"
+      ]
+    },
+    {
+      "id": "shopping-request-arabizi",
+      "input": "bdi 2 tshirt soda size L",
+      "expectIntentOneOf": [
+        "REQ_WANT"
+      ],
+      "assertions": [
+        "bdi stays REQUEST, never ProductType/BODYSUIT",
+        "2 remains quantity context and L size context",
+        "No automatic cart insertion"
+      ]
+    },
+    {
+      "id": "shopping-request-three",
+      "input": "بدي تلات كنزات",
+      "expectIntentOneOf": [
+        "REQ_WANT"
+      ],
+      "assertions": [
+        "Quantity and garment tokens preserved"
+      ]
+    },
+    {
+      "id": "availability",
+      "input": "في منها XL",
+      "expectIntentOneOf": [
+        "AV_CHECK"
+      ],
+      "assertions": [
+        "No inventory reservation",
+        "XL remains size evidence"
+      ]
+    },
+    {
+      "id": "price-discount",
+      "input": "قديش السعر وفي حسم؟",
+      "expectIntentOneOf": [
+        "PRICE_ASK",
+        "PRICE_DISCOUNT"
+      ],
+      "assertions": [
+        "Price question never adjusts price"
+      ]
+    },
+    {
+      "id": "preference-no-print",
+      "input": "بدون طبعة",
+      "expectIntentOneOf": [
+        "PREF_NO_PRINT"
+      ],
+      "assertions": [
+        "Negative constraint kept, not dropped"
+      ]
+    },
+    {
+      "id": "rejection-size",
+      "input": "مش هالقياس بدي L",
+      "expectIntentOneOf": [
+        "REJ_NOT_SIZE"
+      ],
+      "assertions": [
+        "Scope negation to rejected size; do not select wrong variant"
+      ]
+    },
+    {
+      "id": "ambiguous-done",
+      "input": "خلص",
+      "expectIntentOneOf": [
+        "AMB_DONE"
+      ],
+      "assertions": [
+        "Requires clarification; not interpreted as completed sale"
+      ]
+    },
+    {
+      "id": "ambiguous-change-color",
+      "input": "غيرلي اللون",
+      "expectIntentOneOf": [
+        "CHANGE_COLOR",
+        "PREF_OTHER_COLOR"
+      ],
+      "assertions": [
+        "Cross-intent ambiguity preserved; no automatic modification"
+      ]
+    },
+    {
+      "id": "ambiguous-fr",
+      "input": "d accord",
+      "expectIntentOneOf": [
+        "CONF_AGREE",
+        "CONF_OK"
+      ],
+      "assertions": [
+        "Collision preserved rather than first-wins",
+        "Confirmation phrase does not checkout"
+      ]
+    },
+    {
+      "id": "cancel-order",
+      "input": "بدي الغي طلبي",
+      "expectIntentOneOf": [
+        "CANCEL_ORDER"
+      ],
+      "assertions": [
+        "Intent recognition only; cannot cancel real order from matcher"
+      ]
+    },
+    {
+      "id": "negated-cancel",
+      "input": "ما بدي ألغي الطلب",
+      "expectIntentOneOf": [
+        "CHANGE_KEEP_ORDER"
+      ],
+      "assertions": [
+        "Must not activate CANCEL_ORDER",
+        "Negation priority tested"
+      ]
+    },
+    {
+      "id": "return-item",
+      "input": "بدي رجع القطعة",
+      "expectIntentOneOf": [
+        "RETURN_REQUEST"
+      ],
+      "assertions": [
+        "No stock returns/refund initiated"
+      ]
+    },
+    {
+      "id": "delivery",
+      "input": "بدي دليفري",
+      "expectIntentOneOf": [
+        "SHIP_HOME"
+      ],
+      "assertions": [
+        "No shipment created"
+      ]
+    },
+    {
+      "id": "payment",
+      "input": "دفع عند الاستلام",
+      "expectIntentOneOf": [
+        "PAY_COD"
+      ],
+      "assertions": [
+        "No payment or checkout initiated"
+      ]
+    },
+    {
+      "id": "photorequest",
+      "input": "بدي صورة عالطبيعة",
+      "expectIntentOneOf": [
+        "PHOTO_REAL"
+      ],
+      "assertions": [
+        "No filesystem/network action triggered"
+      ]
+    },
+    {
+      "id": "size-help",
+      "input": "شو قياس الموديل",
+      "expectIntentOneOf": [
+        "SIZE_MODEL"
+      ],
+      "assertions": [
+        "Intent not mistaken for requested variant size"
+      ]
+    },
+    {
+      "id": "materials-question",
+      "input": "فيها ليكرا",
+      "expectIntentOneOf": [
+        "MAT_STRETCH"
+      ],
+      "assertions": [
+        "No fabricated material fields"
+      ]
+    },
+    {
+      "id": "filler-brand",
+      "input": "bdi Shirt Cedar سودا XL قطعتين",
+      "expectIntentOneOf": [
+        "REQ_WANT"
+      ],
+      "assertions": [
+        "Cedar remains product model token; never swallowed as expression"
+      ]
+    },
+    {
+      "id": "multi-item",
+      "input": "بدي تي شيرت سودا و فستان حمرا",
+      "expectIntentOneOf": [
+        "REQ_WANT"
+      ],
+      "assertions": [
+        "Existing single-item MVP rejects/clarifies multi-product speech"
+      ]
+    },
+    {
+      "id": "unknown",
+      "input": "1234567847 zzzzz lorem",
+      "expectIntentOneOf": [],
+      "assertions": [
+        "No invented intent or product"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,889 @@
+{
+  "node": "v24.21.0",
+  "warmCommonBefore": {
+    "runs": 300,
+    "meanMs": 1.5011373333333238,
+    "p95Ms": 2.312199999999848
+  },
+  "warmCommonAfter": {
+    "runs": 300,
+    "meanMs": 1.5368810000000273,
+    "p95Ms": 2.4420000000000073
+  },
+  "observedCommonParserMeanDifferenceMs": 0.03574366666670348,
+  "warmNecklineParser": {
+    "runs": 300,
+    "meanMs": 3.9310316666666645,
+    "p95Ms": 6.162800000000061
+  },
+  "matcher1000SharedLabels": {
+    "runs": 30,
+    "meanMs": 37.46405333333329,
+    "p95Ms": 47.97770000000037
+  },
+  "matcher1000DistinctLabels": {
+    "runs": 10,
+    "meanMs": 1216.0313399999995,
+    "p95Ms": 1482.5987999999998
+  },
+  "coldCompleteDictionaryAndParserImport": {
+    "runs": 5,
+    "meanMs": 1479.16244,
+    "p95Ms": 1680.2037
+  },
+  "coldMemorySamples": [
+    {
+      "importMs": 1414.5115,
+      "retainedHeapDeltaMiB": 24.960784912109375,
+      "rssDeltaMiB": 100.1484375
+    },
+    {
+      "importMs": 1377.2106,
+      "retainedHeapDeltaMiB": 24.968521118164062,
+      "rssDeltaMiB": 101.31640625
+    },
+    {
+      "importMs": 1523.3396,
+      "retainedHeapDeltaMiB": 24.96063995361328,
+      "rssDeltaMiB": 100.46875
+    },
+    {
+      "importMs": 1680.2037,
+      "retainedHeapDeltaMiB": 24.960464477539062,
+      "rssDeltaMiB": 99.97265625
+    },
+    {
+      "importMs": 1400.5468,
+      "retainedHeapDeltaMiB": 24.968429565429688,
+      "rssDeltaMiB": 101.3125
+    }
+  ],
+  "resourceBytes": [
+    {
+      "name": "necklines.seed.json",
+      "bytes": 363041
+    },
+    {
+      "name": "necklines.source-collisions.json",
+      "bytes": 17285
+    }
+  ],
+  "totalNewRuntimeBytes": 380326,
+  "beforeAfterExample": {
+    "input": "Shirt col Claudine black XL two pieces",
+    "actualSyntheticCatalog": {
+      "variants": [
+        {
+          "productId": "product",
+          "variantId": "variant",
+          "productName": "Shirt Peter Pan collar",
+          "categoryName": "Shirt",
+          "color": "Black",
+          "size": "XL",
+          "sellingPrice": "12.50",
+          "availableStock": 40,
+          "currency": "USD"
+        }
+      ],
+      "scannedVariants": 1,
+      "truncated": false
+    },
+    "before": {
+      "parser": {
+        "status": "parsed",
+        "originalText": "Shirt col Claudine black XL two pieces",
+        "normalizedText": "shirt col claudine black xl two pieces",
+        "attributes": {
+          "productType": {
+            "status": "resolved",
+            "value": "SHIRT",
+            "candidates": [
+              "SHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 0,
+                  "endToken": 1,
+                  "text": "shirt"
+                },
+                "source": "explicit",
+                "rule": "dictionary_alias"
+              }
+            ]
+          },
+          "color": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 4,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "size": {
+            "status": "resolved",
+            "value": "XL",
+            "candidates": [
+              "XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "dictionary_alias"
+              }
+            ]
+          },
+          "quantity": {
+            "status": "resolved",
+            "value": 2,
+            "candidates": [
+              2
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 7,
+                  "text": "two pieces"
+                },
+                "source": "explicit",
+                "rule": "verified_quantity_intent"
+              }
+            ]
+          },
+          "material": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "neckline": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "fit": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "pattern": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          }
+        },
+        "sourceProductType": {
+          "status": "resolved",
+          "value": "SHIRT",
+          "candidates": [
+            "SHIRT"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "shirt"
+              },
+              "source": "explicit",
+              "rule": "active_source_alias"
+            }
+          ]
+        },
+        "sourceColorId": {
+          "status": "resolved",
+          "value": "BLACK",
+          "candidates": [
+            "BLACK"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "black"
+              },
+              "source": "explicit",
+              "rule": "active_color_alias"
+            }
+          ]
+        },
+        "sourceSizeId": {
+          "status": "resolved",
+          "value": "ALPHA_XL",
+          "candidates": [
+            "ALPHA_XL"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 4,
+                "endToken": 5,
+                "text": "xl"
+              },
+              "source": "explicit",
+              "rule": "source_size_expression"
+            }
+          ]
+        },
+        "quantityIntent": {
+          "status": "resolved",
+          "intent": "order",
+          "orderUnits": 2,
+          "unitId": "PIECE",
+          "unitCandidates": [
+            "PIECE"
+          ],
+          "resolvedPieces": 2,
+          "needsCatalogMetadata": false,
+          "exactness": "exact",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 5,
+                "endToken": 7,
+                "text": "two pieces"
+              },
+              "originalSpan": {
+                "start": 28,
+                "end": 38,
+                "text": "two pieces"
+              },
+              "orderUnits": 2,
+              "unitCandidates": [
+                "PIECE"
+              ],
+              "rule": "number_unit_phrase"
+            }
+          ],
+          "modifiers": [],
+          "reasons": []
+        },
+        "sourceMaterial": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "materialCandidates": [],
+        "materialComposition": [],
+        "sourceSizeCandidates": [
+          {
+            "startToken": 4,
+            "endToken": 5,
+            "phrase": "XL",
+            "originalSpan": {
+              "start": 25,
+              "end": 27,
+              "text": "XL"
+            },
+            "result": {
+              "alias": "xl",
+              "status": "matched",
+              "candidates": [
+                {
+                  "size_id": "ALPHA_XL",
+                  "family": "ALPHA",
+                  "canonical_label": "XL",
+                  "size_standard": "INTERNATIONAL",
+                  "size_value": "XL",
+                  "display_ar": "اكس لارج",
+                  "display_en": "XL",
+                  "apparel_scope": "all",
+                  "required_context": "garment_size",
+                  "notes": "Alpha label; no universal cm-equivalent.",
+                  "aliases_count": 19
+                }
+              ],
+              "records": [
+                {
+                  "alias_id": "SZA000116",
+                  "size_id": "ALPHA_XL",
+                  "alias": "XL",
+                  "normalized_alias": "xl",
+                  "language": "en",
+                  "alias_kind": "canonical",
+                  "match_policy": "contextual",
+                  "confidence": 0.99,
+                  "required_context": "garment_size",
+                  "notes": ""
+                }
+              ],
+              "crossDomainOverlaps": [],
+              "legacySize": "XL",
+              "reason": null
+            },
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "resolvedId": "ALPHA_XL",
+            "contextRequired": false,
+            "incompatibleStandard": false,
+            "sizeDomainExplicit": false
+          }
+        ],
+        "colorCandidates": [
+          {
+            "startToken": 3,
+            "endToken": 4,
+            "phrase": "black",
+            "result": {
+              "alias": "black",
+              "status": "matched",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "legacyColor": "BLACK",
+              "records": [
+                {
+                  "alias": "Black",
+                  "sourceNormalized": "black",
+                  "source": "canonical_en",
+                  "locale": "latin",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "sourceCsvLine": 261
+                },
+                {
+                  "alias": "black",
+                  "sourceNormalized": "black",
+                  "source": "english",
+                  "locale": "latin",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "sourceCsvLine": 262
+                }
+              ],
+              "crossDomainOverlaps": [],
+              "embeddedPattern": null,
+              "colorMode": false,
+              "reason": null
+            },
+            "colorDomainExplicit": false
+          }
+        ],
+        "productTypeCandidates": [
+          {
+            "startToken": 0,
+            "endToken": 1,
+            "phrase": "shirt",
+            "result": {
+              "alias": "shirt",
+              "status": "candidate",
+              "candidates": [
+                {
+                  "sourceTypeId": "SHIRT",
+                  "canonicalType": "SHIRT",
+                  "labels": {
+                    "ar": "قميص",
+                    "en": "Shirt"
+                  },
+                  "group": "Tops / بلايز وكنزات",
+                  "audienceHint": "unisex",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "aliases": [
+                    {
+                      "text": "Shirt",
+                      "sourceNormalized": "shirt",
+                      "source": "canonical_en;arabizi",
+                      "locale": "latin",
+                      "matchPolicy": "exact_candidate",
+                      "reviewStatus": "seed_review"
+                    }
+                  ]
+                }
+              ],
+              "context": [],
+              "crossDomainOverlaps": []
+            },
+            "requiresCatalogEvidence": false
+          }
+        ],
+        "productNameResidualTokens": [
+          {
+            "token": "col",
+            "index": 1
+          },
+          {
+            "token": "claudine",
+            "index": 2
+          }
+        ],
+        "unrecognizedTokens": [
+          {
+            "token": "col",
+            "index": 1
+          },
+          {
+            "token": "claudine",
+            "index": 2
+          }
+        ],
+        "conversationalTokens": [],
+        "ambiguities": [],
+        "missingInformation": [
+          "material",
+          "neckline",
+          "fit",
+          "pattern"
+        ],
+        "unresolvedInformation": []
+      },
+      "status": "NOT_FOUND"
+    },
+    "after": {
+      "parser": {
+        "status": "parsed",
+        "originalText": "Shirt col Claudine black XL two pieces",
+        "normalizedText": "shirt col claudine black xl two pieces",
+        "attributes": {
+          "productType": {
+            "status": "resolved",
+            "value": "SHIRT",
+            "candidates": [
+              "SHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 0,
+                  "endToken": 1,
+                  "text": "shirt"
+                },
+                "source": "explicit",
+                "rule": "dictionary_alias"
+              }
+            ]
+          },
+          "color": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 4,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "size": {
+            "status": "resolved",
+            "value": "XL",
+            "candidates": [
+              "XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "dictionary_alias"
+              }
+            ]
+          },
+          "quantity": {
+            "status": "resolved",
+            "value": 2,
+            "candidates": [
+              2
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 7,
+                  "text": "two pieces"
+                },
+                "source": "explicit",
+                "rule": "verified_quantity_intent"
+              }
+            ]
+          },
+          "material": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "neckline": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "fit": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "pattern": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          }
+        },
+        "sourceProductType": {
+          "status": "resolved",
+          "value": "SHIRT",
+          "candidates": [
+            "SHIRT"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "shirt"
+              },
+              "source": "explicit",
+              "rule": "active_source_alias"
+            }
+          ]
+        },
+        "sourceColorId": {
+          "status": "resolved",
+          "value": "BLACK",
+          "candidates": [
+            "BLACK"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "black"
+              },
+              "source": "explicit",
+              "rule": "active_color_alias"
+            }
+          ]
+        },
+        "sourceSizeId": {
+          "status": "resolved",
+          "value": "ALPHA_XL",
+          "candidates": [
+            "ALPHA_XL"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 4,
+                "endToken": 5,
+                "text": "xl"
+              },
+              "source": "explicit",
+              "rule": "source_size_expression"
+            }
+          ]
+        },
+        "quantityIntent": {
+          "status": "resolved",
+          "intent": "order",
+          "orderUnits": 2,
+          "unitId": "PIECE",
+          "unitCandidates": [
+            "PIECE"
+          ],
+          "resolvedPieces": 2,
+          "needsCatalogMetadata": false,
+          "exactness": "exact",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 5,
+                "endToken": 7,
+                "text": "two pieces"
+              },
+              "originalSpan": {
+                "start": 28,
+                "end": 38,
+                "text": "two pieces"
+              },
+              "orderUnits": 2,
+              "unitCandidates": [
+                "PIECE"
+              ],
+              "rule": "number_unit_phrase"
+            }
+          ],
+          "modifiers": [],
+          "reasons": []
+        },
+        "sourceMaterial": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "materialCandidates": [],
+        "materialComposition": [],
+        "sourceNecklineShape": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "sourceCollarType": {
+          "status": "resolved",
+          "value": "COLLAR_PETER_PAN",
+          "candidates": [
+            "COLLAR_PETER_PAN"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 1,
+                "endToken": 3,
+                "text": "col claudine"
+              },
+              "source": "explicit",
+              "rule": "source_neckline_alias"
+            }
+          ]
+        },
+        "necklineCandidates": [
+          {
+            "startToken": 1,
+            "endToken": 3,
+            "text": "col claudine",
+            "result": {
+              "status": "matched",
+              "shapes": [],
+              "collars": [
+                "COLLAR_PETER_PAN"
+              ],
+              "modifiers": [],
+              "externalRoles": [],
+              "records": [
+                {
+                  "domain": "style",
+                  "sourceIndex": 553,
+                  "id": "COLLAR_PETER_PAN",
+                  "alias": "col Claudine",
+                  "normalized": "col claudine",
+                  "sourceNormalized": "col claudine",
+                  "disposition": "active",
+                  "reasons": [],
+                  "crossDomains": []
+                }
+              ],
+              "ambiguities": [],
+              "crossDomains": []
+            },
+            "domainExplicit": true,
+            "constrainsCatalog": true
+          }
+        ],
+        "sourceSizeCandidates": [
+          {
+            "startToken": 4,
+            "endToken": 5,
+            "phrase": "XL",
+            "originalSpan": {
+              "start": 25,
+              "end": 27,
+              "text": "XL"
+            },
+            "result": {
+              "alias": "xl",
+              "status": "matched",
+              "candidates": [
+                {
+                  "size_id": "ALPHA_XL",
+                  "family": "ALPHA",
+                  "canonical_label": "XL",
+                  "size_standard": "INTERNATIONAL",
+                  "size_value": "XL",
+                  "display_ar": "اكس لارج",
+                  "display_en": "XL",
+                  "apparel_scope": "all",
+                  "required_context": "garment_size",
+                  "notes": "Alpha label; no universal cm-equivalent.",
+                  "aliases_count": 19
+                }
+              ],
+              "records": [
+                {
+                  "alias_id": "SZA000116",
+                  "size_id": "ALPHA_XL",
+                  "alias": "XL",
+                  "normalized_alias": "xl",
+                  "language": "en",
+                  "alias_kind": "canonical",
+                  "match_policy": "contextual",
+                  "confidence": 0.99,
+                  "required_context": "garment_size",
+                  "notes": ""
+                }
+              ],
+              "crossDomainOverlaps": [],
+              "legacySize": "XL",
+              "reason": null
+            },
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "resolvedId": "ALPHA_XL",
+            "contextRequired": false,
+            "incompatibleStandard": false,
+            "sizeDomainExplicit": false
+          }
+        ],
+        "colorCandidates": [
+          {
+            "startToken": 3,
+            "endToken": 4,
+            "phrase": "black",
+            "result": {
+              "alias": "black",
+              "status": "matched",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "legacyColor": "BLACK",
+              "records": [
+                {
+                  "alias": "Black",
+                  "sourceNormalized": "black",
+                  "source": "canonical_en",
+                  "locale": "latin",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "sourceCsvLine": 261
+                },
+                {
+                  "alias": "black",
+                  "sourceNormalized": "black",
+                  "source": "english",
+                  "locale": "latin",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "sourceCsvLine": 262
+                }
+              ],
+              "crossDomainOverlaps": [],
+              "embeddedPattern": null,
+              "colorMode": false,
+              "reason": null
+            },
+            "colorDomainExplicit": false
+          }
+        ],
+        "productTypeCandidates": [
+          {
+            "startToken": 0,
+            "endToken": 1,
+            "phrase": "shirt",
+            "result": {
+              "alias": "shirt",
+              "status": "candidate",
+              "candidates": [
+                {
+                  "sourceTypeId": "SHIRT",
+                  "canonicalType": "SHIRT",
+                  "labels": {
+                    "ar": "قميص",
+                    "en": "Shirt"
+                  },
+                  "group": "Tops / بلايز وكنزات",
+                  "audienceHint": "unisex",
+                  "matchPolicy": "exact_candidate",
+                  "reviewStatus": "seed_review",
+                  "aliases": [
+                    {
+                      "text": "Shirt",
+                      "sourceNormalized": "shirt",
+                      "source": "canonical_en;arabizi",
+                      "locale": "latin",
+                      "matchPolicy": "exact_candidate",
+                      "reviewStatus": "seed_review"
+                    }
+                  ]
+                }
+              ],
+              "context": [],
+              "crossDomainOverlaps": []
+            },
+            "requiresCatalogEvidence": false
+          }
+        ],
+        "productNameResidualTokens": [],
+        "unrecognizedTokens": [],
+        "conversationalTokens": [],
+        "ambiguities": [],
+        "missingInformation": [
+          "material",
+          "fit",
+          "pattern"
+        ],
+        "unresolvedInformation": []
+      },
+      "status": "MATCHED"
+    },
+    "liveSupabase": false
+  },
+  "measurementScope": "Synthetic local Node timings; warm baseline uses the exact saved previous parser/matcher sharing current existing dictionaries. Cold covers the entire pipeline; no controlled cold baseline or production latency claim.",
+  "databaseCalls": 0,
+  "writes": 0,
+  "liveSupabase": false
+}

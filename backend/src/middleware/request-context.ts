@@ -18,6 +18,7 @@ function safeRouteGroup(request: Request): string {
     'ready',
     'reports',
     'sales',
+    'voice-sales',
   ])
   const group = segments[1]
 

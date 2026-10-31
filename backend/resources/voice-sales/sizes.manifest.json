@@ -1,0 +1,66 @@
+{
+  "kit": "SAAS2_Sizes_Dictionary_Integration_Kit",
+  "sourceArchiveName": "SAAS2_Sizes_Dictionary_Complete(1).zip",
+  "sourceArchiveSHA256": "96aafaf34ed7d77929743790294d5867bdbd36a6574b7b11a27b642b8f19cb8b",
+  "sourceFiles": {
+    "saas2_sizes_dictionary.xlsx": {
+      "sha256": "fefcd4b83077e4cb2de2b5929b566d4d8402119384d7756ebc085eac863cd114",
+      "bytes": 487258
+    },
+    "saas2_sizes_dictionary.json": {
+      "sha256": "39bdbf124229f786f46cd7e4ca0b37d4a3ebf68ee91db12d66154488b703f438",
+      "bytes": 3960804
+    },
+    "SAAS2_SIZES_DICTIONARY_README.md": {
+      "sha256": "8daf98a7a2150fcbc92873a255a9be5952084a4055497afe3e82ae226045cd10",
+      "bytes": 3274
+    },
+    "saas2_sizes_matcher_example.ts": {
+      "sha256": "5d532acc32102dba10210a10e5dd6d23f9359ffdde27b3224fed2deb0b76ab94",
+      "bytes": 7026
+    },
+    "saas2_sizes.csv": {
+      "sha256": "57e654f86f06bd41b6bde9f42cc2ae415ce36921f50a65eaf9defaf943eee132",
+      "bytes": 125891
+    },
+    "saas2_size_aliases.csv": {
+      "sha256": "2d80efa108e87e23dfdf70aba4a6c54a6684a17ac5d12b14d4402903112223b5",
+      "bytes": 1136460
+    },
+    "saas2_size_modifiers.csv": {
+      "sha256": "a4aa0a4731da443e0a66afa5857fe1aabebe1b660a93d5b053b145ad8898558a",
+      "bytes": 2977
+    },
+    "saas2_size_modifier_aliases.csv": {
+      "sha256": "760c7b46bb4408eb070bc50c9e84730a1be55ac3405ee40e35277ab7d2836040",
+      "bytes": 7799
+    },
+    "saas2_size_ambiguities.csv": {
+      "sha256": "bc99ea32639b6cfba8d7aa096b20408278588d4d15514540b1f1021cb036e72b",
+      "bytes": 5017
+    },
+    "saas2_size_parser_test_cases.csv": {
+      "sha256": "c634715b6710e88e2924245c9c24e8790cf64ef4b3daf07daffa467980c7ec22",
+      "bytes": 1768
+    }
+  },
+  "sourceCounts": {
+    "sizeConcepts": 671,
+    "aliasRecords": 10448,
+    "uniqueSourceNormalizedAliasKeys": 9384,
+    "sizeFamilies": 22,
+    "declaredAmbiguities": 51,
+    "sourceNormalizedCrossSizeCollisionKeys": 352,
+    "nonSizeModifiers": 23,
+    "modifierAliases": 196,
+    "originalParserFixtures": 24,
+    "potentialFuzzyWithContextAliases": 24
+  },
+  "normalizerWarning": "Collision audit uses source normalized_alias, not the actual SaaS2 runtime normalizer.",
+  "seedFile": "data/sizes.seed.json",
+  "seedSHA256": "39bdbf124229f786f46cd7e4ca0b37d4a3ebf68ee91db12d66154488b703f438",
+  "smokeCasesFile": "reference/size-smoke-test-cases.json",
+  "collisionAuditFile": "data/sizes.source-collisions.json",
+  "version": "1.0",
+  "note": "No project integration, real Supabase testing or build/test execution performed for this package."
+}

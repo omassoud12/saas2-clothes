@@ -34,6 +34,8 @@ import {
 } from './runtime/startup-diagnostics.js'
 import { createSaleDependencies } from './sales/sale.service.js'
 import { createSupabaseVerifier } from './supabase.js'
+import { createVoiceMatchingDependencies } from './voice-sales/matching.service.js'
+import { createVoiceTranscriptionDependencies } from './voice-sales/transcription.service.js'
 
 const logger = createJsonLogger()
 
@@ -79,6 +81,27 @@ async function start(): Promise<void> {
         adminAccounts,
         categories,
         products,
+        voiceMatching: createVoiceMatchingDependencies(prisma, async (context, productId, imageKey) => {
+          if (!context.accountId) return null
+          try {
+            imageStore ??= createR2ProductImageStore(loadR2Environment())
+            return await imageStore.signedReadUrl(context.accountId, productId, imageKey)
+          } catch { return null }
+        }),
+        voiceTranscription: createVoiceTranscriptionDependencies({
+          apiKey: environment.elevenLabsApiKey,
+          timeoutMs: environment.elevenLabsSttTimeoutMs,
+          onFailure: (failure) => {
+            logger.warn('voice_transcription_failed', {
+              requestId: failure.requestId,
+              stage: failure.stage,
+              upstreamStatus: failure.upstreamStatus,
+              code: failure.providerCode,
+              mimeType: failure.mimeType,
+              byteCount: failure.byteCount,
+            })
+          },
+        }),
         inventory,
         receipts: createReceiptDependencies(prisma),
         sales,

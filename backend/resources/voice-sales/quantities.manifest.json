@@ -1,0 +1,109 @@
+{
+  "kit": "SAAS2_Quantities_Dictionary_Integration_Kit",
+  "format_version": "1.0",
+  "created_on": "2026-10-10",
+  "source_archive_filename": "SAAS2_Quantities_Dictionary_Complete(1).zip",
+  "source_archive_sha256": "08f873cc44a1957669d55986945e2ed2e1ea00ac71bbec4588a3b2aad4a7fb7c",
+  "source_json_sha256": "571349b70a03189316912edd8393f45ef5d4730f5d6ffc9f3a94dd1ab4cb5176",
+  "source_record_counts": {
+    "quantities": 1006,
+    "number_aliases": 1533,
+    "units": 23,
+    "unit_aliases": 361,
+    "direct_phrases": 312,
+    "modifiers": 24,
+    "modifier_aliases": 220,
+    "ambiguities": 61,
+    "alias_collisions": 3,
+    "parser_test_cases": 65,
+    "normalization_rules": 22
+  },
+  "files": [
+    {
+      "path": "CODEX_INTEGRATION_PROMPT.md",
+      "size": 9409,
+      "sha256": "4accca73193fb3e9e98e33e3ff606b25ac6a6b5079ebdf00e2c580b113ab7a47"
+    },
+    {
+      "path": "QA_REPORT.md",
+      "size": 4516,
+      "sha256": "3374559bd90b2c617e19d616e650576047739c9e284e0dc6224243e65e9611d6"
+    },
+    {
+      "path": "README_FIRST.md",
+      "size": 2023,
+      "sha256": "f5bacb9e3e8464dd03107a93ecbd443999f84cb79f9d4a748450080c0d071eb8"
+    },
+    {
+      "path": "data/quantities.seed.json",
+      "size": 993898,
+      "sha256": "571349b70a03189316912edd8393f45ef5d4730f5d6ffc9f3a94dd1ab4cb5176"
+    },
+    {
+      "path": "data/quantities.source-collisions.json",
+      "size": 16144,
+      "sha256": "be98f12bac4b97f849a99fef7d4293aae07e9b294c477c1242a128d4132d1231"
+    },
+    {
+      "path": "reference/SAAS2_QUANTITIES_DICTIONARY_README.original.md",
+      "size": 3336,
+      "sha256": "c131279397e3a3ed7fd1fb67b643af6a3db4aac8277fcbcb766c7dc590a1d235"
+    },
+    {
+      "path": "reference/quantity-smoke-test-cases.json",
+      "size": 32540,
+      "sha256": "7351f5cbe87993605fdddae7b56fa40500f052cef0aa4fd7c5e70320d8080fb2"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantities.csv",
+      "size": 104333,
+      "sha256": "9768ac3b0e2e1d07bd89970b9267aaf54d2f8942d42cd83d146a491f186a785d"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_aliases.csv",
+      "size": 148172,
+      "sha256": "e7e86dd3db173244b50191dff1ab2ba94de7b359aeda4a2b0dfc0d5b89028f08"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_ambiguities.csv",
+      "size": 5631,
+      "sha256": "600bf327faa71d2e3861b2592d5e600e055038bcc730e5c9e16a80e857beda52"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_direct_phrases.csv",
+      "size": 17648,
+      "sha256": "0be7a37ebe812f2d7da851c77d9d6ab113a73c2d1a2d42d10d28afa171b26492"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_modifier_aliases.csv",
+      "size": 11899,
+      "sha256": "6bd00d770e45674472f1d3da2be7c4034911287fcd75f16f369865510ffbc445"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_modifiers.csv",
+      "size": 2504,
+      "sha256": "c438f6cfbe6f5a5be1f88b7c0b5ea27dff64afc67c6e3497a44266dda305a7ea"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_parser_test_cases.csv",
+      "size": 3381,
+      "sha256": "cd9dfdb54d9fc48e5dbd7f1d7b62589bba76276081c33f683aa208f853508539"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_unit_aliases.csv",
+      "size": 32269,
+      "sha256": "c9dfbcf7e1b0bab5bd388427b87c32fc175fbbbbe110d0322053da0c38e6fd9e"
+    },
+    {
+      "path": "reference/raw-csv/saas2_quantity_units.csv",
+      "size": 2055,
+      "sha256": "e5e23843d2fd861d53683f4af1c253b930809f8f178815fe1a5b7a6f6357c053"
+    },
+    {
+      "path": "reference/saas2_quantities_matching_example.NOT_PRODUCTION.ts",
+      "size": 3331,
+      "sha256": "6d1428b94c04685296f298ae3276388489855a025f3f5c2717f2ca90e004b99b"
+    }
+  ],
+  "note": "Source-integrity and source-QA only. Integration, alias activation and repository regression tests must be done by Codex on the real SaaS2 codebase."
+}

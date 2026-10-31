@@ -1,0 +1,544 @@
+{
+  "notes": [
+    "These collisions use NORMALIZED KEYS STORED IN THE SOURCE. Recompute with the real Phase 1A SaaS2 runtime normalizer before activation.",
+    "Never resolve a collision by record order or broad substring matching.",
+    "Cross-domain overlaps with Size, Price, ProductType, Color and POS terms require an additional repository-level audit."
+  ],
+  "sourceDeclaredUnitCollisions": [
+    {
+      "normalized_alias": "lot",
+      "unit_ids": "BUNDLE | LOT",
+      "handling": "need product/packaging context"
+    },
+    {
+      "normalized_alias": "lots",
+      "unit_ids": "BUNDLE | LOT",
+      "handling": "need product/packaging context"
+    },
+    {
+      "normalized_alias": "شوال",
+      "unit_ids": "BAG | SACK",
+      "handling": "need product/packaging context"
+    }
+  ],
+  "computedNumberValueCollisions": [],
+  "computedUnitCollisions": [
+    {
+      "normalized_key": "lot",
+      "meanings": [
+        {
+          "target": "BUNDLE",
+          "source_record_indices": [
+            155
+          ]
+        },
+        {
+          "target": "LOT",
+          "source_record_indices": [
+            268
+          ]
+        }
+      ]
+    },
+    {
+      "normalized_key": "lots",
+      "meanings": [
+        {
+          "target": "BUNDLE",
+          "source_record_indices": [
+            156
+          ]
+        },
+        {
+          "target": "LOT",
+          "source_record_indices": [
+            269
+          ]
+        }
+      ]
+    },
+    {
+      "normalized_key": "شوال",
+      "meanings": [
+        {
+          "target": "BAG",
+          "source_record_indices": [
+            204
+          ]
+        },
+        {
+          "target": "SACK",
+          "source_record_indices": [
+            254
+          ]
+        }
+      ]
+    }
+  ],
+  "computedDirectPhraseUnitCollisions": [],
+  "computedModifierCollisions": [
+    {
+      "normalized_key": "just",
+      "meanings": [
+        {
+          "target": "EXACT",
+          "source_record_indices": [
+            22
+          ]
+        },
+        {
+          "target": "ONLY",
+          "source_record_indices": [
+            140
+          ]
+        }
+      ]
+    },
+    {
+      "normalized_key": "من",
+      "meanings": [
+        {
+          "target": "RANGE",
+          "source_record_indices": [
+            54
+          ]
+        },
+        {
+          "target": "OF",
+          "source_record_indices": [
+            200
+          ]
+        }
+      ]
+    }
+  ],
+  "reviewFlags": [
+    {
+      "expression": "M",
+      "may_mean": "Clothing size medium vs meter abbreviation",
+      "domain_hint": "SIZE / LENGTH",
+      "resolution_rule": "Never infer quantity from M without units/order intent",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "L",
+      "may_mean": "Clothing size large vs length notation",
+      "domain_hint": "SIZE",
+      "resolution_rule": "Exclude from quantity parser",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "XL",
+      "may_mean": "Clothing size",
+      "domain_hint": "SIZE",
+      "resolution_rule": "Exclude",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "38",
+      "may_mean": "shoe/dress/bra size or requested item count",
+      "domain_hint": "SIZE or QUANTITY",
+      "resolution_rule": "Require qty cue or explicit item unit; numeric alone low confidence",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "42",
+      "may_mean": "shoe/dress size or requested count",
+      "domain_hint": "SIZE or QUANTITY",
+      "resolution_rule": "Same guard",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "36",
+      "may_mean": "shoe/dress size or requested count",
+      "domain_hint": "SIZE or QUANTITY",
+      "resolution_rule": "Same guard",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "75B",
+      "may_mean": "Bra measurement",
+      "domain_hint": "BRA_SIZE",
+      "resolution_rule": "Never parse 75 as quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "32/34",
+      "may_mean": "Jeans waist/length",
+      "domain_hint": "JEANS_SIZE",
+      "resolution_rule": "Do not split into two order quantities",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "W32 L30",
+      "may_mean": "Jeans waist and inseam",
+      "domain_hint": "JEANS_SIZE",
+      "resolution_rule": "Prioritize size recognizer",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "0-3m",
+      "may_mean": "Baby clothing age months",
+      "domain_hint": "BABY_SIZE",
+      "resolution_rule": "Not range 0-3 pieces, not 3 meters",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "3-6 شهور",
+      "may_mean": "Baby size",
+      "domain_hint": "BABY_SIZE",
+      "resolution_rule": "Age range not quantity range",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "2-3Y",
+      "may_mean": "Kids age size",
+      "domain_hint": "KIDS_SIZE",
+      "resolution_rule": "Do not parse as quantity range",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "15$",
+      "may_mean": "Price",
+      "domain_hint": "PRICE",
+      "resolution_rule": "Ignore numeric with currency symbol",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "15 USD",
+      "may_mean": "Price",
+      "domain_hint": "PRICE",
+      "resolution_rule": "Ignore when adjacent to currency",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "150000 ليرة",
+      "may_mean": "Price",
+      "domain_hint": "PRICE",
+      "resolution_rule": "Prioritize price recognizer",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "90000",
+      "may_mean": "Price or product code or quantity",
+      "domain_hint": "UNKNOWN",
+      "resolution_rule": "Only quantity with nearby order cues",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "model 2026",
+      "may_mean": "Product model/year",
+      "domain_hint": "MODEL",
+      "resolution_rule": "Keep model code",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "كود 12",
+      "may_mean": "SKU/code",
+      "domain_hint": "PRODUCT_CODE",
+      "resolution_rule": "Do not call 12 pieces",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "SKU-12",
+      "may_mean": "SKU",
+      "domain_hint": "PRODUCT_CODE",
+      "resolution_rule": "Do not parse 12 as quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "رقم 12",
+      "may_mean": "Number/code or garment size",
+      "domain_hint": "CODE_OR_SIZE",
+      "resolution_rule": "No quantity without order intent",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "12:30",
+      "may_mean": "Time",
+      "domain_hint": "TIME",
+      "resolution_rule": "Ignore time",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "12/10",
+      "may_mean": "Date or sizing",
+      "domain_hint": "DATE_OR_SIZE",
+      "resolution_rule": "Do not split into quantities",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "5.5",
+      "may_mean": "Decimal amount or size",
+      "domain_hint": "SIZE_OR_FRACTION",
+      "resolution_rule": "Require unit; only lengths/weights allow fractions by default",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "نص",
+      "may_mean": "Half, but half a pack vs half meter vs half dozen",
+      "domain_hint": "FRACTION",
+      "resolution_rule": "Require unit; block half piece",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "ربع",
+      "may_mean": "Quarter, often measurement",
+      "domain_hint": "FRACTION",
+      "resolution_rule": "Require unit",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "دستة",
+      "may_mean": "12 pieces (one dozen) vs single sellable carton of dozen",
+      "domain_hint": "PACKAGE",
+      "resolution_rule": "Preserve unit dozen and resolved_pieces 12",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "دستتين",
+      "may_mean": "Two dozens = 24 pieces",
+      "domain_hint": "DUAL_DOZEN",
+      "resolution_rule": "Resolve 24 only for piece-based dozen",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "جوز",
+      "may_mean": "Pair vs walnut in ordinary language",
+      "domain_hint": "PAIR_OR_PRODUCT",
+      "resolution_rule": "Clothing domain context required",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "جوزين",
+      "may_mean": "Two pairs not two pieces",
+      "domain_hint": "DUAL_PAIR",
+      "resolution_rule": "Keep pair semantics",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "حبة",
+      "may_mean": "Piece vs edible seed",
+      "domain_hint": "PRODUCT_DOMAIN",
+      "resolution_rule": "Domain guard",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "وحدة",
+      "may_mean": "One piece or generic noun feminine",
+      "domain_hint": "GRAMMAR",
+      "resolution_rule": "Require numeric noun/order context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "ست",
+      "may_mean": "Number 6 or polite title for a woman",
+      "domain_hint": "PERSON",
+      "resolution_rule": "Require number context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "شي",
+      "may_mean": "Approximate modifier or thing",
+      "domain_hint": "UNKNOWN",
+      "resolution_rule": "Needs numeric neighbor to signal approximation",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "متر",
+      "may_mean": "Length of fabric or garment measurement",
+      "domain_hint": "LENGTH_OR_SIZE",
+      "resolution_rule": "Distinguish order by meter vs sizing",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "cm",
+      "may_mean": "Measurement (body dimensions)",
+      "domain_hint": "MEASUREMENT",
+      "resolution_rule": "Not piece quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "كيلو",
+      "may_mean": "Fabric bulk weight or informal thousand",
+      "domain_hint": "WEIGHT_OR_SLANG",
+      "resolution_rule": "Context required",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "دبل",
+      "may_mean": "Double quantity vs double layer/design",
+      "domain_hint": "DESIGN_OR_MULTIPLIER",
+      "resolution_rule": "Do not multiply blindly",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "طقم",
+      "may_mean": "1 set with unknown number of components",
+      "domain_hint": "SET",
+      "resolution_rule": "Never infer 2 or 3 pieces",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "باكيت",
+      "may_mean": "Package with unknown quantity",
+      "domain_hint": "PACK",
+      "resolution_rule": "Require packaging metadata",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "كرتونة",
+      "may_mean": "Carton with unknown quantity",
+      "domain_hint": "CARTON",
+      "resolution_rule": "Require carton piece_count from SKU",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "علبة",
+      "may_mean": "Package with unknown quantity",
+      "domain_hint": "BOX",
+      "resolution_rule": "Require contents",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "ربطة",
+      "may_mean": "Bundle quantity unknown",
+      "domain_hint": "BUNDLE",
+      "resolution_rule": "Require unit_count",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "باك 3",
+      "may_mean": "May mean 3-pack or 3 packages",
+      "domain_hint": "PACK",
+      "resolution_rule": "Interpret as explicit pack of 3 only with known grammar/product metadata",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "3 pack",
+      "may_mean": "3-pack product or 3 packs",
+      "domain_hint": "PACK",
+      "resolution_rule": "Hyphen/context change meaning",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "x2",
+      "may_mean": "Two copies or size/model text",
+      "domain_hint": "MULTIPLIER",
+      "resolution_rule": "Require contextual reference item",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "2x",
+      "may_mean": "Multiplier 2 or textile sizing",
+      "domain_hint": "MULTIPLIER",
+      "resolution_rule": "Require contextual reference",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "1+1",
+      "may_mean": "Offer buy one get one vs sum 2",
+      "domain_hint": "PROMO",
+      "resolution_rule": "Treat as promotion unless explicitly order quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "2+1",
+      "may_mean": "Promo vs two plus one ordered",
+      "domain_hint": "PROMO",
+      "resolution_rule": "Promotion precedence",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "قطعة من كل لون",
+      "may_mean": "One per color, total depends on selected color count",
+      "domain_hint": "ALLOCATION",
+      "resolution_rule": "Needs chosen colors to compute total",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "حبة من كل قياس",
+      "may_mean": "One per size, total depends on chosen sizes",
+      "domain_hint": "ALLOCATION",
+      "resolution_rule": "Needs selected sizes to compute total",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "كل الكمية",
+      "may_mean": "All available stock",
+      "domain_hint": "INVENTORY",
+      "resolution_rule": "Query stock for quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "الباقي",
+      "may_mean": "Remaining stock vs rest of order",
+      "domain_hint": "INVENTORY",
+      "resolution_rule": "Query context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "بين 2 و 3",
+      "may_mean": "range 2–3 not 5",
+      "domain_hint": "RANGE",
+      "resolution_rule": "Keep bounds",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "2-3",
+      "may_mean": "Range, garment size, pack of 2/3",
+      "domain_hint": "AMBIGUOUS",
+      "resolution_rule": "Require context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "نص درزن",
+      "may_mean": "Variant for 6 pieces",
+      "domain_hint": "REGIONAL",
+      "resolution_rule": "Normalize to HALF_DOZEN after local confirmation",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "فردة",
+      "may_mean": "One side of pair, e.g. single sock or shoe",
+      "domain_hint": "PAIR_COMPONENT",
+      "resolution_rule": "Do not map to a pair without product context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "فردتين",
+      "may_mean": "Two individual components vs one pair",
+      "domain_hint": "PAIR_COMPONENT",
+      "resolution_rule": "Explicit item count, not guaranteed set",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "6M",
+      "may_mean": "6 months baby size",
+      "domain_hint": "BABY_SIZE",
+      "resolution_rule": "Ignore as quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "100%",
+      "may_mean": "Percent discount/composition",
+      "domain_hint": "PERCENT",
+      "resolution_rule": "Ignore as ordered quantity",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "1/2",
+      "may_mean": "Fraction vs SKU size",
+      "domain_hint": "FRACTION_OR_SIZE",
+      "resolution_rule": "Require meter/dozen/weight context",
+      "review_status": "review_needed"
+    },
+    {
+      "expression": "1.5m",
+      "may_mean": "Length of fabric",
+      "domain_hint": "LENGTH",
+      "resolution_rule": "Value 1.5 meter, not item count",
+      "review_status": "review_needed"
+    }
+  ]
+}

@@ -1,0 +1,389 @@
+{
+  "algorithm": "Approximate project normalization ONLY: NFKC + casefold + Arabic Alef/diacritics + Arabic/Persian digits + whitespace. Codex must audit real project normalizer.",
+  "pattern_distinct_normalized_keys_estimate": 1213,
+  "pattern_cross_id_collision_keys_estimate": 6,
+  "modifier_distinct_normalized_keys_estimate": 145,
+  "modifier_cross_id_collision_keys_estimate": 0,
+  "pattern_key_collisions": [
+    {
+      "normalized_key_estimate": "dalmatian print",
+      "candidate_pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "source_alias_spellings": {
+        "ANIMAL_DALMATIAN": [
+          "Dalmatian Print"
+        ],
+        "DOT_DALMATIAN": [
+          "dalmatian print"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    },
+    {
+      "normalized_key_estimate": "dalmatien",
+      "candidate_pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "source_alias_spellings": {
+        "ANIMAL_DALMATIAN": [
+          "dalmatien"
+        ],
+        "DOT_DALMATIAN": [
+          "dalmatien"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    },
+    {
+      "normalized_key_estimate": "losanges",
+      "candidate_pattern_ids": [
+        "CHECK_DIAMOND",
+        "GEO_DIAMONDS"
+      ],
+      "source_alias_spellings": {
+        "CHECK_DIAMOND": [
+          "losanges"
+        ],
+        "GEO_DIAMONDS": [
+          "losanges"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    },
+    {
+      "normalized_key_estimate": "écossais",
+      "candidate_pattern_ids": [
+        "CHECK_PLAID",
+        "CHECK_TARTAN"
+      ],
+      "source_alias_spellings": {
+        "CHECK_PLAID": [
+          "écossais"
+        ],
+        "CHECK_TARTAN": [
+          "écossais"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    },
+    {
+      "normalized_key_estimate": "دلمشين",
+      "candidate_pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "source_alias_spellings": {
+        "ANIMAL_DALMATIAN": [
+          "دلمشين"
+        ],
+        "DOT_DALMATIAN": [
+          "دلمشين"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    },
+    {
+      "normalized_key_estimate": "نقشة معينات",
+      "candidate_pattern_ids": [
+        "CHECK_DIAMOND",
+        "GEO_DIAMONDS"
+      ],
+      "source_alias_spellings": {
+        "CHECK_DIAMOND": [
+          "نقشة معينات"
+        ],
+        "GEO_DIAMONDS": [
+          "نقشة معينات"
+        ]
+      },
+      "policy": "candidate_only_until_context_or_independent_tenant_catalog_evidence"
+    }
+  ],
+  "modifier_key_collisions": [],
+  "source_declared_collisions": [
+    {
+      "normalized_key": "dalmatian print",
+      "pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    },
+    {
+      "normalized_key": "dalmatien",
+      "pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    },
+    {
+      "normalized_key": "losanges",
+      "pattern_ids": [
+        "CHECK_DIAMOND",
+        "GEO_DIAMONDS"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    },
+    {
+      "normalized_key": "écossais",
+      "pattern_ids": [
+        "CHECK_PLAID",
+        "CHECK_TARTAN"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    },
+    {
+      "normalized_key": "دلمشين",
+      "pattern_ids": [
+        "ANIMAL_DALMATIAN",
+        "DOT_DALMATIAN"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    },
+    {
+      "normalized_key": "نقشه معينات",
+      "pattern_ids": [
+        "CHECK_DIAMOND",
+        "GEO_DIAMONDS"
+      ],
+      "action": "review_candidates_no_auto_pick"
+    }
+  ],
+  "source_declared_ambiguities": [
+    {
+      "phrase": "كاروهات",
+      "normalized_key": "كاروهات",
+      "candidate_ids": [
+        "CHECK_GENERIC",
+        "CHECK_PLAID",
+        "CHECK_TARTAN",
+        "CHECK_GINGHAM"
+      ],
+      "reason": "كاروهات اسم واسع ويحتاج وصف أدق أو منتجات الكتالوج",
+      "severity": "high"
+    },
+    {
+      "phrase": "مربعات",
+      "normalized_key": "مربعات",
+      "candidate_ids": [
+        "CHECK_GENERIC",
+        "GEO_SQUARES",
+        "CHECK_GRID"
+      ],
+      "reason": "مربعات عامة وقد تعني كاروهات أو أشكال هندسية",
+      "severity": "high"
+    },
+    {
+      "phrase": "منقط",
+      "normalized_key": "منقط",
+      "candidate_ids": [
+        "DOT_GENERIC",
+        "DOT_SPECKLED",
+        "ANIMAL_DALMATIAN"
+      ],
+      "reason": "منقط يصف غالباً نقاطاً، والمراجعة حسب سياق الكتالوج",
+      "severity": "low"
+    },
+    {
+      "phrase": "مرقط",
+      "normalized_key": "مرقط",
+      "candidate_ids": [
+        "DOT_SPECKLED",
+        "ANIMAL_LEOPARD",
+        "ANIMAL_CHEETAH"
+      ],
+      "reason": "مرقط قد يعني نقشة بقع حيوانية أو نقاط",
+      "severity": "high"
+    },
+    {
+      "phrase": "نمري",
+      "normalized_key": "نمري",
+      "candidate_ids": [
+        "ANIMAL_LEOPARD",
+        "ANIMAL_TIGER"
+      ],
+      "reason": "نمري يستخدم للفهد المرقط أو النمر المخطط",
+      "severity": "high"
+    },
+    {
+      "phrase": "نمر",
+      "normalized_key": "نمر",
+      "candidate_ids": [
+        "ANIMAL_LEOPARD",
+        "ANIMAL_TIGER"
+      ],
+      "reason": "نمر اسم الحيوان ومش بالضرورة نقشة",
+      "severity": "high"
+    },
+    {
+      "phrase": "ورود",
+      "normalized_key": "ورود",
+      "candidate_ids": [
+        "FLORAL_GENERIC",
+        "FLORAL_SMALL",
+        "FLORAL_LARGE"
+      ],
+      "reason": "لا يمكن تحديد حجم الورود من الكلمة فقط",
+      "severity": "low"
+    },
+    {
+      "phrase": "خطوط",
+      "normalized_key": "خطوط",
+      "candidate_ids": [
+        "STRIPE_GENERIC",
+        "STRIPE_VERTICAL",
+        "STRIPE_HORIZONTAL"
+      ],
+      "reason": "الجهة ما بتنحدد من كلمة خطوط",
+      "severity": "low"
+    },
+    {
+      "phrase": "سادة",
+      "normalized_key": "ساده",
+      "candidate_ids": [
+        "PLAIN_SOLID"
+      ],
+      "reason": "سادة تعني بلا نقشة؛ يمكن أن تصف لوناً موحداً أيضاً",
+      "severity": "low"
+    },
+    {
+      "phrase": "جاكار",
+      "normalized_key": "جاكار",
+      "candidate_ids": [
+        "HER_JACQUARD_LOOK"
+      ],
+      "reason": "غالباً تقنية نسيج؛ لا تفترض أنها طبعة مرسومة",
+      "severity": "high"
+    },
+    {
+      "phrase": "داماسك",
+      "normalized_key": "داماسك",
+      "candidate_ids": [
+        "HER_DAMASK"
+      ],
+      "reason": "قد يكون زخرفة أو تقنية نسيج",
+      "severity": "medium"
+    },
+    {
+      "phrase": "دانتيل",
+      "normalized_key": "دانتيل",
+      "candidate_ids": [
+        "EFFECT_LACE_LOOK"
+      ],
+      "reason": "قد يشير إلى قماش دانتيل حقيقي وليس طبعة شبيهة",
+      "severity": "high"
+    },
+    {
+      "phrase": "تطريز",
+      "normalized_key": "تطريز",
+      "candidate_ids": [
+        "EFFECT_EMBROIDERY_LOOK"
+      ],
+      "reason": "التطريز الحقيقي ليس طباعة تشبه التطريز",
+      "severity": "high"
+    },
+    {
+      "phrase": "جلد",
+      "normalized_key": "جلد",
+      "candidate_ids": [
+        "ANIMAL_SNAKE",
+        "ANIMAL_CROCODILE",
+        "ANIMAL_REPTILE"
+      ],
+      "reason": "قد يشير لخامة الجلد أو لنقشته",
+      "severity": "high"
+    },
+    {
+      "phrase": "جليتر",
+      "normalized_key": "جليتر",
+      "candidate_ids": [
+        "EFFECT_GLITTER"
+      ],
+      "reason": "قد يكون طباعة أو مادة متلألئة فعلية",
+      "severity": "medium"
+    },
+    {
+      "phrase": "ترتر",
+      "normalized_key": "ترتر",
+      "candidate_ids": [
+        "EFFECT_SEQUIN_LOOK"
+      ],
+      "reason": "قد يكون ترتر مثبت فعلاً أو مطبوع",
+      "severity": "high"
+    },
+    {
+      "phrase": "ماربل",
+      "normalized_key": "ماربل",
+      "candidate_ids": [
+        "ABS_MARBLE"
+      ],
+      "reason": "قد يدل على حجر/خامة وليس نقشة لباس",
+      "severity": "medium"
+    },
+    {
+      "phrase": "جينز",
+      "normalized_key": "جينز",
+      "candidate_ids": [
+        "EFFECT_DENIM_LOOK"
+      ],
+      "reason": "غالباً Product Type أو Material وليس نقشة",
+      "severity": "high"
+    },
+    {
+      "phrase": "logo",
+      "normalized_key": "logo",
+      "candidate_ids": [
+        "GRAPHIC_LOGO"
+      ],
+      "reason": "قد يعني شعار مطبوع أو رقعة أو تطريز",
+      "severity": "medium"
+    },
+    {
+      "phrase": "رسم",
+      "normalized_key": "رسم",
+      "candidate_ids": [
+        "GRAPHIC_GENERIC"
+      ],
+      "reason": "لفظ عام قد يشمل رسمة حيوان أو كرتون أو شعار",
+      "severity": "medium"
+    },
+    {
+      "phrase": "زكزاك",
+      "normalized_key": "زكزاك",
+      "candidate_ids": [
+        "GEO_ZIGZAG",
+        "STRIPE_ZIGZAG"
+      ],
+      "reason": "قد يكون خطوطا أو هندسة عامة",
+      "severity": "medium"
+    },
+    {
+      "phrase": "مموه",
+      "normalized_key": "مموه",
+      "candidate_ids": [
+        "CAMO_GENERIC",
+        "CAMO_WOODLAND",
+        "CAMO_DESERT"
+      ],
+      "reason": "النوع الفرعي للتمويه يحتاج سياق",
+      "severity": "low"
+    },
+    {
+      "phrase": "2",
+      "normalized_key": "2",
+      "candidate_ids": [
+        "DOT_GENERIC"
+      ],
+      "reason": "رقم 2 ليس اسم نقشة",
+      "severity": "high"
+    }
+  ],
+  "notes": [
+    "Original source normalized_key values are retained unchanged in seed; no synthetic aliases are introduced.",
+    "Pattern and modifier terms may collide with Materials, Fit, Product Types, Colors, Sizes, Quantities, Common Expressions; must audit project runtime across domains."
+  ]
+}

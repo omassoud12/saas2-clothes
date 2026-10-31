@@ -25,6 +25,8 @@ export interface BackendEnvironment
   readonly nodeEnvironment: NodeEnvironment
   readonly appReplicaCount: 1
   readonly supabaseAuthTimeoutMs: number
+  readonly elevenLabsApiKey: string | null
+  readonly elevenLabsSttTimeoutMs: number
 }
 
 export interface AdminEnvironment {
@@ -145,6 +147,15 @@ function parseSupabaseKey(value: string | undefined, label: string): string {
   }
 
   return key
+}
+
+function parseOptionalSecret(value: string | undefined, label: string): string | null {
+  if (value === undefined || value.trim() === '') return null
+  const secret = value.trim()
+  if (secret.length > MAX_SUPABASE_KEY_LENGTH || /\s|[\u0000-\u001f\u007f]/u.test(secret)) {
+    throw new Error(`${label} configuration is invalid`)
+  }
+  return secret
 }
 
 export function parseCorsAllowedOrigins(
@@ -348,6 +359,14 @@ export function loadEnvironment(
       1_000,
       30_000,
       'SUPABASE_AUTH_TIMEOUT_MS configuration is invalid',
+    ),
+    elevenLabsApiKey: parseOptionalSecret(environment.ELEVENLABS_API_KEY, 'ELEVENLABS_API_KEY'),
+    elevenLabsSttTimeoutMs: parseBoundedInteger(
+      environment.ELEVENLABS_STT_TIMEOUT_MS,
+      20_000,
+      1_000,
+      60_000,
+      'ELEVENLABS_STT_TIMEOUT_MS configuration is invalid',
     ),
   })
 }

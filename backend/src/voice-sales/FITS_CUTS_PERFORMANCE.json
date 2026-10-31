@@ -1,0 +1,37 @@
+{
+  "node": "v24.21.0",
+  "liveSupabase": false,
+  "method": "Same process, alternating paired warm parser+pure matcher on an identical descriptor-free synthetic catalog. Cold subprocesses measure full dictionary imports, not only Fits.",
+  "warmBefore": {
+    "samples": 200,
+    "meanMs": 2.4864894999999616,
+    "p95Ms": 3.6296999999995023
+  },
+  "warmAfter": {
+    "samples": 200,
+    "meanMs": 2.5809035000000087,
+    "p95Ms": 3.4952000000002954
+  },
+  "shared1000": {
+    "samples": 20,
+    "meanMs": 58.68305500000006,
+    "p95Ms": 78.56940000000031
+  },
+  "distinct1000": {
+    "samples": 5,
+    "meanMs": 2727.0772199999997,
+    "p95Ms": 2862.9133
+  },
+  "coldBefore": {
+    "startupMs": 1537.288,
+    "heapDeltaMiB": 26.26567840576172,
+    "rssMiB": 156.5546875
+  },
+  "coldAfter": {
+    "startupMs": 1745.4115,
+    "heapDeltaMiB": 27.96289825439453,
+    "rssMiB": 156.9140625
+  },
+  "runtimeResourceBytes": 372602,
+  "warmMeanDeltaMs": 0.09441400000004707
+}

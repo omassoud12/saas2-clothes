@@ -1,0 +1,213 @@
+{
+  "origin": "original source ambiguities/collisions; copied without semantic edits",
+  "ambiguities": [
+    {
+      "phrase": "واسع",
+      "candidate_ids": "FIT_LOOSE;LEG_WIDE;SLEEVE_WIDE",
+      "reason": "Could describe overall fit, leg or sleeve",
+      "severity": "review"
+    },
+    {
+      "phrase": "ضيق",
+      "candidate_ids": "FIT_SLIM;FIT_SKINNY;FIT_FITTED",
+      "reason": "Degree of tightness is unspecified",
+      "severity": "review"
+    },
+    {
+      "phrase": "فيت",
+      "candidate_ids": "FIT_FITTED;FIT_SLIM",
+      "reason": "generic fit or colloquial fitted",
+      "severity": "review"
+    },
+    {
+      "phrase": "كروب",
+      "candidate_ids": "LEN_CROPPED",
+      "reason": "Could refer to a crop top product rather than garment length",
+      "severity": "review"
+    },
+    {
+      "phrase": "كولوت",
+      "candidate_ids": "LEG_CULOTTE",
+      "reason": "Could be underwear in local usage",
+      "severity": "review"
+    },
+    {
+      "phrase": "سليب",
+      "candidate_ids": "SIL_SLIP",
+      "reason": "Could be underwear / sleepwear, not dress cut",
+      "severity": "review"
+    },
+    {
+      "phrase": "موم",
+      "candidate_ids": "LEG_MOM",
+      "reason": "Could be unrelated to clothes without jeans context",
+      "severity": "review"
+    },
+    {
+      "phrase": "كلاسيك",
+      "candidate_ids": "FIT_CLASSIC;FIT_REGULAR",
+      "reason": "Generic style adjective is not a reliable fit label",
+      "severity": "review"
+    },
+    {
+      "phrase": "سكيني",
+      "candidate_ids": "FIT_SKINNY;FIT_SUPER_SKINNY",
+      "reason": "Different tightness categories depending product brand",
+      "severity": "review"
+    },
+    {
+      "phrase": "قصة واسعة",
+      "candidate_ids": "FIT_LOOSE;LEG_WIDE",
+      "reason": "Overall fit versus pant leg needs context",
+      "severity": "review"
+    },
+    {
+      "phrase": "فلير",
+      "candidate_ids": "LEG_FLARED;SIL_FIT_FLARE",
+      "reason": "Pants leg vs dress silhouette",
+      "severity": "review"
+    },
+    {
+      "phrase": "ستريت",
+      "candidate_ids": "LEG_STRAIGHT",
+      "reason": "Romanized street/straight may be ambiguous",
+      "severity": "review"
+    },
+    {
+      "phrase": "قصة اميرة",
+      "candidate_ids": "SIL_PRINCESS;SIL_BALL_GOWN",
+      "reason": "Princess seams versus ball-gown silhouette",
+      "severity": "review"
+    },
+    {
+      "phrase": "بالون",
+      "candidate_ids": "LEG_BALLOON;SLEEVE_BALLOON;SIL_BUBBLE",
+      "reason": "Leg, sleeve or hem shape",
+      "severity": "review"
+    },
+    {
+      "phrase": "قصير",
+      "candidate_ids": "LEN_CROPPED;LEN_MINI;LEN_BERMUDA",
+      "reason": "Absolute length undefined without product type",
+      "severity": "review"
+    },
+    {
+      "phrase": "مشد",
+      "candidate_ids": "FIT_COMPRESSION;DETAIL_CORSET",
+      "reason": "Compression sportswear vs corset construction",
+      "severity": "review"
+    },
+    {
+      "phrase": "تلات ارباع",
+      "candidate_ids": "LEN_THREE_QUARTER",
+      "reason": "Could mean sleeve or pant length; look at product type",
+      "severity": "review"
+    },
+    {
+      "phrase": "هاي ويست",
+      "candidate_ids": "RISE_HIGH;RISE_ULTRA_HIGH",
+      "reason": "Rise depends on brand measurement",
+      "severity": "review"
+    },
+    {
+      "phrase": "حجر واطي",
+      "candidate_ids": "LEG_DROP_CROTCH;RISE_LOW",
+      "reason": "Crotch construction and waist rise differ",
+      "severity": "review"
+    },
+    {
+      "phrase": "بليسيه",
+      "candidate_ids": "SIL_PLEATED;DETAIL_PLEATS",
+      "reason": "Entire garment silhouette versus detail",
+      "severity": "review"
+    },
+    {
+      "phrase": "روشد",
+      "candidate_ids": "SIL_RUCHED;DETAIL_RUCHED",
+      "reason": "Overall silhouette versus construction detail",
+      "severity": "review"
+    },
+    {
+      "phrase": "فستان منفوش",
+      "candidate_ids": "SIL_BALL_GOWN;SIL_FIT_FLARE",
+      "reason": "Flare degree unclear",
+      "severity": "review"
+    },
+    {
+      "phrase": "كتافات",
+      "candidate_ids": "SHOULDER_PADDED",
+      "reason": "Can refer to pads or straps in local dialect",
+      "severity": "review"
+    },
+    {
+      "phrase": "مطاط",
+      "candidate_ids": "HEM_ELASTIC;DETAIL_ELASTIC_WAIST",
+      "reason": "Location of elastic matters",
+      "severity": "review"
+    },
+    {
+      "phrase": "ميدي",
+      "candidate_ids": "LEN_MIDI",
+      "reason": "Product-length label; actual hem varies by customer height",
+      "severity": "review"
+    },
+    {
+      "phrase": "أوفر سايز",
+      "candidate_ids": "FIT_OVERSIZED",
+      "reason": "Design intent is not equivalent to ordering a larger tagged size",
+      "severity": "review"
+    }
+  ],
+  "collisions": [
+    {
+      "normalized_key": "drapé",
+      "style_ids": "DETAIL_DRAPING;SIL_DRAPED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "froncé",
+      "style_ids": "DETAIL_GATHERS;SIL_RUCHED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "ruching",
+      "style_ids": "DETAIL_RUCHED;SIL_RUCHED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "split hem",
+      "style_ids": "HEM_SPLIT;LEG_SPLIT_HEM",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "بليسيه",
+      "style_ids": "DETAIL_PLEATS;SIL_PLEATED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "تجميع قماش",
+      "style_ids": "DETAIL_GATHERS;DETAIL_RUCHED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "ثنيات منسدله",
+      "style_ids": "DETAIL_DRAPING;SIL_DRAPED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "شق من تحت",
+      "style_ids": "HEM_SPLIT;LEG_SPLIT_HEM",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "مجمع",
+      "style_ids": "DETAIL_GATHERS;SIL_RUCHED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    },
+    {
+      "normalized_key": "مجمع قماش",
+      "style_ids": "DETAIL_GATHERS;SIL_RUCHED",
+      "action": "Require contextual review; never auto-execute based on this phrase alone"
+    }
+  ]
+}

@@ -79,7 +79,10 @@ export function isNavigationItemActive(pathname, itemPath) {
   return pathname === itemPath || (itemPath === ROUTES.products && /^\/app\/products\/[0-9a-f-]{36}$/i.test(pathname))
 }
 
-export function resolveAppRoute(pathname, role) {
+export function resolveAppRoute(pathname, role, development = false) {
+  if (development === true && pathname === ROUTES.textMatchingLab && tenantRoles.includes(role)) {
+    return Object.freeze({ route: Object.freeze({ key: 'textMatchingLab', label: 'Text Matching Lab', path: ROUTES.textMatchingLab }), redirectTo: null })
+  }
   const navigation = getAppNavigation(role)
   const productMatch = /^\/app\/products\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(pathname)
   const route = navigation.find((item) => item.path === pathname || (item.key === 'products' && productMatch))

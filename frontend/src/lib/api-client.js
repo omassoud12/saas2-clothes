@@ -151,6 +151,8 @@ export function normalizeApiError(status, body, fallbackMessage, retryAfter = nu
 }
 
 export async function apiRequest({
+  // Opt-in only for endpoints returning a validated domain result on an error status.
+  acceptedStatuses = [],
   accessToken,
   fallbackMessage = 'The service is unavailable. Please try again.',
   fetchImpl = globalThis.fetch,
@@ -178,6 +180,7 @@ export async function apiRequest({
   const options = {
     method: normalizedMethod,
     headers: requestHeaders,
+    ...(signal && requestBody ? { signal } : {}),
     ...(payload
       ? { body: JSON.stringify(payload) }
       : requestBody
@@ -213,7 +216,7 @@ export async function apiRequest({
   }
   const { response, body } = transport
 
-  if (!response.ok) {
+  if (!response.ok && !acceptedStatuses.includes(response.status)) {
     return normalizeApiError(response.status, body, fallbackMessage, response.headers?.get?.('Retry-After') ?? null)
   }
 

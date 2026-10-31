@@ -1,0 +1,29 @@
+{
+  "node": "v24.21.0",
+  "liveSupabase": "UNVERIFIED",
+  "method": "Alternating paired warm parser and pure matcher on identical synthetic data; distinct/shared catalog scenarios have no paired before measurement. No network or database.",
+  "warmBefore": {
+    "samples": 150,
+    "meanMs": 5.004782000014869,
+    "p95Ms": 6.627299999818206
+  },
+  "warmAfter": {
+    "samples": 150,
+    "meanMs": 4.919266666658222,
+    "p95Ms": 7.996999999973923
+  },
+  "shared1000": {
+    "samples": 10,
+    "meanMs": 53.08512999997474,
+    "p95Ms": 62.767500000074506
+  },
+  "distinct1000": {
+    "samples": 3,
+    "meanMs": 1498.203666666678,
+    "p95Ms": 1612.2039999999106
+  },
+  "runtimeResourceBytes": 405181,
+  "mockBefore": "NOT_FOUND",
+  "mockAfter": "MATCHED",
+  "warmMeanDeltaMs": -0.0855153333566463
+}

@@ -1,0 +1,47 @@
+{
+  "sourceFile": "saas2_color_aliases(1).csv",
+  "sourceSha256": "f50e8977a07b212801966b6cc2b1c063676ce92d768c212d50c34232d9d07c85",
+  "sourceRecordCount": 3475,
+  "colorConceptCount": 307,
+  "sourceNormalizedUniqueKeys": 2937,
+  "sourceNormalizedCrossColorCollisionKeys": 64,
+  "rawAliasCrossColorCollisionKeys": 63,
+  "repeatedWithinSameColorRawAliasRecords": 306,
+  "repeatedWithinSameColorNormalizedAliasRecords": 470,
+  "matchPolicies": {
+    "exact_candidate": 3314,
+    "needs_context": 161
+  },
+  "reviewStatuses": {
+    "seed_review": 3042,
+    "needs_review": 433
+  },
+  "localeCounts": {
+    "latin": 1730,
+    "ar": 1745
+  },
+  "sourceCounts": {
+    "canonical_en": 307,
+    "arabizi;english": 244,
+    "english": 324,
+    "arabizi": 397,
+    "french": 404,
+    "canonical_ar": 206,
+    "ar_colloquial": 1005,
+    "generated_definite_ar": 433,
+    "ar_colloquial;canonical_ar": 101,
+    "arabizi;english;french": 38,
+    "arabizi;french": 10,
+    "english;french": 6
+  },
+  "sourceSchema": [
+    "color_id",
+    "alias",
+    "normalized",
+    "source",
+    "locale",
+    "match_policy",
+    "review_status"
+  ],
+  "caveat": "All source records are unverified candidate vocabulary, not confirmed real-world color equivalences; backend runtime-normalization and cross-domain audit required."
+}

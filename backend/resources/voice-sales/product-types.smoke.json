@@ -1,0 +1,63 @@
+{
+  "note": "Candidate detection fixtures only. Exact catalog outcome depends on tenant products and existing parser. These are NOT product/variant fixtures.",
+  "cases": [
+    {
+      "text": "بدي تي شيرت سودا قياس XL قطعتين",
+      "expectCandidateTypeIds": [
+        "TSHIRT"
+      ],
+      "otherAttributes": "handled by preexisting dictionaries"
+    },
+    {
+      "text": "tchirt sawda XL two pieces",
+      "expectCandidateTypeIds": [
+        "TSHIRT"
+      ],
+      "otherAttributes": "handled by preexisting dictionaries"
+    },
+    {
+      "text": "t chirt orange kt3ten",
+      "expectCandidateTypeIds": [],
+      "reviewNote": "t chirt is NOT in supplied aliases and orange/kt3ten are outside scope. Do not claim this seed fixes it."
+    },
+    {
+      "text": "بدي بودي",
+      "expectCandidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "mustStayAmbiguous": true
+    },
+    {
+      "text": "بدي بودي بيبي",
+      "expectCandidateTypeIds": [
+        "BABY_ONESIE"
+      ],
+      "needsContextValidation": true
+    },
+    {
+      "text": "بدي كولون",
+      "expectCandidateTypeIds": [
+        "LEGGINGS",
+        "TIGHTS"
+      ],
+      "mustStayAmbiguous": true
+    },
+    {
+      "text": "بدي كيلوت",
+      "expectCandidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "mustStayAmbiguous": true
+    },
+    {
+      "text": "Polo collar shirt",
+      "reviewNote": "Polo may mean collar, product style, or model; preserve parser context."
+    },
+    {
+      "text": "jeans مخمل قياس 32",
+      "reviewNote": "Material, product type and numeric size are separate constraints, preserve any conflict."
+    }
+  ]
+}

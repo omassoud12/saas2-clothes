@@ -1,0 +1,1292 @@
+{
+  "auditNormalizer": "NFKC + lowercase + Arabic Alef folding + Arabic diacritics removal + Arabic/Persian digit conversion + whitespace (approximation only; MUST recompute with existing TypeScript normalizer)",
+  "counts": {
+    "sourceDeclaredAmbiguities": 50,
+    "distinctPreviewFabricCrossIdKeys": 4,
+    "distinctPreviewModifierCrossIdKeys": 0,
+    "distinctPreviewFabricModifierOverlapKeys": 2,
+    "sameConceptRepeatedKeyRecords": 41
+  },
+  "fabricCrossIdKeys": [
+    {
+      "key": "polaire",
+      "fabricIds": [
+        "FLEECE",
+        "POLAR_FLEECE"
+      ],
+      "modifierIds": [],
+      "aliases": [
+        "polaire"
+      ],
+      "sourceNormalized": [
+        "polaire"
+      ],
+      "fabricRecords": 2,
+      "modifierRecords": 0
+    },
+    {
+      "key": "velours",
+      "fabricIds": [
+        "VELOUR",
+        "VELVET"
+      ],
+      "modifierIds": [],
+      "aliases": [
+        "velours"
+      ],
+      "sourceNormalized": [
+        "velours"
+      ],
+      "fabricRecords": 2,
+      "modifierRecords": 0
+    },
+    {
+      "key": "شمواة",
+      "fabricIds": [
+        "FAUX_SUEDE",
+        "SUEDE"
+      ],
+      "modifierIds": [],
+      "aliases": [
+        "شمواة"
+      ],
+      "sourceNormalized": [
+        "شمواة"
+      ],
+      "fabricRecords": 2,
+      "modifierRecords": 0
+    },
+    {
+      "key": "شمواه",
+      "fabricIds": [
+        "FAUX_SUEDE",
+        "SUEDE"
+      ],
+      "modifierIds": [],
+      "aliases": [
+        "شمواه"
+      ],
+      "sourceNormalized": [
+        "شمواه"
+      ],
+      "fabricRecords": 2,
+      "modifierRecords": 0
+    }
+  ],
+  "modifierCrossIdKeys": [],
+  "fabricModifierOverlapKeys": [
+    {
+      "key": "matelasse",
+      "fabricIds": [
+        "QUILTED_FABRIC"
+      ],
+      "modifierIds": [
+        "QUILTED"
+      ],
+      "aliases": [
+        "matelasse"
+      ],
+      "sourceNormalized": [
+        "matelasse"
+      ],
+      "fabricRecords": 1,
+      "modifierRecords": 1
+    },
+    {
+      "key": "matelassé",
+      "fabricIds": [
+        "QUILTED_FABRIC"
+      ],
+      "modifierIds": [
+        "QUILTED"
+      ],
+      "aliases": [
+        "matelassé"
+      ],
+      "sourceNormalized": [
+        "matelassé"
+      ],
+      "fabricRecords": 1,
+      "modifierRecords": 1
+    }
+  ],
+  "sameConceptRepeatedKeys": [
+    {
+      "key": "2-way stretch",
+      "fabricIds": [],
+      "modifierIds": [
+        "TWO_WAY_STRETCH"
+      ],
+      "aliases": [
+        "2-way stretch"
+      ],
+      "sourceNormalized": [
+        "2 way stretch"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "4-way stretch",
+      "fabricIds": [],
+      "modifierIds": [
+        "FOUR_WAY_STRETCH"
+      ],
+      "aliases": [
+        "4-way stretch"
+      ],
+      "sourceNormalized": [
+        "4 way stretch"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "blend",
+      "fabricIds": [],
+      "modifierIds": [
+        "MIXED"
+      ],
+      "aliases": [
+        "Blend",
+        "blend"
+      ],
+      "sourceNormalized": [
+        "blend"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "breathable",
+      "fabricIds": [],
+      "modifierIds": [
+        "BREATHABLE"
+      ],
+      "aliases": [
+        "Breathable",
+        "breathable"
+      ],
+      "sourceNormalized": [
+        "breathable"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "double face",
+      "fabricIds": [],
+      "modifierIds": [
+        "DOUBLE_FACE"
+      ],
+      "aliases": [
+        "Double face",
+        "double face"
+      ],
+      "sourceNormalized": [
+        "double face"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "fleece lined",
+      "fabricIds": [],
+      "modifierIds": [
+        "FLEECE_LINED"
+      ],
+      "aliases": [
+        "Fleece lined",
+        "fleece lined"
+      ],
+      "sourceNormalized": [
+        "fleece lined"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "lightweight",
+      "fabricIds": [],
+      "modifierIds": [
+        "LIGHTWEIGHT"
+      ],
+      "aliases": [
+        "Lightweight",
+        "lightweight"
+      ],
+      "sourceNormalized": [
+        "lightweight"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "matte",
+      "fabricIds": [],
+      "modifierIds": [
+        "MATTE"
+      ],
+      "aliases": [
+        "Matte",
+        "matte"
+      ],
+      "sourceNormalized": [
+        "matte"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "medium weight",
+      "fabricIds": [],
+      "modifierIds": [
+        "MEDIUM_WEIGHT"
+      ],
+      "aliases": [
+        "Medium weight",
+        "medium weight"
+      ],
+      "sourceNormalized": [
+        "medium weight"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "mercerized",
+      "fabricIds": [],
+      "modifierIds": [
+        "MERCERIZED"
+      ],
+      "aliases": [
+        "Mercerized",
+        "mercerized"
+      ],
+      "sourceNormalized": [
+        "mercerized"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "metallic",
+      "fabricIds": [],
+      "modifierIds": [
+        "METALLIC"
+      ],
+      "aliases": [
+        "Metallic",
+        "metallic"
+      ],
+      "sourceNormalized": [
+        "metallic"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "moisture wicking",
+      "fabricIds": [],
+      "modifierIds": [
+        "MOISTURE_WICKING"
+      ],
+      "aliases": [
+        "Moisture wicking",
+        "moisture wicking"
+      ],
+      "sourceNormalized": [
+        "moisture wicking"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "natural",
+      "fabricIds": [],
+      "modifierIds": [
+        "NATURAL"
+      ],
+      "aliases": [
+        "Natural",
+        "natural"
+      ],
+      "sourceNormalized": [
+        "natural"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "non iron",
+      "fabricIds": [],
+      "modifierIds": [
+        "NON_IRON"
+      ],
+      "aliases": [
+        "Non iron",
+        "non iron"
+      ],
+      "sourceNormalized": [
+        "non iron"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "non-stretch",
+      "fabricIds": [],
+      "modifierIds": [
+        "NON_STRETCH"
+      ],
+      "aliases": [
+        "Non-stretch",
+        "non-stretch"
+      ],
+      "sourceNormalized": [
+        "non stretch"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "opaque",
+      "fabricIds": [],
+      "modifierIds": [
+        "OPAQUE"
+      ],
+      "aliases": [
+        "Opaque",
+        "opaque"
+      ],
+      "sourceNormalized": [
+        "opaque"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "organic",
+      "fabricIds": [],
+      "modifierIds": [
+        "ORGANIC"
+      ],
+      "aliases": [
+        "Organic",
+        "organic"
+      ],
+      "sourceNormalized": [
+        "organic"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "prewashed",
+      "fabricIds": [],
+      "modifierIds": [
+        "PREWASHED"
+      ],
+      "aliases": [
+        "Prewashed",
+        "prewashed"
+      ],
+      "sourceNormalized": [
+        "prewashed"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "pure",
+      "fabricIds": [],
+      "modifierIds": [
+        "PURE"
+      ],
+      "aliases": [
+        "Pure",
+        "pure"
+      ],
+      "sourceNormalized": [
+        "pure"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "quick dry",
+      "fabricIds": [],
+      "modifierIds": [
+        "QUICK_DRY"
+      ],
+      "aliases": [
+        "Quick dry",
+        "quick dry"
+      ],
+      "sourceNormalized": [
+        "quick dry"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "quilted",
+      "fabricIds": [],
+      "modifierIds": [
+        "QUILTED"
+      ],
+      "aliases": [
+        "Quilted",
+        "quilted"
+      ],
+      "sourceNormalized": [
+        "quilted"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "recycled",
+      "fabricIds": [],
+      "modifierIds": [
+        "RECYCLED"
+      ],
+      "aliases": [
+        "Recycled",
+        "recycled"
+      ],
+      "sourceNormalized": [
+        "recycled"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "rough",
+      "fabricIds": [],
+      "modifierIds": [
+        "ROUGH"
+      ],
+      "aliases": [
+        "Rough",
+        "rough"
+      ],
+      "sourceNormalized": [
+        "rough"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "sheer",
+      "fabricIds": [],
+      "modifierIds": [
+        "SHEER"
+      ],
+      "aliases": [
+        "Sheer",
+        "sheer"
+      ],
+      "sourceNormalized": [
+        "sheer"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "shiny",
+      "fabricIds": [],
+      "modifierIds": [
+        "SHINY"
+      ],
+      "aliases": [
+        "Shiny",
+        "shiny"
+      ],
+      "sourceNormalized": [
+        "shiny"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "smooth",
+      "fabricIds": [],
+      "modifierIds": [
+        "SMOOTH"
+      ],
+      "aliases": [
+        "Smooth",
+        "smooth"
+      ],
+      "sourceNormalized": [
+        "smooth"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "soft",
+      "fabricIds": [],
+      "modifierIds": [
+        "SOFT"
+      ],
+      "aliases": [
+        "Soft",
+        "soft"
+      ],
+      "sourceNormalized": [
+        "soft"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "stonewashed",
+      "fabricIds": [],
+      "modifierIds": [
+        "STONEWASHED"
+      ],
+      "aliases": [
+        "Stonewashed",
+        "stonewashed"
+      ],
+      "sourceNormalized": [
+        "stonewashed"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "stretchy",
+      "fabricIds": [],
+      "modifierIds": [
+        "STRETCH"
+      ],
+      "aliases": [
+        "Stretchy",
+        "stretchy"
+      ],
+      "sourceNormalized": [
+        "stretchy"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "synthetic",
+      "fabricIds": [],
+      "modifierIds": [
+        "SYNTHETIC"
+      ],
+      "aliases": [
+        "Synthetic",
+        "synthetic"
+      ],
+      "sourceNormalized": [
+        "synthetic"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "thick",
+      "fabricIds": [],
+      "modifierIds": [
+        "THICK"
+      ],
+      "aliases": [
+        "Thick",
+        "thick"
+      ],
+      "sourceNormalized": [
+        "thick"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "water repellent",
+      "fabricIds": [],
+      "modifierIds": [
+        "WATER_REPELLENT"
+      ],
+      "aliases": [
+        "Water repellent",
+        "water repellent"
+      ],
+      "sourceNormalized": [
+        "water repellent"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "waterproof",
+      "fabricIds": [],
+      "modifierIds": [
+        "WATERPROOF"
+      ],
+      "aliases": [
+        "Waterproof",
+        "waterproof"
+      ],
+      "sourceNormalized": [
+        "waterproof"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "windproof",
+      "fabricIds": [],
+      "modifierIds": [
+        "WINDPROOF"
+      ],
+      "aliases": [
+        "Windproof",
+        "windproof"
+      ],
+      "sourceNormalized": [
+        "windproof"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "wrinkle resistant",
+      "fabricIds": [],
+      "modifierIds": [
+        "WRINKLE_RESISTANT"
+      ],
+      "aliases": [
+        "Wrinkle resistant",
+        "wrinkle resistant"
+      ],
+      "sourceNormalized": [
+        "wrinkle resistant"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "املس",
+      "fabricIds": [],
+      "modifierIds": [
+        "SMOOTH"
+      ],
+      "aliases": [
+        "أملس",
+        "املس"
+      ],
+      "sourceNormalized": [
+        "املس"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "اورغانيك",
+      "fabricIds": [],
+      "modifierIds": [
+        "ORGANIC"
+      ],
+      "aliases": [
+        "أورغانيك",
+        "اورغانيك"
+      ],
+      "sourceNormalized": [
+        "اورغانيك"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "خشن",
+      "fabricIds": [],
+      "modifierIds": [
+        "ROUGH"
+      ],
+      "aliases": [
+        "خشن"
+      ],
+      "sourceNormalized": [
+        "خشن"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "مطاطي",
+      "fabricIds": [],
+      "modifierIds": [
+        "STRETCH"
+      ],
+      "aliases": [
+        "مطاطي"
+      ],
+      "sourceNormalized": [
+        "مطاطي"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    },
+    {
+      "key": "مطفي",
+      "fabricIds": [],
+      "modifierIds": [
+        "MATTE"
+      ],
+      "aliases": [
+        "مطفي",
+        "مطفّي"
+      ],
+      "sourceNormalized": [
+        "مطفي"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 3
+    },
+    {
+      "key": "ناعم",
+      "fabricIds": [],
+      "modifierIds": [
+        "SOFT"
+      ],
+      "aliases": [
+        "ناعم"
+      ],
+      "sourceNormalized": [
+        "ناعم"
+      ],
+      "fabricRecords": 0,
+      "modifierRecords": 2
+    }
+  ],
+  "sourceDeclaredAmbiguities": [
+    {
+      "sourceRecordIndex": 0,
+      "alias": "جينز",
+      "keyPreview": "جينز",
+      "candidateIds": [
+        "DENIM"
+      ],
+      "whyAmbiguous": "Product type JEANS pants versus denim textile",
+      "safeDefault": "Require قماش/خامة or product context; do not consume same span for two entities automatically"
+    },
+    {
+      "sourceRecordIndex": 1,
+      "alias": "jeans",
+      "keyPreview": "jeans",
+      "candidateIds": [
+        "DENIM"
+      ],
+      "whyAmbiguous": "Pants PRODUCT or denim FABRIC",
+      "safeDefault": "Context before assigning FABRIC"
+    },
+    {
+      "sourceRecordIndex": 2,
+      "alias": "denim",
+      "keyPreview": "denim",
+      "candidateIds": [
+        "DENIM"
+      ],
+      "whyAmbiguous": "Fabric commonly but denim jeans also product",
+      "safeDefault": "Prefer material if preceded by fabric/material"
+    },
+    {
+      "sourceRecordIndex": 3,
+      "alias": "مخمل",
+      "keyPreview": "مخمل",
+      "candidateIds": [
+        "VELVET",
+        "VELOUR"
+      ],
+      "whyAmbiguous": "Velvet versus velour in retail use",
+      "safeDefault": "Flag multiple candidates without subtype"
+    },
+    {
+      "sourceRecordIndex": 4,
+      "alias": "قطيفة",
+      "keyPreview": "قطيفة",
+      "candidateIds": [
+        "VELVET",
+        "VELOUR",
+        "VELVETEEN"
+      ],
+      "whyAmbiguous": "Widely used for velvet-like surfaces",
+      "safeDefault": "Ask or use tenant SKU fabric field"
+    },
+    {
+      "sourceRecordIndex": 5,
+      "alias": "velours",
+      "keyPreview": "velours",
+      "candidateIds": [
+        "VELVET",
+        "VELOUR"
+      ],
+      "whyAmbiguous": "French velours can refer broadly to plush/velvet",
+      "safeDefault": "Require context"
+    },
+    {
+      "sourceRecordIndex": 6,
+      "alias": "ليكرا",
+      "keyPreview": "ليكرا",
+      "candidateIds": [
+        "ELASTANE",
+        "SPANDEX_FABRIC"
+      ],
+      "whyAmbiguous": "Fiber brand versus stretchy knit retail label",
+      "safeDefault": "Do not infer percent or knit construction"
+    },
+    {
+      "sourceRecordIndex": 7,
+      "alias": "lycra",
+      "keyPreview": "lycra",
+      "candidateIds": [
+        "ELASTANE",
+        "SPANDEX_FABRIC"
+      ],
+      "whyAmbiguous": "Trademark used for elastane and stretchy fabrics",
+      "safeDefault": "Use product composition to disambiguate"
+    },
+    {
+      "sourceRecordIndex": 8,
+      "alias": "ستريتش",
+      "keyPreview": "ستريتش",
+      "candidateIds": [
+        "SPANDEX_FABRIC"
+      ],
+      "whyAmbiguous": "Property/stretch, not a specific fiber",
+      "safeDefault": "Store STRETCH modifier unless specific fabric is sold"
+    },
+    {
+      "sourceRecordIndex": 9,
+      "alias": "stretch",
+      "keyPreview": "stretch",
+      "candidateIds": [
+        "SPANDEX_FABRIC"
+      ],
+      "whyAmbiguous": "Stretches but could be knit without elastane",
+      "safeDefault": "Modifier by default"
+    },
+    {
+      "sourceRecordIndex": 10,
+      "alias": "جوك",
+      "keyPreview": "جوك",
+      "candidateIds": [
+        "FELT",
+        "MELTON"
+      ],
+      "whyAmbiguous": "Regional variant of جوخ; noisy spelling",
+      "safeDefault": "Review manual and avoid automatic match"
+    },
+    {
+      "sourceRecordIndex": 11,
+      "alias": "جوخ",
+      "keyPreview": "جوخ",
+      "candidateIds": [
+        "FELT",
+        "MELTON"
+      ],
+      "whyAmbiguous": "Thick wool fabric or felt/melton",
+      "safeDefault": "Ask or compare merchant catalogue"
+    },
+    {
+      "sourceRecordIndex": 12,
+      "alias": "شيفون",
+      "keyPreview": "شيفون",
+      "candidateIds": [
+        "CHIFFON"
+      ],
+      "whyAmbiguous": "Fabric or clothing product",
+      "safeDefault": "Fabric if material cue exists"
+    },
+    {
+      "sourceRecordIndex": 13,
+      "alias": "جيرسي",
+      "keyPreview": "جيرسي",
+      "candidateIds": [
+        "JERSEY"
+      ],
+      "whyAmbiguous": "Sports jersey clothing item or knit fabric",
+      "safeDefault": "Prefer material with قماش/fabric/تركيبة"
+    },
+    {
+      "sourceRecordIndex": 14,
+      "alias": "jersey",
+      "keyPreview": "jersey",
+      "candidateIds": [
+        "JERSEY"
+      ],
+      "whyAmbiguous": "Sports top or knitted fabric",
+      "safeDefault": "Use product and material slots separately"
+    },
+    {
+      "sourceRecordIndex": 15,
+      "alias": "تريكو",
+      "keyPreview": "تريكو",
+      "candidateIds": [
+        "TRICOT"
+      ],
+      "whyAmbiguous": "Knit process or sweater product",
+      "safeDefault": "Match context"
+    },
+    {
+      "sourceRecordIndex": 16,
+      "alias": "حرير صناعي",
+      "keyPreview": "حرير صناعي",
+      "candidateIds": [
+        "VISCOSE",
+        "RAYON"
+      ],
+      "whyAmbiguous": "Silk-like regenerated/synthetic textile not real silk",
+      "safeDefault": "Never map to SILK"
+    },
+    {
+      "sourceRecordIndex": 17,
+      "alias": "حرير",
+      "keyPreview": "حرير",
+      "candidateIds": [
+        "SILK"
+      ],
+      "whyAmbiguous": "Might be used colloquially for silk-look textiles",
+      "safeDefault": "Real silk requires confirmed label"
+    },
+    {
+      "sourceRecordIndex": 18,
+      "alias": "ساتان",
+      "keyPreview": "ساتان",
+      "candidateIds": [
+        "SATIN"
+      ],
+      "whyAmbiguous": "Weave/appearance, not silk fiber",
+      "safeDefault": "Store SATIN in weave/fabric slot, not SILK"
+    },
+    {
+      "sourceRecordIndex": 19,
+      "alias": "فوال",
+      "keyPreview": "فوال",
+      "candidateIds": [
+        "VOILE"
+      ],
+      "whyAmbiguous": "May be confused with foil in Latin spelling",
+      "safeDefault": "Do not equate foil print"
+    },
+    {
+      "sourceRecordIndex": 20,
+      "alias": "شاش",
+      "keyPreview": "شاش",
+      "candidateIds": [
+        "GAUZE"
+      ],
+      "whyAmbiguous": "Medical gauze or apparel fabric",
+      "safeDefault": "Prefer fabric context"
+    },
+    {
+      "sourceRecordIndex": 21,
+      "alias": "تول",
+      "keyPreview": "تول",
+      "candidateIds": [
+        "TULLE"
+      ],
+      "whyAmbiguous": "Could be generic roll/netting and lexical overlaps",
+      "safeDefault": "Check garments/material context"
+    },
+    {
+      "sourceRecordIndex": 22,
+      "alias": "تل",
+      "keyPreview": "تل",
+      "candidateIds": [
+        "TULLE"
+      ],
+      "whyAmbiguous": "Short common Arabic word",
+      "safeDefault": "Require material or dress context"
+    },
+    {
+      "sourceRecordIndex": 23,
+      "alias": "مش",
+      "keyPreview": "مش",
+      "candidateIds": [
+        "MESH"
+      ],
+      "whyAmbiguous": "Arabic negation مش versus mesh",
+      "safeDefault": "Never auto-match negation"
+    },
+    {
+      "sourceRecordIndex": 24,
+      "alias": "mesh",
+      "keyPreview": "mesh",
+      "candidateIds": [
+        "MESH"
+      ],
+      "whyAmbiguous": "Fabric term but short/technical",
+      "safeDefault": "Require clothing/material context"
+    },
+    {
+      "sourceRecordIndex": 25,
+      "alias": "جلد",
+      "keyPreview": "جلد",
+      "candidateIds": [
+        "GENUINE_LEATHER",
+        "FAUX_LEATHER"
+      ],
+      "whyAmbiguous": "Generic leather doesn't specify genuine/faux",
+      "safeDefault": "Store LEATHER_UNSPECIFIED or ask"
+    },
+    {
+      "sourceRecordIndex": 26,
+      "alias": "leather",
+      "keyPreview": "leather",
+      "candidateIds": [
+        "GENUINE_LEATHER",
+        "FAUX_LEATHER"
+      ],
+      "whyAmbiguous": "Not always proof of animal hide",
+      "safeDefault": "Require composition label"
+    },
+    {
+      "sourceRecordIndex": 27,
+      "alias": "شمواه",
+      "keyPreview": "شمواه",
+      "candidateIds": [
+        "SUEDE",
+        "FAUX_SUEDE"
+      ],
+      "whyAmbiguous": "Real suede versus synthetic suede look",
+      "safeDefault": "Do not assume genuine leather"
+    },
+    {
+      "sourceRecordIndex": 28,
+      "alias": "suede",
+      "keyPreview": "suede",
+      "candidateIds": [
+        "SUEDE",
+        "FAUX_SUEDE"
+      ],
+      "whyAmbiguous": "Retail description may mean suede-look",
+      "safeDefault": "Ask or use catalog"
+    },
+    {
+      "sourceRecordIndex": 29,
+      "alias": "بامبو",
+      "keyPreview": "بامبو",
+      "candidateIds": [
+        "BAMBOO_RAW",
+        "BAMBOO_VISCOSE"
+      ],
+      "whyAmbiguous": "Most soft bamboo textiles are processed regenerated fibers",
+      "safeDefault": "Require labeling to determine actual fiber"
+    },
+    {
+      "sourceRecordIndex": 30,
+      "alias": "bamboo",
+      "keyPreview": "bamboo",
+      "candidateIds": [
+        "BAMBOO_RAW",
+        "BAMBOO_VISCOSE"
+      ],
+      "whyAmbiguous": "Unspecific bamboo textile claim",
+      "safeDefault": "Avoid assuming bast fiber"
+    },
+    {
+      "sourceRecordIndex": 31,
+      "alias": "فرو",
+      "keyPreview": "فرو",
+      "candidateIds": [
+        "FAUX_FUR",
+        "NATURAL_FUR"
+      ],
+      "whyAmbiguous": "Synthetic versus animal fur",
+      "safeDefault": "Must distinguish faux/real"
+    },
+    {
+      "sourceRecordIndex": 32,
+      "alias": "fur",
+      "keyPreview": "fur",
+      "candidateIds": [
+        "FAUX_FUR",
+        "NATURAL_FUR"
+      ],
+      "whyAmbiguous": "Natural versus faux",
+      "safeDefault": "Require explicit subtype"
+    },
+    {
+      "sourceRecordIndex": 33,
+      "alias": "قطن",
+      "keyPreview": "قطن",
+      "candidateIds": [
+        "COTTON"
+      ],
+      "whyAmbiguous": "Often a blended cotton fabric",
+      "safeDefault": "Do not infer 100% from label without percentage"
+    },
+    {
+      "sourceRecordIndex": 34,
+      "alias": "صوف",
+      "keyPreview": "صوف",
+      "candidateIds": [
+        "WOOL_FIBER"
+      ],
+      "whyAmbiguous": "Wool-like sweater may use acrylic or blend",
+      "safeDefault": "Check product composition"
+    },
+    {
+      "sourceRecordIndex": 35,
+      "alias": "كريب",
+      "keyPreview": "كريب",
+      "candidateIds": [
+        "CREPE"
+      ],
+      "whyAmbiguous": "Could denote food outside clothing context",
+      "safeDefault": "Use SaaS2 garment context"
+    },
+    {
+      "sourceRecordIndex": 36,
+      "alias": "بوليستر",
+      "keyPreview": "بوليستر",
+      "candidateIds": [
+        "POLYESTER"
+      ],
+      "whyAmbiguous": "May be fabric with polyester blend",
+      "safeDefault": "Percentage unknown until parsed"
+    },
+    {
+      "sourceRecordIndex": 37,
+      "alias": "بيركال",
+      "keyPreview": "بيركال",
+      "candidateIds": [
+        "PERCALE"
+      ],
+      "whyAmbiguous": "Also common in home textiles",
+      "safeDefault": "No issue in household textiles category"
+    },
+    {
+      "sourceRecordIndex": 38,
+      "alias": "موسلين",
+      "keyPreview": "موسلين",
+      "candidateIds": [
+        "MUSLIN"
+      ],
+      "whyAmbiguous": "Sometimes confused with chiffon due to French mousseline",
+      "safeDefault": "Context required"
+    },
+    {
+      "sourceRecordIndex": 39,
+      "alias": "mousseline",
+      "keyPreview": "mousseline",
+      "candidateIds": [
+        "MUSLIN",
+        "CHIFFON"
+      ],
+      "whyAmbiguous": "French word for different gauzy fabrics",
+      "safeDefault": "Ask/merchant context"
+    },
+    {
+      "sourceRecordIndex": 40,
+      "alias": "موديل",
+      "keyPreview": "موديل",
+      "candidateIds": [
+        "MODAL"
+      ],
+      "whyAmbiguous": "Arabic word model, not modal fiber",
+      "safeDefault": "Never auto-match bare موديل"
+    },
+    {
+      "sourceRecordIndex": 41,
+      "alias": "مودال",
+      "keyPreview": "مودال",
+      "candidateIds": [
+        "MODAL"
+      ],
+      "whyAmbiguous": "Fiber; sometimes confused with model in Latin",
+      "safeDefault": "Require fabric context in weak matches"
+    },
+    {
+      "sourceRecordIndex": 42,
+      "alias": "جوخ ميلتون",
+      "keyPreview": "جوخ ميلتون",
+      "candidateIds": [
+        "MELTON"
+      ],
+      "whyAmbiguous": "Specific melton often sold as جوخ",
+      "safeDefault": "Prefer longest phrase"
+    },
+    {
+      "sourceRecordIndex": 43,
+      "alias": "فليس",
+      "keyPreview": "فليس",
+      "candidateIds": [
+        "FLEECE",
+        "POLAR_FLEECE"
+      ],
+      "whyAmbiguous": "Fleece generic versus polar fleece",
+      "safeDefault": "Prefer POLAR_FLEECE only when بولار/polar stated"
+    },
+    {
+      "sourceRecordIndex": 44,
+      "alias": "دراي فت",
+      "keyPreview": "دراي فت",
+      "candidateIds": [
+        "MOISTURE_WICKING"
+      ],
+      "whyAmbiguous": "Marketing technology not a raw material",
+      "safeDefault": "Property not primary material"
+    },
+    {
+      "sourceRecordIndex": 45,
+      "alias": "100%",
+      "keyPreview": "100%",
+      "candidateIds": [
+        "PURE"
+      ],
+      "whyAmbiguous": "Unlinked percentage cannot specify material",
+      "safeDefault": "Only combine with recognized material span"
+    },
+    {
+      "sourceRecordIndex": 46,
+      "alias": "PU",
+      "keyPreview": "pu",
+      "candidateIds": [
+        "POLYURETHANE",
+        "PU_LEATHER"
+      ],
+      "whyAmbiguous": "Fiber/coating vs imitation leather",
+      "safeDefault": "Context required"
+    },
+    {
+      "sourceRecordIndex": 47,
+      "alias": "PVC",
+      "keyPreview": "pvc",
+      "candidateIds": [
+        "POLYVINYL_CHLORIDE",
+        "PVC_LEATHER"
+      ],
+      "whyAmbiguous": "Sheet/coating vs leather",
+      "safeDefault": "Context required"
+    },
+    {
+      "sourceRecordIndex": 48,
+      "alias": "polaire",
+      "keyPreview": "polaire",
+      "candidateIds": [
+        "FLEECE",
+        "POLAR_FLEECE"
+      ],
+      "whyAmbiguous": "Same normalized alias matches multiple fabric IDs",
+      "safeDefault": "Do not auto-select without product context / SKU confirmation"
+    },
+    {
+      "sourceRecordIndex": 49,
+      "alias": "شمواة",
+      "keyPreview": "شمواة",
+      "candidateIds": [
+        "FAUX_SUEDE",
+        "SUEDE"
+      ],
+      "whyAmbiguous": "Same normalized alias matches multiple fabric IDs",
+      "safeDefault": "Do not auto-select without product context / SKU confirmation"
+    }
+  ],
+  "note": "Cross-domain conflicts with existing Product Types, Colors, Sizes, Quantities, Fits and Patterns cannot be fully audited outside the repository. Do not auto-resolve them from source CSV or this preview."
+}

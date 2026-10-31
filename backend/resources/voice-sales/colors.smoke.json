@@ -1,0 +1,149 @@
+{
+  "scope": "Text matching test cases, not claims of real catalog matching",
+  "cases": [
+    {
+      "utterance": "بدي تي شيرت سودا قياس XL قطعتين",
+      "colorExpression": "سودا",
+      "expectedColorSourceIdIfUniquelyGrounded": "BLACK",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "BLACK"
+      ],
+      "testingNote": "unambiguous color evidence",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت sawda قياس XL قطعتين",
+      "colorExpression": "sawda",
+      "expectedColorSourceIdIfUniquelyGrounded": "BLACK",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "BLACK"
+      ],
+      "testingNote": "Arabizi black",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت orange قياس XL قطعتين",
+      "colorExpression": "orange",
+      "expectedColorSourceIdIfUniquelyGrounded": "ORANGE",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "ORANGE"
+      ],
+      "testingNote": "English orange",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت برتقالي قياس XL قطعتين",
+      "colorExpression": "برتقالي",
+      "expectedColorSourceIdIfUniquelyGrounded": "ORANGE",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "ORANGE"
+      ],
+      "testingNote": "Arabic orange",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت بيضا قياس XL قطعتين",
+      "colorExpression": "بيضا",
+      "expectedColorSourceIdIfUniquelyGrounded": "WHITE",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "WHITE"
+      ],
+      "testingNote": "Lebanese white",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت bleu marine قياس XL قطعتين",
+      "colorExpression": "bleu marine",
+      "expectedColorSourceIdIfUniquelyGrounded": "NAVY_BLUE",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "NAVY_BLUE"
+      ],
+      "testingNote": "French navy blue",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت zayti قياس XL قطعتين",
+      "colorExpression": "zayti",
+      "expectedColorSourceIdIfUniquelyGrounded": "OLIVE_GREEN",
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "OLIVE_GREEN"
+      ],
+      "testingNote": "Arabizi olive",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت خمري قياس XL قطعتين",
+      "colorExpression": "خمري",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "BORDEAUX",
+        "BURGUNDY",
+        "MAROON_RED",
+        "WINE_RED"
+      ],
+      "testingNote": "Multiple possible shades: BORDEAUX, BURGUNDY, MAROON_RED, WINE_RED",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت سكري قياس XL قطعتين",
+      "colorExpression": "سكري",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "CREAM",
+        "OFF_WHITE"
+      ],
+      "testingNote": "Multiple shades CREAM/OFF_WHITE",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت kaki قياس XL قطعتين",
+      "colorExpression": "kaki",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "testingNote": "Multiple shades KHAKI_BEIGE/KHAKI_GREEN",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت جينز قياس XL قطعتين",
+      "colorExpression": "جينز",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": true,
+      "sourceColorIds": [
+        "DENIM_BLUE"
+      ],
+      "testingNote": "Cross-domain Denim material/Product vs DENIM_BLUE color",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت كحلية قياس XL قطعتين",
+      "colorExpression": "كحلية",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": false,
+      "sourceColorIds": [],
+      "testingNote": "Not literally present in source; do not invent coverage",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    },
+    {
+      "utterance": "بدي تي شيرت زيتية قياس XL قطعتين",
+      "colorExpression": "زيتية",
+      "expectedColorSourceIdIfUniquelyGrounded": null,
+      "existsAsRawSourceAlias": false,
+      "sourceColorIds": [],
+      "testingNote": "Not literally present in source; do not invent coverage",
+      "matcherExpectation": "Require actual tenant ProductVariant color and supported product identity; never fake catalog data."
+    }
+  ]
+}

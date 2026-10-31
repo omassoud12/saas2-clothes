@@ -1,0 +1,373 @@
+{
+  "sourceCasesCount": 21,
+  "additionalSafetyCasesCount": 15,
+  "cases": [
+    {
+      "id": "SRC_001",
+      "origin": "source",
+      "text": "بدي بلوزة قطن 100%",
+      "expectedSourceIds": [
+        "COTTON"
+      ],
+      "expectedSourceSlot": "FIBER",
+      "expectedCompositionPercent": [
+        "100"
+      ],
+      "notes": "قطن 100% composition",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_002",
+      "origin": "source",
+      "text": "فستان ساتان",
+      "expectedSourceIds": [
+        "SATIN"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "Satin does not imply silk",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_003",
+      "origin": "source",
+      "text": "جاكيت مخمل",
+      "expectedSourceIds": [
+        "VELVET",
+        "VELOUR"
+      ],
+      "expectedSourceSlot": "REVIEW",
+      "expectedCompositionPercent": [],
+      "notes": "Unqualified plush textile is ambiguous",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_004",
+      "origin": "source",
+      "text": "leggings lycra",
+      "expectedSourceIds": [
+        "ELASTANE",
+        "SPANDEX_FABRIC"
+      ],
+      "expectedSourceSlot": "REVIEW",
+      "expectedCompositionPercent": [],
+      "notes": "Potential trademark fiber vs stretch fabric",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_005",
+      "origin": "source",
+      "text": "بنطلون جينز",
+      "expectedSourceIds": [
+        "DENIM"
+      ],
+      "expectedSourceSlot": "REVIEW",
+      "expectedCompositionPercent": [],
+      "notes": "جينز is product plus possible fabric",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_006",
+      "origin": "source",
+      "text": "قماش جينز",
+      "expectedSourceIds": [
+        "DENIM"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "Explicit fabric cue",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_007",
+      "origin": "source",
+      "text": "sweater cashmere 70%",
+      "expectedSourceIds": [
+        "CASHMERE"
+      ],
+      "expectedSourceSlot": "FIBER",
+      "expectedCompositionPercent": [
+        "70"
+      ],
+      "notes": "English fiber percentage",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_008",
+      "origin": "source",
+      "text": "قميص linen",
+      "expectedSourceIds": [
+        "LINEN_FIBER"
+      ],
+      "expectedSourceSlot": "FIBER",
+      "expectedCompositionPercent": [],
+      "notes": "Mixed English and Arabic",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_009",
+      "origin": "source",
+      "text": "قماش شيفون",
+      "expectedSourceIds": [
+        "CHIFFON"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "Sheer fabric",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_010",
+      "origin": "source",
+      "text": "pijama polaire",
+      "expectedSourceIds": [
+        "POLAR_FLEECE"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "French polar fleece",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_011",
+      "origin": "source",
+      "text": "جلد طبيعي",
+      "expectedSourceIds": [
+        "GENUINE_LEATHER"
+      ],
+      "expectedSourceSlot": "MATERIAL",
+      "expectedCompositionPercent": [],
+      "notes": "Explicit genuine leather",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_012",
+      "origin": "source",
+      "text": "جلد صناعي",
+      "expectedSourceIds": [
+        "FAUX_LEATHER"
+      ],
+      "expectedSourceSlot": "MATERIAL",
+      "expectedCompositionPercent": [],
+      "notes": "Explicit faux leather",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_013",
+      "origin": "source",
+      "text": "شمواه",
+      "expectedSourceIds": [
+        "SUEDE",
+        "FAUX_SUEDE"
+      ],
+      "expectedSourceSlot": "REVIEW",
+      "expectedCompositionPercent": [],
+      "notes": "Unspecified suede vs faux",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_014",
+      "origin": "source",
+      "text": "bdi cotton 95% elastane 5%",
+      "expectedSourceIds": [
+        "COTTON",
+        "ELASTANE"
+      ],
+      "expectedSourceSlot": "FIBER",
+      "expectedCompositionPercent": [
+        "95",
+        "5"
+      ],
+      "notes": "Blended composition",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_015",
+      "origin": "source",
+      "text": "قماش كريب جورجيت",
+      "expectedSourceIds": [
+        "CREPE",
+        "GEORGETTE"
+      ],
+      "expectedSourceSlot": "REVIEW",
+      "expectedCompositionPercent": [],
+      "notes": "Two types; might be compound product name",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_016",
+      "origin": "source",
+      "text": "بلوزة mesh",
+      "expectedSourceIds": [
+        "MESH"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "English mesh in apparel context",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_017",
+      "origin": "source",
+      "text": "بدي تيشيرت مش أسود",
+      "expectedSourceIds": [],
+      "expectedSourceSlot": "NONE",
+      "expectedCompositionPercent": [],
+      "notes": "Arabic negation must not match MESH",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_018",
+      "origin": "source",
+      "text": "مخمل قطني",
+      "expectedSourceIds": [
+        "VELVETEEN"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "Longer phrase preferred",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_019",
+      "origin": "source",
+      "text": "قماش دبل فيس",
+      "expectedSourceIds": [
+        "DOUBLE_FACE"
+      ],
+      "expectedSourceSlot": "MODIFIER",
+      "expectedCompositionPercent": [],
+      "notes": "Construction separate",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_020",
+      "origin": "source",
+      "text": "fleece lined jacket",
+      "expectedSourceIds": [
+        "FLEECE_LINED"
+      ],
+      "expectedSourceSlot": "MODIFIER",
+      "expectedCompositionPercent": [],
+      "notes": "Lining property",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "SRC_021",
+      "origin": "source",
+      "text": "فستان دانتيل شانتيلي",
+      "expectedSourceIds": [
+        "CHANTILLY_LACE"
+      ],
+      "expectedSourceSlot": "FABRIC",
+      "expectedCompositionPercent": [],
+      "notes": "Prefer specific subtype",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_001",
+      "origin": "additional_safety_scenario",
+      "text": "بدي تي شيرت قطن سودا XL قطعتين",
+      "expectedSafetyProperty": "One product, color, size, qty, and material must be separate; actual product description evidence still required",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_002",
+      "origin": "additional_safety_scenario",
+      "text": "بدي بنطلون جينز قياس 32 قطعتين",
+      "expectedSafetyProperty": "Jeans product type versus denim fabric; size 32 is not sale quantity",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_003",
+      "origin": "additional_safety_scenario",
+      "text": "بدي قماش جينز",
+      "expectedSafetyProperty": "Explicit fabric cue may resolve DENIM but not claim jeans product type",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_004",
+      "origin": "additional_safety_scenario",
+      "text": "cotton 95% elastane 5%",
+      "expectedSafetyProperty": "Link percentages only to named components; do not claim verified product composition",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_005",
+      "origin": "additional_safety_scenario",
+      "text": "100%",
+      "expectedSafetyProperty": "Unattached percentage; do not invent fiber",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_006",
+      "origin": "additional_safety_scenario",
+      "text": "stretch",
+      "expectedSafetyProperty": "Stretch is property, not proof of elastane",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_007",
+      "origin": "additional_safety_scenario",
+      "text": "مش مخمل",
+      "expectedSafetyProperty": "Negation cannot be ignored; no positive velvet selection",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_008",
+      "origin": "additional_safety_scenario",
+      "text": "شمواه",
+      "expectedSafetyProperty": "Genuine vs faux suede ambiguity; do not guess",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_009",
+      "origin": "additional_safety_scenario",
+      "text": "velours",
+      "expectedSafetyProperty": "VELVET versus VELOUR collision; never first-match-wins",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_010",
+      "origin": "additional_safety_scenario",
+      "text": "fleece lined jacket",
+      "expectedSafetyProperty": "Lining modifier separate from garment fabric and product identity",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_011",
+      "origin": "additional_safety_scenario",
+      "text": "two piece set",
+      "expectedSafetyProperty": "Set descriptor is not necessarily quantity two",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_012",
+      "origin": "additional_safety_scenario",
+      "text": "من دون ليكرا",
+      "expectedSafetyProperty": "Exclusion/negation; no inferred elastane material",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_013",
+      "origin": "additional_safety_scenario",
+      "text": "بدي فستان ساتان XL قطعة",
+      "expectedSafetyProperty": "Satin describes weave/appearance, not silk fiber",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_014",
+      "origin": "additional_safety_scenario",
+      "text": "بلوزة قطن وكشمير",
+      "expectedSafetyProperty": "Two materials may be present, but no percentages should be invented",
+      "requiresCatalogProofForSale": true
+    },
+    {
+      "id": "EDGE_015",
+      "origin": "additional_safety_scenario",
+      "text": "size 38 2 pieces",
+      "expectedSafetyProperty": "Numerical size versus explicit requested quantity",
+      "requiresCatalogProofForSale": true
+    }
+  ]
+}

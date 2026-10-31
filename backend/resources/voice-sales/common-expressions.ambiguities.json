@@ -1,0 +1,317 @@
+{
+  "source": "common_expressions_dictionary.json",
+  "ambiguities": [
+    {
+      "phrase": "خلص",
+      "expression_id": "AMB_DONE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "khalas",
+      "expression_id": "AMB_DONE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "5alas",
+      "expression_id": "AMB_DONE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "5les",
+      "expression_id": "AMB_DONE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "خلاص",
+      "expression_id": "AMB_DONE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "رجع",
+      "expression_id": "AMB_RETURN",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "رجّع",
+      "expression_id": "AMB_RETURN",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "rje3",
+      "expression_id": "AMB_RETURN",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "raje3",
+      "expression_id": "AMB_RETURN",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "يرجع",
+      "expression_id": "AMB_RETURN",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "طلب",
+      "expression_id": "AMB_ORDER",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "talab",
+      "expression_id": "AMB_ORDER",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "order",
+      "expression_id": "AMB_ORDER",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "commande",
+      "expression_id": "AMB_ORDER",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "موجود",
+      "expression_id": "AMB_PRESENT",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "mawjoud",
+      "expression_id": "AMB_PRESENT",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "available",
+      "expression_id": "AMB_PRESENT",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "disponible",
+      "expression_id": "AMB_PRESENT",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "كمان",
+      "expression_id": "AMB_MORE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "kamman",
+      "expression_id": "AMB_MORE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "kamen",
+      "expression_id": "AMB_MORE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "more",
+      "expression_id": "AMB_MORE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "encore",
+      "expression_id": "AMB_MORE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "قياس",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "مقاس",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "سايز",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "size",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "taille",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "2iyes",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "m2as",
+      "expression_id": "AMB_SIZE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "خد",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "اخد",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "خدها",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "خده",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "khod",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "take",
+      "expression_id": "AMB_TAKE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "بعت",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "ابعث",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "ابعت",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "بعتلي",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "send",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "envoie",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "b3at",
+      "expression_id": "AMB_SEND",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "مع",
+      "expression_id": "AMB_WITH",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "ma3",
+      "expression_id": "AMB_WITH",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "with",
+      "expression_id": "AMB_WITH",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "avec",
+      "expression_id": "AMB_WITH",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "في",
+      "expression_id": "AMB_THERE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "fi",
+      "expression_id": "AMB_THERE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "fii",
+      "expression_id": "AMB_THERE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "there is",
+      "expression_id": "AMB_THERE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    },
+    {
+      "phrase": "il y a",
+      "expression_id": "AMB_THERE",
+      "reason": "ambiguous without broader sentence or store context",
+      "action": "review"
+    }
+  ]
+}

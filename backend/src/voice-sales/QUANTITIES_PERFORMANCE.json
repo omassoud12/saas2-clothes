@@ -1,0 +1,28 @@
+{
+  "node": "v24.21.0",
+  "coldAllVoiceDictionaryImport": {
+    "samples": 5,
+    "meanMs": 1104.00594,
+    "medianMs": 1101.0475999999999,
+    "p95Ms": 1148.569
+  },
+  "warmParser": {
+    "samples": 300,
+    "meanMs": 2.2394926666666923,
+    "medianMs": 2.159700000000157,
+    "p95Ms": 3.198599999999715
+  },
+  "mocked1000VariantMatching": {
+    "samples": 30,
+    "meanMs": 31.289153333333402,
+    "medianMs": 30.9411999999993,
+    "p95Ms": 39.87169999999969
+  },
+  "runtimeQuantityResourceBytes": 1010042,
+  "notes": [
+    "All dictionary import timing includes Product Types, Colors, Sizes and Quantities, not quantity-only overhead.",
+    "No pre-change controlled baseline; these are end-to-end local observations, not a measured incremental regression.",
+    "Warm parser input set includes exact counts, sizes, packages, modifiers and conflicts.",
+    "Catalog is synthetic, never a real Supabase latency measurement."
+  ]
+}

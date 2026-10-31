@@ -1,0 +1,321 @@
+{
+  "node": "v24.21.0",
+  "coldAllVoicePipelineImport": {
+    "runs": 5,
+    "meanMs": 1268.85608,
+    "p95Ms": 1320.3401
+  },
+  "warmCommonParserBefore": {
+    "runs": 300,
+    "meanMs": 1.2041926666666782,
+    "p95Ms": 1.9735999999998057
+  },
+  "warmCommonParserAfter": {
+    "runs": 300,
+    "meanMs": 1.3840496666666635,
+    "p95Ms": 1.7625000000002728
+  },
+  "warmMaterialsParser": {
+    "runs": 300,
+    "meanMs": 2.785218666666668,
+    "p95Ms": 4.410100000000057
+  },
+  "readOnly1000VariantMatcher": {
+    "runs": 30,
+    "meanMs": 32.68225333333333,
+    "p95Ms": 36.92780000000039
+  },
+  "readOnly1000DistinctLabelMatcher": {
+    "runs": 10,
+    "meanMs": 588.897839999999,
+    "p95Ms": 743.6928999999982
+  },
+  "beforeAfterExample": {
+    "input": "Tshirt fabric coton black XL two pieces",
+    "catalog": [
+      {
+        "productId": "fixture-0",
+        "variantId": "variant-0",
+        "productName": "Cotton T-Shirt",
+        "categoryName": "T-Shirt",
+        "size": "XL",
+        "color": "Black",
+        "sellingPrice": "12.50",
+        "availableStock": 40,
+        "currency": "USD"
+      }
+    ],
+    "beforeParser": {
+      "attributes": {
+        "productType": {
+          "status": "resolved",
+          "value": "T_SHIRT",
+          "candidates": [
+            "T_SHIRT"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "tshirt"
+              },
+              "source": "explicit",
+              "rule": "dictionary_alias"
+            }
+          ]
+        },
+        "color": {
+          "status": "resolved",
+          "value": "BLACK",
+          "candidates": [
+            "BLACK"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "black"
+              },
+              "source": "explicit",
+              "rule": "active_color_alias"
+            }
+          ]
+        },
+        "size": {
+          "status": "resolved",
+          "value": "XL",
+          "candidates": [
+            "XL"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 4,
+                "endToken": 5,
+                "text": "xl"
+              },
+              "source": "explicit",
+              "rule": "dictionary_alias"
+            }
+          ]
+        },
+        "quantity": {
+          "status": "resolved",
+          "value": 2,
+          "candidates": [
+            2
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 5,
+                "endToken": 7,
+                "text": "two pieces"
+              },
+              "source": "explicit",
+              "rule": "verified_quantity_intent"
+            }
+          ]
+        },
+        "material": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "neckline": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "fit": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "pattern": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        }
+      },
+      "residual": []
+    },
+    "beforePureCatalogMatch": "INCOMPLETE",
+    "afterParser": {
+      "sourceMaterial": {
+        "status": "resolved",
+        "value": "COTTON",
+        "candidates": [
+          "COTTON"
+        ],
+        "source": "explicit",
+        "evidence": [
+          {
+            "span": {
+              "startToken": 2,
+              "endToken": 3,
+              "text": "coton"
+            },
+            "source": "explicit",
+            "rule": "source_material_alias"
+          }
+        ]
+      },
+      "attributes": {
+        "productType": {
+          "status": "resolved",
+          "value": "T_SHIRT",
+          "candidates": [
+            "T_SHIRT"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "tshirt"
+              },
+              "source": "explicit",
+              "rule": "dictionary_alias"
+            }
+          ]
+        },
+        "color": {
+          "status": "resolved",
+          "value": "BLACK",
+          "candidates": [
+            "BLACK"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "black"
+              },
+              "source": "explicit",
+              "rule": "active_color_alias"
+            }
+          ]
+        },
+        "size": {
+          "status": "resolved",
+          "value": "XL",
+          "candidates": [
+            "XL"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 4,
+                "endToken": 5,
+                "text": "xl"
+              },
+              "source": "explicit",
+              "rule": "dictionary_alias"
+            }
+          ]
+        },
+        "quantity": {
+          "status": "resolved",
+          "value": 2,
+          "candidates": [
+            2
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 5,
+                "endToken": 7,
+                "text": "two pieces"
+              },
+              "source": "explicit",
+              "rule": "verified_quantity_intent"
+            }
+          ]
+        },
+        "material": {
+          "status": "resolved",
+          "value": "COTTON",
+          "candidates": [
+            "COTTON"
+          ],
+          "source": "explicit",
+          "evidence": [
+            {
+              "span": {
+                "startToken": 2,
+                "endToken": 3,
+                "text": "coton"
+              },
+              "source": "explicit",
+              "rule": "source_material_alias"
+            }
+          ]
+        },
+        "neckline": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "fit": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        },
+        "pattern": {
+          "status": "missing",
+          "value": null,
+          "candidates": [],
+          "source": null,
+          "evidence": []
+        }
+      },
+      "residual": []
+    },
+    "afterPureCatalogMatch": "MATCHED",
+    "liveSupabase": false
+  },
+  "observedWarmParserMeanDifferenceMs": 0.17985699999998528,
+  "resourceBytes": [
+    {
+      "name": "materials.seed.json",
+      "bytes": 406693
+    },
+    {
+      "name": "materials.source-collisions.json",
+      "bytes": 28759
+    }
+  ],
+  "totalMaterialResourceBytes": 435452,
+  "baselineNote": "Warm baseline parser was saved before this change, transpiled without edits, and shares current unchanged legacy dictionaries. Cold timings cover all voice dictionaries; no controlled cold baseline.",
+  "limitations": [
+    "Local development measurement, not production/Supabase or load testing.",
+    "Identical raw product/category labels share a pure name profile inside one request; stock, prices and variant identities remain fresh and separate.",
+    "Distinct-label measurement exercises 1000 independent profiles; missing model words prevent confirmation."
+  ],
+  "databaseCalls": 0,
+  "writes": 0
+}

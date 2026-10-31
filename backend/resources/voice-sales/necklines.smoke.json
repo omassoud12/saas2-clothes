@@ -1,0 +1,245 @@
+{
+  "original_test_cases": [
+    {
+      "input_text": "بدي 2 تيشيرت قبة مدورة سودا",
+      "expected_style_id": "NECK_ROUND",
+      "expect_review": false,
+      "note": "general round neckline"
+    },
+    {
+      "input_text": "بلوزة قبة V قياس لارج",
+      "expected_style_id": "NECK_V",
+      "expect_review": false,
+      "note": "V-shape"
+    },
+    {
+      "input_text": "كنزة قبة عالية",
+      "expected_style_id": "NECK_HIGH",
+      "expect_review": false,
+      "note": "unspecified high neck, no forced turtleneck"
+    },
+    {
+      "input_text": "كنزة قبّة رول",
+      "expected_style_id": "NECK_TURTLE",
+      "expect_review": false,
+      "note": "folded high neckline"
+    },
+    {
+      "input_text": "تيشيرت قبّة مبرومة",
+      "expected_style_id": "COLLAR_RIBBED",
+      "expect_review": true,
+      "note": "ambiguous: prefer trim only with context"
+    },
+    {
+      "input_text": "تيشيرت polo blue",
+      "expected_style_id": "COLLAR_POLO",
+      "expect_review": false,
+      "note": "may also mean polo product; context needed"
+    },
+    {
+      "input_text": "فستان قبة قلب",
+      "expected_style_id": "NECK_SWEETHEART",
+      "expect_review": false,
+      "note": "sweetheart"
+    },
+    {
+      "input_text": "بلوزة off shoulder",
+      "expected_style_id": "NECK_OFF_SHOULDER",
+      "expect_review": false,
+      "note": "off shoulder"
+    },
+    {
+      "input_text": "shirt mandarin collar",
+      "expected_style_id": "COLLAR_MANDARIN",
+      "expect_review": false,
+      "note": "mandarin collar"
+    },
+    {
+      "input_text": "كنزة half zip collar",
+      "expected_style_id": "COLLAR_ZIP",
+      "expect_review": false,
+      "note": "zip-up collar"
+    },
+    {
+      "input_text": "فستان قبة مربعة",
+      "expected_style_id": "NECK_SQUARE",
+      "expect_review": false,
+      "note": "square neckline"
+    },
+    {
+      "input_text": "top scoop neck",
+      "expected_style_id": "NECK_SCOOP",
+      "expect_review": false,
+      "note": "scoop neckline"
+    },
+    {
+      "input_text": "فستان strapless",
+      "expected_style_id": "NECK_STRAPLESS",
+      "expect_review": false,
+      "note": "strapless construction"
+    },
+    {
+      "input_text": "blouse col Claudine",
+      "expected_style_id": "COLLAR_PETER_PAN",
+      "expect_review": false,
+      "note": "French Peter Pan"
+    },
+    {
+      "input_text": "jumper mock neck",
+      "expected_style_id": "NECK_MOCK",
+      "expect_review": false,
+      "note": "mock neck"
+    },
+    {
+      "input_text": "top keyhole neck",
+      "expected_style_id": "NECK_KEYHOLE",
+      "expect_review": false,
+      "note": "keyhole"
+    },
+    {
+      "input_text": "shirt cutaway collar",
+      "expected_style_id": "COLLAR_CUTAWAY",
+      "expect_review": false,
+      "note": "cutaway"
+    },
+    {
+      "input_text": "bdi blouse black size m",
+      "expected_style_id": "NONE",
+      "expect_review": true,
+      "note": "no neck detail, should abstain"
+    }
+  ],
+  "integration_review_scenarios": [
+    {
+      "input": "قبّة مدوّرة",
+      "expected_style_or_status_for_review": "NECK_ROUND",
+      "acceptance_note": "broad round; do not narrow crew/scoop without evidence"
+    },
+    {
+      "input": "قبة V",
+      "expected_style_or_status_for_review": "NECK_V",
+      "acceptance_note": "qualified V-neck; V alone ambiguous"
+    },
+    {
+      "input": "v neck",
+      "expected_style_or_status_for_review": "NECK_V",
+      "acceptance_note": "whole phrase, not size V"
+    },
+    {
+      "input": "polo collar",
+      "expected_style_or_status_for_review": "COLLAR_POLO",
+      "acceptance_note": "qualified collar, distinct from product Polo shirt"
+    },
+    {
+      "input": "بولو",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "product vs collar; clarify or check independent catalogue evidence"
+    },
+    {
+      "input": "polo",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "product vs collar; never choose by alias order"
+    },
+    {
+      "input": "قبّة مبرومة",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "ribbed/rolled/crew sense; preserve ambiguity"
+    },
+    {
+      "input": "قبة عالية",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "broad high vs mock/turtle/funnel; preserve specificity"
+    },
+    {
+      "input": "قبة رول",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "neck vs collar turtleneck"
+    },
+    {
+      "input": "قبة قميص",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "shirt neckline/collar overlap"
+    },
+    {
+      "input": "بدي قميص قبة V سودا XL قطعتين",
+      "expected_style_or_status_for_review": "NECK_V",
+      "acceptance_note": "mix languages and ensure quantity/size/color preserved"
+    },
+    {
+      "input": "كنزة قبّة Polo سودا",
+      "expected_style_or_status_for_review": "COLLAR_POLO",
+      "acceptance_note": "only when phrase qualifies collar; product type remains independently resolved"
+    },
+    {
+      "input": "قبة بلا أكمام",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "do not turn sleeve description into an invented collar"
+    },
+    {
+      "input": "بدون قبة",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "collarless vs no neckline; avoid dropped negation"
+    },
+    {
+      "input": "ربطة بالصدر",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "neckline tie front vs lace up"
+    },
+    {
+      "input": "cold shoulder blouse",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "garment sleeve/design may overlap with necklines"
+    },
+    {
+      "input": "two pieces polo collar size XL",
+      "expected_style_or_status_for_review": "COLLAR_POLO",
+      "acceptance_note": "quantity two vs set language: context parse required"
+    },
+    {
+      "input": "XXL crew neck shirt",
+      "expected_style_or_status_for_review": "NECK_CREW",
+      "acceptance_note": "do not match XL inside XXL"
+    },
+    {
+      "input": "تي شيرت سوداء مقاس 32 قبّة عالية",
+      "expected_style_or_status_for_review": "NECK_HIGH",
+      "acceptance_note": "size 32 distinct from quantity, broad high neckline"
+    },
+    {
+      "input": "بدي تي شيرتين",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "plural product expression must not become neckline alias"
+    },
+    {
+      "input": "قبة مش عالية",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "negation, do not assert HIGH"
+    },
+    {
+      "input": "قبة V ورول",
+      "expected_style_or_status_for_review": "AMBIGUOUS",
+      "acceptance_note": "potentially conflicting necklines on one item, not two items"
+    },
+    {
+      "input": "نص رول",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "ambiguous mock vs turtleneck"
+    },
+    {
+      "input": "v",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "single-letter ambiguity / model token"
+    },
+    {
+      "input": "u",
+      "expected_style_or_status_for_review": "REVIEW",
+      "acceptance_note": "single-letter ambiguity / model token"
+    },
+    {
+      "input": "عبارة غير معروفة بالكامل",
+      "expected_style_or_status_for_review": "UNKNOWN",
+      "acceptance_note": "unknown phrases must not generate MATCHED"
+    }
+  ],
+  "instructions": "Original fixtures are imported source fixture expectations, not validated against actual SaaS2 Parser/Matcher. Additional scenarios are human-readable checks, not machine assertions: adapt to project result contract and validate safe behavior."
+}

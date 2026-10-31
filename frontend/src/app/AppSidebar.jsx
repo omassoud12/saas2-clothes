@@ -33,6 +33,7 @@ export function AppSidebar({
   onLogout,
 }) {
   const navigation = getAppNavigation(identity.role)
+  const storeInitial = [...String(identity.storeName || 'S').trim()][0]?.toLocaleUpperCase() || 'S'
 
   function handleNavigation(event, path) {
     if (
@@ -67,16 +68,20 @@ export function AppSidebar({
           aria-label="Close navigation"
           onClick={onClose}
         >
-          &times;
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </div>
 
       <div className="sidebar-store-context">
-        <span>Store</span>
-        <strong>{identity.storeName}</strong>
-        <small>{identity.role}</small>
+        <span className="sidebar-store-mark" aria-hidden="true">{storeInitial}</span>
+        <div className="sidebar-store-copy">
+          <small>Current store</small>
+          <strong>{identity.storeName}</strong>
+        </div>
+        <span className="sidebar-role-badge">{identity.role}</span>
       </div>
 
+      <p className="sidebar-navigation-label">Workspace</p>
       <nav className="business-navigation" aria-label="Business modules">
         {navigation.map((item) => {
           const active = isNavigationItemActive(pathname, item.path)

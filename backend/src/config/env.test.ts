@@ -102,6 +102,13 @@ describe('HTTP runtime environment', () => {
     assert.equal(loaded.expensiveRateLimitMax, 30)
     assert.equal(loaded.imageRateLimitMax, 10)
     assert.equal(loaded.supabaseAuthTimeoutMs, 5_000)
+    assert.equal(loaded.elevenLabsApiKey, null)
+    assert.equal(loaded.elevenLabsSttTimeoutMs, 20_000)
+    const voice = loadEnvironment({ ...developmentEnvironment, ELEVENLABS_API_KEY: 'server-only-key', ELEVENLABS_STT_TIMEOUT_MS: '12000' })
+    assert.equal(voice.elevenLabsApiKey, 'server-only-key')
+    assert.equal(voice.elevenLabsSttTimeoutMs, 12_000)
+    assert.throws(() => loadEnvironment({ ...developmentEnvironment, ELEVENLABS_API_KEY: 'bad key' }), /ELEVENLABS_API_KEY configuration is invalid/)
+    assert.throws(() => loadEnvironment({ ...developmentEnvironment, ELEVENLABS_STT_TIMEOUT_MS: '999' }), /ELEVENLABS_STT_TIMEOUT_MS configuration is invalid/)
   })
 })
 

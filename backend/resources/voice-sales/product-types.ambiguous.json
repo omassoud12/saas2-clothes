@@ -1,0 +1,501 @@
+{
+  "domain": "product_types",
+  "sourceVersion": "1.0-seed",
+  "ambiguousAliases": [
+    {
+      "sourceNormalized": "bady",
+      "candidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "candidateArabicLabels": "بودي نسائي; بودي بيبي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "bodi",
+      "candidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "candidateArabicLabels": "بودي نسائي; بودي بيبي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "body",
+      "candidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "candidateArabicLabels": "بودي نسائي; بودي بيبي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "bralette",
+      "candidateTypeIds": [
+        "BRA",
+        "BRALETTE"
+      ],
+      "candidateArabicLabels": "حمالة صدر; براليت",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "chemise de nuit",
+      "candidateTypeIds": [
+        "CHEMISE_LINGERIE",
+        "NIGHTGOWN"
+      ],
+      "candidateArabicLabels": "قميص نوم; لانجري قميص نوم",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "co ord set",
+      "candidateTypeIds": [
+        "COORD_SET",
+        "TWO_PIECE_SET"
+      ],
+      "candidateArabicLabels": "طقم قطعتين; طقم متناسق",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "corset top",
+      "candidateTypeIds": [
+        "BASQUE",
+        "CORSET_TOP"
+      ],
+      "candidateArabicLabels": "باسك; توب كورسيه",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "djellaba",
+      "candidateTypeIds": [
+        "JALABIYA",
+        "JILBAB"
+      ],
+      "candidateArabicLabels": "جلباب; جلابية",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "escarpins",
+      "candidateTypeIds": [
+        "HEELS",
+        "PUMPS"
+      ],
+      "candidateArabicLabels": "كعب عالي; بامبس",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "foulard",
+      "candidateTypeIds": [
+        "HIJAB_SCARF",
+        "SCARF"
+      ],
+      "candidateArabicLabels": "حجاب; شال",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "g string",
+      "candidateTypeIds": [
+        "G_STRING",
+        "THONG"
+      ],
+      "candidateArabicLabels": "ثونغ; جي سترينغ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "gilet",
+      "candidateTypeIds": [
+        "PUFFER_VEST",
+        "VEST"
+      ],
+      "candidateArabicLabels": "فيست; فيست نفخ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "kelot",
+      "candidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "candidateArabicLabels": "كيلوت نسائي; كيلوت رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "kilot",
+      "candidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "candidateArabicLabels": "كيلوت نسائي; كيلوت رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "kolon",
+      "candidateTypeIds": [
+        "LEGGINGS",
+        "TIGHTS"
+      ],
+      "candidateArabicLabels": "ليغينغ; كولون",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "koulon",
+      "candidateTypeIds": [
+        "LEGGINGS",
+        "TIGHTS"
+      ],
+      "candidateArabicLabels": "ليغينغ; كولون",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "nuisette",
+      "candidateTypeIds": [
+        "CHEMISE_LINGERIE",
+        "NIGHTIE"
+      ],
+      "candidateArabicLabels": "قميص نوم قصير; لانجري قميص نوم",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "paréo",
+      "candidateTypeIds": [
+        "BEACH_COVERUP",
+        "SARONG"
+      ],
+      "candidateArabicLabels": "غطاء بحر; باريو",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "quilted jacket",
+      "candidateTypeIds": [
+        "PUFFER_JACKET",
+        "QUILTED_JACKET"
+      ],
+      "candidateArabicLabels": "جاكيت نفخ; جاكيت مبطن",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "robe",
+      "candidateTypeIds": [
+        "DRESS",
+        "ROBE_HOME"
+      ],
+      "candidateArabicLabels": "فستان; روب بيت",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "sarouel",
+      "candidateTypeIds": [
+        "HAREM_PANTS",
+        "SHERWAL"
+      ],
+      "candidateArabicLabels": "بنطلون حريم; شروال",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "shrug",
+      "candidateTypeIds": [
+        "BOLERO",
+        "SHRUG"
+      ],
+      "candidateArabicLabels": "بوليرو; شروغ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "string",
+      "candidateTypeIds": [
+        "G_STRING",
+        "THONG"
+      ],
+      "candidateArabicLabels": "ثونغ; جي سترينغ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "track pants",
+      "candidateTypeIds": [
+        "SWEATPANTS",
+        "TRACK_PANTS"
+      ],
+      "candidateArabicLabels": "بنطلون رياضي قطني; بنطلون ترينينغ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "ايشارب",
+      "candidateTypeIds": [
+        "HIJAB_SCARF",
+        "SCARF"
+      ],
+      "candidateArabicLabels": "حجاب; شال",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بادي",
+      "candidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "candidateArabicLabels": "بودي نسائي; بودي بيبي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "برقع",
+      "candidateTypeIds": [
+        "BURQA",
+        "NIQAB"
+      ],
+      "candidateArabicLabels": "نقاب; برقع",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بلوزه",
+      "candidateTypeIds": [
+        "BLOUSE",
+        "TOP"
+      ],
+      "candidateArabicLabels": "توب; بلوزة",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بلوزه كورسيه",
+      "candidateTypeIds": [
+        "BASQUE",
+        "CORSET_TOP"
+      ],
+      "candidateArabicLabels": "باسك; توب كورسيه",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بنطلون ترينينغ",
+      "candidateTypeIds": [
+        "SWEATPANTS",
+        "TRACK_PANTS"
+      ],
+      "candidateArabicLabels": "بنطلون رياضي قطني; بنطلون ترينينغ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بودي",
+      "candidateTypeIds": [
+        "BABY_ONESIE",
+        "BODYSUIT"
+      ],
+      "candidateArabicLabels": "بودي نسائي; بودي بيبي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "بيجاما وصل",
+      "candidateTypeIds": [
+        "BABY_SLEEPER",
+        "ONESIE_ADULT"
+      ],
+      "candidateArabicLabels": "ونزي للكبار; بيجاما بيبي قطعة واحدة",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "توب كورسيه",
+      "candidateTypeIds": [
+        "BASQUE",
+        "CORSET_TOP"
+      ],
+      "candidateArabicLabels": "باسك; توب كورسيه",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "جزمه",
+      "candidateTypeIds": [
+        "BOOTS",
+        "SHOES"
+      ],
+      "candidateArabicLabels": "صباط; بوط",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "جلابه",
+      "candidateTypeIds": [
+        "JALABIYA",
+        "JILBAB"
+      ],
+      "candidateArabicLabels": "جلباب; جلابية",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "جلابيه",
+      "candidateTypeIds": [
+        "JALABIYA",
+        "JILBAB"
+      ],
+      "candidateArabicLabels": "جلباب; جلابية",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "شحاطه",
+      "candidateTypeIds": [
+        "SLIDES",
+        "SLIPPERS_HOME"
+      ],
+      "candidateArabicLabels": "شبشب بيت; شحاطة",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "طاقيه",
+      "candidateTypeIds": [
+        "BEANIE",
+        "TAQEEYA"
+      ],
+      "candidateArabicLabels": "طاقية; طاقية صوف",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "طقم متناسق",
+      "candidateTypeIds": [
+        "COORD_SET",
+        "TWO_PIECE_SET"
+      ],
+      "candidateArabicLabels": "طقم قطعتين; طقم متناسق",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "طقم مولود",
+      "candidateTypeIds": [
+        "BABY_NEWBORN_SET",
+        "BABY_SET"
+      ],
+      "candidateArabicLabels": "طقم بيبي; طقم مولود",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "فستان بنوته",
+      "candidateTypeIds": [
+        "BABY_DRESS",
+        "GIRLS_DRESS"
+      ],
+      "candidateArabicLabels": "فستان بيبي; فستان بناتي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "فوطه راس",
+      "candidateTypeIds": [
+        "BANDANA",
+        "HIJAB_SCARF"
+      ],
+      "candidateArabicLabels": "حجاب; باندانا",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "قميص رسمي",
+      "candidateTypeIds": [
+        "DRESS_SHIRT",
+        "SHIRT"
+      ],
+      "candidateArabicLabels": "قميص; قميص رسمي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كاب",
+      "candidateTypeIds": [
+        "BASEBALL_CAP",
+        "CAPETOP"
+      ],
+      "candidateArabicLabels": "كاب; كاب",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كف",
+      "candidateTypeIds": [
+        "GLOVES",
+        "SLIDES"
+      ],
+      "candidateArabicLabels": "شحاطة; كفوف",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كلوت",
+      "candidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "candidateArabicLabels": "كيلوت نسائي; كيلوت رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كولون",
+      "candidateTypeIds": [
+        "LEGGINGS",
+        "TIGHTS"
+      ],
+      "candidateArabicLabels": "ليغينغ; كولون",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كولون نايلون",
+      "candidateTypeIds": [
+        "PANTYHOSE",
+        "TIGHTS"
+      ],
+      "candidateArabicLabels": "كولون; كولون شفاف",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كيلوت",
+      "candidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "candidateArabicLabels": "كيلوت نسائي; كيلوت رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "كيلوتات",
+      "candidateTypeIds": [
+        "MEN_BRIEFS",
+        "PANTIES"
+      ],
+      "candidateArabicLabels": "كيلوت نسائي; كيلوت رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "لفحه",
+      "candidateTypeIds": [
+        "SCARF",
+        "WINTER_SCARF"
+      ],
+      "candidateArabicLabels": "شال; لفحة شتوية",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "مايو رجالي",
+      "candidateTypeIds": [
+        "MEN_TANK_UNDER",
+        "SWIM_TRUNKS"
+      ],
+      "candidateArabicLabels": "فانيلة داخلية رجالي; شورت سباحة رجالي",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "مريول",
+      "candidateTypeIds": [
+        "APRON",
+        "SCHOOL_APRON"
+      ],
+      "candidateArabicLabels": "مريول مدرسة; مريول مطبخ",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "مريول مدرسه",
+      "candidateTypeIds": [
+        "SCHOOL_APRON",
+        "SCHOOL_UNIFORM"
+      ],
+      "candidateArabicLabels": "يونيفورم مدرسة; مريول مدرسة",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    },
+    {
+      "sourceNormalized": "يونيفورم",
+      "candidateTypeIds": [
+        "SCHOOL_UNIFORM",
+        "WORK_UNIFORM"
+      ],
+      "candidateArabicLabels": "يونيفورم مدرسة; يونيفورم عمل",
+      "neededContext": "نوع الزبون/الفئة العمرية/اسم المنتج الكامل/المخزون"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "source": "common_expressions_dictionary.json",
+  "collisions": [
+    {
+      "normalized_key": "بدي نفسو",
+      "expression_ids": [
+        "PREF_SAME",
+        "REQ_SPECIFIC"
+      ],
+      "action": "return candidates, require review if cross-category"
+    },
+    {
+      "normalized_key": "disponible",
+      "expression_ids": [
+        "AMB_PRESENT",
+        "AV_CHECK"
+      ],
+      "action": "return candidates, require review if cross-category"
+    },
+    {
+      "normalized_key": "خبيلي ياها",
+      "expression_ids": [
+        "ASK_HOLD",
+        "AV_RESERVE_STOCK"
+      ],
+      "action": "return candidates, require review if cross-category"
+    },
+    {
+      "normalized_key": "غيرلي اللون",
+      "expression_ids": [
+        "CHANGE_COLOR",
+        "PREF_OTHER_COLOR"
+      ],
+      "action": "return candidates, require review if cross-category"
+    },
+    {
+      "normalized_key": "نوعيه منيحه",
+      "expression_ids": [
+        "MAT_QUALITY",
+        "PREF_BETTER"
+      ],
+      "action": "return candidates, require review if cross-category"
+    },
+    {
+      "normalized_key": "d accord",
+      "expression_ids": [
+        "CONF_AGREE",
+        "CONF_OK"
+      ],
+      "action": "return candidates, require review if cross-category"
+    }
+  ]
+}

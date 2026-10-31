@@ -1,0 +1,1059 @@
+{
+  "note": "Detected using CSV normalized field. Backend normalizer may find additional/different collisions; re-audit after importing.",
+  "collisionCount": 64,
+  "collisions": [
+    {
+      "sourceNormalizedKey": "3anabi",
+      "colorIds": [
+        "GRAPE_PURPLE",
+        "WINE_RED"
+      ],
+      "sourceAliasesByColor": {
+        "GRAPE_PURPLE": [
+          "3anabi"
+        ],
+        "WINE_RED": [
+          "3anabi"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "blue green",
+      "colorIds": [
+        "BLUE_GREEN",
+        "TEAL"
+      ],
+      "sourceAliasesByColor": {
+        "BLUE_GREEN": [
+          "Blue Green",
+          "blue green",
+          "blue-green"
+        ],
+        "TEAL": [
+          "blue green",
+          "blue-green"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "bone",
+      "colorIds": [
+        "BONE_WHITE",
+        "BROWN"
+      ],
+      "sourceAliasesByColor": {
+        "BONE_WHITE": [
+          "bone"
+        ],
+        "BROWN": [
+          "bone"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "cerise",
+      "colorIds": [
+        "CERISE_PINK",
+        "CHERRY_RED"
+      ],
+      "sourceAliasesByColor": {
+        "CERISE_PINK": [
+          "Cerise",
+          "cerise"
+        ],
+        "CHERRY_RED": [
+          "cerise"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "champagne gold",
+      "colorIds": [
+        "CHAMPAGNE_GOLD",
+        "CHAMPAGNE_YELLOW"
+      ],
+      "sourceAliasesByColor": {
+        "CHAMPAGNE_GOLD": [
+          "Champagne Gold",
+          "champagne gold"
+        ],
+        "CHAMPAGNE_YELLOW": [
+          "champagne gold"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "deep purple",
+      "colorIds": [
+        "DARK_PURPLE",
+        "DEEP_PURPLE"
+      ],
+      "sourceAliasesByColor": {
+        "DARK_PURPLE": [
+          "deep purple"
+        ],
+        "DEEP_PURPLE": [
+          "Deep Purple",
+          "deep purple"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "etain",
+      "colorIds": [
+        "PEWTER",
+        "PEWTER_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "PEWTER": [
+          "etain",
+          "étain"
+        ],
+        "PEWTER_GREY": [
+          "étain"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "gris canon de fusil",
+      "colorIds": [
+        "GUNMETAL",
+        "GUNMETAL_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "GUNMETAL": [
+          "gris canon de fusil"
+        ],
+        "GUNMETAL_GREY": [
+          "gris canon de fusil"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "gun metal",
+      "colorIds": [
+        "GUNMETAL",
+        "GUNMETAL_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "GUNMETAL": [
+          "gun metal"
+        ],
+        "GUNMETAL_GREY": [
+          "gun metal"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "gunmetal",
+      "colorIds": [
+        "GUNMETAL",
+        "GUNMETAL_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "GUNMETAL": [
+          "gunmetal"
+        ],
+        "GUNMETAL_GREY": [
+          "gunmetal"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "kaki",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "kaki"
+        ],
+        "KHAKI_GREEN": [
+          "kaki"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "khaki",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "khaki"
+        ],
+        "KHAKI_GREEN": [
+          "khaki"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "laymouni",
+      "colorIds": [
+        "LEMON_YELLOW",
+        "LIME_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "LEMON_YELLOW": [
+          "laymouni"
+        ],
+        "LIME_GREEN": [
+          "laymouni"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "mandarine",
+      "colorIds": [
+        "MANDARIN_ORANGE",
+        "TANGERINE"
+      ],
+      "sourceAliasesByColor": {
+        "MANDARIN_ORANGE": [
+          "mandarine"
+        ],
+        "TANGERINE": [
+          "mandarine"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "pale yellow",
+      "colorIds": [
+        "LIGHT_YELLOW",
+        "PALE_YELLOW"
+      ],
+      "sourceAliasesByColor": {
+        "LIGHT_YELLOW": [
+          "pale yellow"
+        ],
+        "PALE_YELLOW": [
+          "Pale Yellow",
+          "pale yellow"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "petrol",
+      "colorIds": [
+        "PETROL_BLUE",
+        "PETROL_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "PETROL_BLUE": [
+          "petrol"
+        ],
+        "PETROL_GREEN": [
+          "petrol"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "petroli",
+      "colorIds": [
+        "PETROL_BLUE",
+        "PETROL_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "PETROL_BLUE": [
+          "petroli"
+        ],
+        "PETROL_GREEN": [
+          "petroli"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "pewter",
+      "colorIds": [
+        "PEWTER",
+        "PEWTER_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "PEWTER": [
+          "Pewter",
+          "pewter"
+        ],
+        "PEWTER_GREY": [
+          "pewter"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "rose",
+      "colorIds": [
+        "PINK",
+        "ROSE_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "PINK": [
+          "rose"
+        ],
+        "ROSE_PINK": [
+          "rose"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "rose poudre",
+      "colorIds": [
+        "DUSTY_ROSE",
+        "POWDER_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "DUSTY_ROSE": [
+          "rose poudré"
+        ],
+        "POWDER_PINK": [
+          "rose poudre",
+          "rose poudré"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "rose vif",
+      "colorIds": [
+        "HOT_PINK",
+        "ROSE_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "HOT_PINK": [
+          "rose vif"
+        ],
+        "ROSE_PINK": [
+          "rose vif"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "rust",
+      "colorIds": [
+        "RUST_ORANGE",
+        "RUST_RED"
+      ],
+      "sourceAliasesByColor": {
+        "RUST_ORANGE": [
+          "rust"
+        ],
+        "RUST_RED": [
+          "rust"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "salmon",
+      "colorIds": [
+        "SALMON",
+        "SALMON_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "SALMON": [
+          "Salmon",
+          "salmon"
+        ],
+        "SALMON_PINK": [
+          "salmon"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "saumon",
+      "colorIds": [
+        "SALMON",
+        "SALMON_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "SALMON": [
+          "saumon"
+        ],
+        "SALMON_PINK": [
+          "saumon"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "tooti",
+      "colorIds": [
+        "MULBERRY_PURPLE",
+        "RASPBERRY_RED"
+      ],
+      "sourceAliasesByColor": {
+        "MULBERRY_PURPLE": [
+          "tooti"
+        ],
+        "RASPBERRY_RED": [
+          "tooti"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "toubi",
+      "colorIds": [
+        "BRICK_ORANGE",
+        "BRICK_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BRICK_ORANGE": [
+          "toubi"
+        ],
+        "BRICK_RED": [
+          "toubi"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "violet",
+      "colorIds": [
+        "PURPLE",
+        "VIOLET"
+      ],
+      "sourceAliasesByColor": {
+        "PURPLE": [
+          "violet"
+        ],
+        "VIOLET": [
+          "Violet",
+          "violet"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "ابيض عاجي",
+      "colorIds": [
+        "IVORY",
+        "OFF_WHITE"
+      ],
+      "sourceAliasesByColor": {
+        "IVORY": [
+          "أبيض عاجي"
+        ],
+        "OFF_WHITE": [
+          "أبيض عاجي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "اسود فاحم",
+      "colorIds": [
+        "BLACK",
+        "JET_BLACK"
+      ],
+      "sourceAliasesByColor": {
+        "BLACK": [
+          "أسود فاحم"
+        ],
+        "JET_BLACK": [
+          "أسود فاحم",
+          "اسود فاحم"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "البترولي",
+      "colorIds": [
+        "PETROL_BLUE",
+        "PETROL_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "PETROL_BLUE": [
+          "البترولي"
+        ],
+        "PETROL_GREEN": [
+          "البترولي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "البحري",
+      "colorIds": [
+        "NAVY_BLUE",
+        "SEA_BLUE"
+      ],
+      "sourceAliasesByColor": {
+        "NAVY_BLUE": [
+          "البحري"
+        ],
+        "SEA_BLUE": [
+          "البحري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "البيوتر",
+      "colorIds": [
+        "PEWTER",
+        "PEWTER_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "PEWTER": [
+          "البيوتر"
+        ],
+        "PEWTER_GREY": [
+          "البيوتر"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الخاكي",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "الخاكي"
+        ],
+        "KHAKI_GREEN": [
+          "الخاكي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الخمري",
+      "colorIds": [
+        "BORDEAUX",
+        "BURGUNDY",
+        "MAROON_RED",
+        "WINE_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BORDEAUX": [
+          "الخمري"
+        ],
+        "BURGUNDY": [
+          "الخمري"
+        ],
+        "MAROON_RED": [
+          "الخمري"
+        ],
+        "WINE_RED": [
+          "الخمري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "السكري",
+      "colorIds": [
+        "CREAM",
+        "OFF_WHITE"
+      ],
+      "sourceAliasesByColor": {
+        "CREAM": [
+          "السكري"
+        ],
+        "OFF_WHITE": [
+          "السكري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "السلموني",
+      "colorIds": [
+        "SALMON",
+        "SALMON_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "SALMON": [
+          "السلموني"
+        ],
+        "SALMON_PINK": [
+          "السلموني"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "السماوي",
+      "colorIds": [
+        "LIGHT_BLUE",
+        "SKY_BLUE"
+      ],
+      "sourceAliasesByColor": {
+        "LIGHT_BLUE": [
+          "السماوي"
+        ],
+        "SKY_BLUE": [
+          "السماوي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الشامبانيا",
+      "colorIds": [
+        "CHAMPAGNE_GOLD",
+        "CHAMPAGNE_YELLOW"
+      ],
+      "sourceAliasesByColor": {
+        "CHAMPAGNE_GOLD": [
+          "الشامبانيا"
+        ],
+        "CHAMPAGNE_YELLOW": [
+          "الشامبانيا"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الطوبي",
+      "colorIds": [
+        "BRICK_ORANGE",
+        "BRICK_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BRICK_ORANGE": [
+          "الطوبي"
+        ],
+        "BRICK_RED": [
+          "الطوبي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الفوشي",
+      "colorIds": [
+        "FUCHSIA",
+        "MAGENTA"
+      ],
+      "sourceAliasesByColor": {
+        "FUCHSIA": [
+          "الفوشي"
+        ],
+        "MAGENTA": [
+          "الفوشي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الكاكي",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "الكاكي"
+        ],
+        "KHAKI_GREEN": [
+          "الكاكي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "الليموني",
+      "colorIds": [
+        "LEMON_YELLOW",
+        "LIME_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "LEMON_YELLOW": [
+          "الليموني"
+        ],
+        "LIME_GREEN": [
+          "الليموني"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "المارون",
+      "colorIds": [
+        "BROWN",
+        "MAROON_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BROWN": [
+          "المارون"
+        ],
+        "MAROON_RED": [
+          "المارون"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "المرون",
+      "colorIds": [
+        "BROWN",
+        "MAROON_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BROWN": [
+          "المرون"
+        ],
+        "MAROON_RED": [
+          "المَرون"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "بترولي",
+      "colorIds": [
+        "PETROL_BLUE",
+        "PETROL_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "PETROL_BLUE": [
+          "بترولي"
+        ],
+        "PETROL_GREEN": [
+          "بترولي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "بحري",
+      "colorIds": [
+        "NAVY_BLUE",
+        "SEA_BLUE"
+      ],
+      "sourceAliasesByColor": {
+        "NAVY_BLUE": [
+          "بحري"
+        ],
+        "SEA_BLUE": [
+          "بحري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "برتقالي يوسفي",
+      "colorIds": [
+        "MANDARIN_ORANGE",
+        "TANGERINE"
+      ],
+      "sourceAliasesByColor": {
+        "MANDARIN_ORANGE": [
+          "برتقالي يوسفي"
+        ],
+        "TANGERINE": [
+          "برتقالي يوسفي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "بيوتر",
+      "colorIds": [
+        "PEWTER",
+        "PEWTER_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "PEWTER": [
+          "بيوتر"
+        ],
+        "PEWTER_GREY": [
+          "بيوتر"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "تركواز غامق",
+      "colorIds": [
+        "BLUE_GREEN",
+        "DARK_TURQUOISE"
+      ],
+      "sourceAliasesByColor": {
+        "BLUE_GREEN": [
+          "تركواز غامق"
+        ],
+        "DARK_TURQUOISE": [
+          "تركواز غامق"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "خاكي",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "خاكي"
+        ],
+        "KHAKI_GREEN": [
+          "خاكي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "خمري",
+      "colorIds": [
+        "BORDEAUX",
+        "BURGUNDY",
+        "MAROON_RED",
+        "WINE_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BORDEAUX": [
+          "خمري"
+        ],
+        "BURGUNDY": [
+          "خمري"
+        ],
+        "MAROON_RED": [
+          "خمري"
+        ],
+        "WINE_RED": [
+          "خمري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "سكري",
+      "colorIds": [
+        "CREAM",
+        "OFF_WHITE"
+      ],
+      "sourceAliasesByColor": {
+        "CREAM": [
+          "سكري"
+        ],
+        "OFF_WHITE": [
+          "سكري"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "سلموني",
+      "colorIds": [
+        "SALMON",
+        "SALMON_PINK"
+      ],
+      "sourceAliasesByColor": {
+        "SALMON": [
+          "سلموني"
+        ],
+        "SALMON_PINK": [
+          "سلموني"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "سماوي",
+      "colorIds": [
+        "LIGHT_BLUE",
+        "SKY_BLUE"
+      ],
+      "sourceAliasesByColor": {
+        "LIGHT_BLUE": [
+          "سماوي"
+        ],
+        "SKY_BLUE": [
+          "سماوي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "شامبانيا",
+      "colorIds": [
+        "CHAMPAGNE_GOLD",
+        "CHAMPAGNE_YELLOW"
+      ],
+      "sourceAliasesByColor": {
+        "CHAMPAGNE_GOLD": [
+          "شامبانيا"
+        ],
+        "CHAMPAGNE_YELLOW": [
+          "شامبانيا"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "طوبي",
+      "colorIds": [
+        "BRICK_ORANGE",
+        "BRICK_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BRICK_ORANGE": [
+          "طوبي"
+        ],
+        "BRICK_RED": [
+          "طوبي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "غان ميتال",
+      "colorIds": [
+        "GUNMETAL",
+        "GUNMETAL_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "GUNMETAL": [
+          "غان ميتال"
+        ],
+        "GUNMETAL_GREY": [
+          "غان ميتال"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "غن ميتال",
+      "colorIds": [
+        "GUNMETAL",
+        "GUNMETAL_GREY"
+      ],
+      "sourceAliasesByColor": {
+        "GUNMETAL": [
+          "غن ميتال"
+        ],
+        "GUNMETAL_GREY": [
+          "غن ميتال"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "فوشي",
+      "colorIds": [
+        "FUCHSIA",
+        "MAGENTA"
+      ],
+      "sourceAliasesByColor": {
+        "FUCHSIA": [
+          "فوشي"
+        ],
+        "MAGENTA": [
+          "فوشي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "كاكي",
+      "colorIds": [
+        "KHAKI_BEIGE",
+        "KHAKI_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "KHAKI_BEIGE": [
+          "كاكي"
+        ],
+        "KHAKI_GREEN": [
+          "كاكي"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "لون الصدا",
+      "colorIds": [
+        "RUST_ORANGE",
+        "RUST_RED"
+      ],
+      "sourceAliasesByColor": {
+        "RUST_ORANGE": [
+          "لون الصدأ"
+        ],
+        "RUST_RED": [
+          "لون الصدأ"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "ليموني",
+      "colorIds": [
+        "LEMON_YELLOW",
+        "LIME_GREEN"
+      ],
+      "sourceAliasesByColor": {
+        "LEMON_YELLOW": [
+          "ليموني"
+        ],
+        "LIME_GREEN": [
+          "ليموني"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "مارون",
+      "colorIds": [
+        "BROWN",
+        "MAROON_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BROWN": [
+          "مارون"
+        ],
+        "MAROON_RED": [
+          "مارون"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    },
+    {
+      "sourceNormalizedKey": "مرون",
+      "colorIds": [
+        "BROWN",
+        "MAROON_RED"
+      ],
+      "sourceAliasesByColor": {
+        "BROWN": [
+          "مرون"
+        ],
+        "MAROON_RED": [
+          "مَرون"
+        ]
+      },
+      "policy": "MUST_REQUIRE_CONTEXT_OR_CLARIFICATION"
+    }
+  ]
+}

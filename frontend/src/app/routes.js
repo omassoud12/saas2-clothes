@@ -19,6 +19,7 @@ export const ROUTES = Object.freeze({
   exchanges: '/app/exchanges',
   expenses: '/app/expenses',
   reports: '/app/reports',
+  textMatchingLab: '/app/dev/text-matching',
 })
 
 export function normalizePathname(pathname) {

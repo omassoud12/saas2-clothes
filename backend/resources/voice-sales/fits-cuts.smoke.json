@@ -1,0 +1,257 @@
+{
+  "source": "Original JSON test_cases copied without modification; these are expected outcomes for evaluation, not passing SaaS2 integration tests.",
+  "cases": [
+    {
+      "input_text": "بدي جينز سكيني",
+      "expected_style_ids": [
+        "FIT_SKINNY"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi jeans wide leg high waist",
+      "expected_style_ids": [
+        "LEG_WIDE",
+        "RISE_HIGH"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي كنزة أوفر سايز",
+      "expected_style_ids": [
+        "FIT_OVERSIZED"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بنطلون ستريت ليغ",
+      "expected_style_ids": [
+        "LEG_STRAIGHT"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بنطرون بوت كت",
+      "expected_style_ids": [
+        "LEG_BOOTCUT"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "jean mom fit",
+      "expected_style_ids": [
+        "LEG_MOM"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "فستان A line ميدي",
+      "expected_style_ids": [
+        "SIL_A_LINE",
+        "LEN_MIDI"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي فستان ميرميد طويل للأرض",
+      "expected_style_ids": [
+        "SIL_MERMAID",
+        "LEN_FLOOR"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي تنورة بليسيه",
+      "expected_style_ids": [
+        "SIL_PLEATED"
+      ],
+      "expect_review": true
+    },
+    {
+      "input_text": "bdi skinny jeans low rise",
+      "expected_style_ids": [
+        "FIT_SKINNY",
+        "RISE_LOW"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "قصة واسعة",
+      "expected_style_ids": [
+        "FIT_LOOSE"
+      ],
+      "expect_review": true
+    },
+    {
+      "input_text": "قبة V",
+      "expected_style_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي فستان ضيق من فوق وواسع من تحت",
+      "expected_style_ids": [
+        "SIL_FIT_FLARE"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي بلوزة كم باتوينغ",
+      "expected_style_ids": [
+        "SLEEVE_BATWING"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي تيشيرت بكتف نازل",
+      "expected_style_ids": [
+        "SHOULDER_DROPPED"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "قميص طرف مدور",
+      "expected_style_ids": [
+        "HEM_CURVED"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "ميني سكيرت",
+      "expected_style_ids": [
+        "LEN_MINI"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي قماش قطن 100%",
+      "expected_style_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "ما بدي سكيني بدي وايد ليغ",
+      "expected_style_ids": [
+        "LEG_WIDE"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي بنطرون لو ويست جوغر",
+      "expected_style_ids": [
+        "RISE_LOW",
+        "LEG_JOGGER"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي فستان بابي دول",
+      "expected_style_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي فستان بيبي دول",
+      "expected_style_ids": [
+        "SIL_BABYDOLL"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "فستان لف على الجسم",
+      "expected_style_ids": [
+        "SIL_WRAP"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بنطلون جزرة",
+      "expected_style_ids": [
+        "LEG_CARROT"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "ما بدي أوسع، بدي ستريت ليغ",
+      "expected_style_ids": [
+        "LEG_STRAIGHT"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "بلوزة بيبلوم",
+      "expected_style_ids": [
+        "SIL_PEPLUM"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "في عندكن شورت برمودا؟",
+      "expected_style_ids": [
+        "LEN_BERMUDA"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "fustan bodycon maxi",
+      "expected_style_ids": [
+        "SIL_BODYCON",
+        "LEN_MAXI"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "تيشيرت ماسل فيت",
+      "expected_style_ids": [
+        "FIT_MUSCLE"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "كولون سليب",
+      "expected_style_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi jeans wede leg 5ser 3ale",
+      "expected_style_ids": [
+        "LEG_WIDE",
+        "RISE_HIGH"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi kenze oversaiz",
+      "expected_style_ids": [
+        "FIT_OVERSIZED"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "jeans botcut",
+      "expected_style_ids": [
+        "LEG_BOOTCUT"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "fustan mermaid maksi",
+      "expected_style_ids": [
+        "SIL_MERMAID",
+        "LEN_MAXI"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi tlet arba3",
+      "expected_style_ids": [
+        "LEN_THREE_QUARTER"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "mish skini bdi palazo",
+      "expected_style_ids": [
+        "LEG_PALAZZO"
+      ],
+      "expect_review": false
+    }
+  ]
+}

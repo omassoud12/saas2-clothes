@@ -36,6 +36,9 @@ import {
   type ReadinessDependencies,
 } from './runtime/readiness.js'
 import type { RuntimeLogger } from './runtime/logger.js'
+import { createVoiceMatchingRouter } from './voice-sales/matching.routes.js'
+import type { VoiceMatchingDependencies } from './voice-sales/match.types.js'
+import type { VoiceTranscriptionDependencies } from './voice-sales/transcription.types.js'
 
 export const JSON_BODY_LIMIT = '100kb'
 
@@ -93,8 +96,9 @@ export function isWriteRequest(request: express.Request): boolean {
 }
 
 export function isExpensiveRead(request: express.Request): boolean {
-  if (request.method !== 'GET') return false
   const path = requestPath(request)
+  if (request.method === 'POST' && /^\/api\/voice-sales\/(?:match|transcribe)\/?$/iu.test(path)) return true
+  if (request.method !== 'GET') return false
   return (
     path.startsWith('/api/reports/') ||
     path.startsWith('/api/inventory/') ||
@@ -154,6 +158,8 @@ export const jsonNotFoundHandler: RequestHandler = (
 }
 
 export interface AppDependencies {
+  readonly voiceMatching?: VoiceMatchingDependencies
+  readonly voiceTranscription?: VoiceTranscriptionDependencies
   readonly receipts?: ReceiptDependencies
   readonly auth: AuthDependencies
   readonly adminAccounts: AdminAccountDependencies
@@ -227,6 +233,9 @@ export function createApp(
     createCategoryRouter(dependencies.auth, dependencies.categories),
   )
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
+  if (dependencies.voiceMatching || dependencies.voiceTranscription) {
+    app.use('/api/voice-sales', createVoiceMatchingRouter(dependencies.auth, dependencies.voiceMatching, dependencies.voiceTranscription))
+  }
   if (dependencies.receipts) app.use('/api/inventory', createReceiptRouter(dependencies.auth, dependencies.receipts))
   app.use('/api/inventory', createInventoryRouter(dependencies.auth, dependencies.inventory))
   app.use('/api/sales', createSaleRouter(

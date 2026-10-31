@@ -10,7 +10,10 @@ export interface RuntimeLogFields {
   readonly durationMs?: number
   readonly code?: string
   readonly reason?: string
-  readonly stage?: StartupStage
+  readonly stage?: StartupStage | 'provider_request' | 'provider_response' | 'provider_timeout' | 'provider_connectivity'
+  readonly upstreamStatus?: number
+  readonly mimeType?: string
+  readonly byteCount?: number
 }
 
 export interface RuntimeLogger {

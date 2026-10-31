@@ -1,0 +1,3848 @@
+{
+  "node": "v24.21.0",
+  "commonBefore": {
+    "runs": 200,
+    "meanMs": 2.7646054999999707,
+    "p95Ms": 3.7299000000002707
+  },
+  "commonAfter": {
+    "runs": 200,
+    "meanMs": 2.799721500000014,
+    "p95Ms": 3.727700000000368
+  },
+  "requestAfter": {
+    "runs": 200,
+    "meanMs": 7.084163000000035,
+    "p95Ms": 9.481400000000576
+  },
+  "commonParserMeanDeltaMs": 0.035116000000043446,
+  "match1000Shared": {
+    "runs": 20,
+    "meanMs": 50.91374500000002,
+    "p95Ms": 56.87219999999979
+  },
+  "match1000Distinct": {
+    "runs": 5,
+    "meanMs": 1064.1524599999998,
+    "p95Ms": 1177.125399999999
+  },
+  "nonSaleGate": {
+    "runs": 200,
+    "meanMs": 5.161443000000017,
+    "p95Ms": 7.219100000000253
+  },
+  "coldWholePipeline": [
+    {
+      "importMs": 1622.0298,
+      "heapDeltaMiB": 26.498802185058594,
+      "rssDeltaMiB": 101.2109375
+    },
+    {
+      "importMs": 1549.1366,
+      "heapDeltaMiB": 26.504623413085938,
+      "rssDeltaMiB": 103.09375
+    },
+    {
+      "importMs": 1523.9116,
+      "heapDeltaMiB": 26.49895477294922,
+      "rssDeltaMiB": 101.49609375
+    }
+  ],
+  "resourceBytes": [
+    {
+      "kind": "seed",
+      "bytes": 355055
+    },
+    {
+      "kind": "collisions",
+      "bytes": 1314
+    },
+    {
+      "kind": "ambiguities",
+      "bytes": 8943
+    }
+  ],
+  "totalNewRuntimeBytes": 365312,
+  "beforeAfterExamples": [
+    {
+      "input": "je veux Cedar T-shirt black XL two pieces",
+      "before": {
+        "parser": {
+          "status": "parsed",
+          "originalText": "je veux Cedar T-shirt black XL two pieces",
+          "normalizedText": "je veux cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 3,
+                    "endToken": 5,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 7,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 7,
+                    "endToken": 9,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 5,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 7,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 7,
+                  "endToken": 9,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 31,
+                  "end": 41,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 6,
+              "endToken": 7,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 28,
+                "end": 30,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 3,
+              "endToken": 5,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "je",
+              "index": 0
+            },
+            {
+              "token": "veux",
+              "index": 1
+            },
+            {
+              "token": "cedar",
+              "index": 2
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "je",
+              "index": 0
+            },
+            {
+              "token": "veux",
+              "index": 1
+            },
+            {
+              "token": "cedar",
+              "index": 2
+            }
+          ],
+          "conversationalTokens": [],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "NOT_FOUND"
+      },
+      "after": {
+        "parser": {
+          "status": "parsed",
+          "originalText": "je veux Cedar T-shirt black XL two pieces",
+          "normalizedText": "je veux cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 3,
+                    "endToken": 5,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 7,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 7,
+                    "endToken": 9,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 5,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 7,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "commonExpressionMatches": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 2,
+                "text": "je veux"
+              },
+              "candidates": [
+                "REQ_WANT"
+              ],
+              "categories": [
+                "REQUEST"
+              ],
+              "status": "recognized",
+              "role": "intent",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            }
+          ],
+          "commonExpressionSafety": {
+            "salePreviewAllowed": true,
+            "reason": "AFFIRMATIVE_OR_ATTRIBUTE_TEXT",
+            "recognitionOnly": true,
+            "authorizesAction": false
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 7,
+                  "endToken": 9,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 31,
+                  "end": 41,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 6,
+              "endToken": 7,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 28,
+                "end": 30,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 3,
+              "endToken": 5,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "cedar",
+              "index": 2
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "cedar",
+              "index": 2
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "je",
+              "index": 0
+            },
+            {
+              "token": "veux",
+              "index": 1
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "MATCHED"
+      },
+      "catalog": {
+        "variants": [
+          {
+            "productId": "product",
+            "variantId": "variant",
+            "productName": "Cedar T-Shirt",
+            "categoryName": "T-Shirts",
+            "color": "Black",
+            "size": "XL",
+            "sellingPrice": "20.00",
+            "availableStock": 50,
+            "currency": "USD"
+          }
+        ],
+        "scannedVariants": 1,
+        "truncated": false
+      },
+      "synthetic": true
+    },
+    {
+      "input": "أكيد Cedar T-shirt black XL two pieces",
+      "before": {
+        "parser": {
+          "status": "parsed",
+          "originalText": "أكيد Cedar T-shirt black XL two pieces",
+          "normalizedText": "اكيد cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 4,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 4,
+                    "endToken": 5,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 8,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 4,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 8,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 28,
+                  "end": 38,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 25,
+                "end": 27,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 4,
+              "endToken": 5,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 4,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "اكيد",
+              "index": 0
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "MATCHED"
+      },
+      "after": {
+        "parser": {
+          "status": "needs_clarification",
+          "originalText": "أكيد Cedar T-shirt black XL two pieces",
+          "normalizedText": "اكيد cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 4,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 4,
+                    "endToken": 5,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 8,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 4,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "commonExpressionMatches": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "اكيد"
+              },
+              "candidates": [
+                "CONF_YES"
+              ],
+              "categories": [
+                "CONFIRMATION"
+              ],
+              "status": "context_required",
+              "role": "intent",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            }
+          ],
+          "commonExpressionSafety": {
+            "salePreviewAllowed": false,
+            "reason": "INTENT_REQUIRES_CONTEXT",
+            "recognitionOnly": true,
+            "authorizesAction": false
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 8,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 28,
+                  "end": 38,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 25,
+                "end": 27,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 4,
+              "endToken": 5,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 4,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "اكيد",
+              "index": 0
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "INCOMPLETE"
+      },
+      "catalog": {
+        "variants": [
+          {
+            "productId": "product",
+            "variantId": "variant",
+            "productName": "Cedar T-Shirt",
+            "categoryName": "T-Shirts",
+            "color": "Black",
+            "size": "XL",
+            "sellingPrice": "20.00",
+            "availableStock": 50,
+            "currency": "USD"
+          }
+        ],
+        "scannedVariants": 1,
+        "truncated": false
+      },
+      "synthetic": true
+    },
+    {
+      "input": "baddi Cedar T-shirt black XL two pieces",
+      "before": {
+        "parser": {
+          "status": "parsed",
+          "originalText": "baddi Cedar T-shirt black XL two pieces",
+          "normalizedText": "baddi cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 4,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 4,
+                    "endToken": 5,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 8,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 4,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 8,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 29,
+                  "end": 39,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 26,
+                "end": 28,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 4,
+              "endToken": 5,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 4,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "baddi",
+              "index": 0
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "MATCHED"
+      },
+      "after": {
+        "parser": {
+          "status": "parsed",
+          "originalText": "baddi Cedar T-shirt black XL two pieces",
+          "normalizedText": "baddi cedar t shirt black xl two pieces",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 4,
+                    "text": "t shirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "resolved",
+              "value": "BLACK",
+              "candidates": [
+                "BLACK"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 4,
+                    "endToken": 5,
+                    "text": "black"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "XL",
+              "candidates": [
+                "XL"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "xl"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "resolved",
+              "value": 2,
+              "candidates": [
+                2
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 6,
+                    "endToken": 8,
+                    "text": "two pieces"
+                  },
+                  "source": "explicit",
+                  "rule": "verified_quantity_intent"
+                }
+              ]
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 4,
+                  "text": "t shirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "resolved",
+            "value": "BLACK",
+            "candidates": [
+              "BLACK"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 4,
+                  "endToken": 5,
+                  "text": "black"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_XL",
+            "candidates": [
+              "ALPHA_XL"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "xl"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "commonExpressionMatches": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "baddi"
+              },
+              "candidates": [
+                "REQ_WANT"
+              ],
+              "categories": [
+                "REQUEST"
+              ],
+              "status": "recognized",
+              "role": "intent",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            }
+          ],
+          "commonExpressionSafety": {
+            "salePreviewAllowed": true,
+            "reason": "AFFIRMATIVE_OR_ATTRIBUTE_TEXT",
+            "recognitionOnly": true,
+            "authorizesAction": false
+          },
+          "quantityIntent": {
+            "status": "resolved",
+            "intent": "order",
+            "orderUnits": 2,
+            "unitId": "PIECE",
+            "unitCandidates": [
+              "PIECE"
+            ],
+            "resolvedPieces": 2,
+            "needsCatalogMetadata": false,
+            "exactness": "exact",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 6,
+                  "endToken": 8,
+                  "text": "two pieces"
+                },
+                "originalSpan": {
+                  "start": 29,
+                  "end": 39,
+                  "text": "two pieces"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [
+                  "PIECE"
+                ],
+                "rule": "number_unit_phrase"
+              }
+            ],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "XL",
+              "originalSpan": {
+                "start": 26,
+                "end": 28,
+                "text": "XL"
+              },
+              "result": {
+                "alias": "xl",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_XL",
+                    "family": "ALPHA",
+                    "canonical_label": "XL",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "XL",
+                    "display_ar": "اكس لارج",
+                    "display_en": "XL",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 19
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000116",
+                    "size_id": "ALPHA_XL",
+                    "alias": "XL",
+                    "normalized_alias": "xl",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "XL",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_XL"
+              ],
+              "resolvedId": "ALPHA_XL",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": false
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 4,
+              "endToken": 5,
+              "phrase": "black",
+              "result": {
+                "alias": "black",
+                "status": "matched",
+                "value": "BLACK",
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "Black",
+                    "sourceNormalized": "black",
+                    "source": "canonical_en",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 261
+                  },
+                  {
+                    "alias": "black",
+                    "sourceNormalized": "black",
+                    "source": "english",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 262
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": null
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 4,
+              "phrase": "t shirt",
+              "result": {
+                "alias": "t shirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "T-Shirt",
+                        "sourceNormalized": "t shirt",
+                        "source": "canonical_en;arabizi",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "cedar",
+              "index": 1
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "baddi",
+              "index": 0
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "MATCHED"
+      },
+      "catalog": {
+        "variants": [
+          {
+            "productId": "product",
+            "variantId": "variant",
+            "productName": "Cedar T-Shirt",
+            "categoryName": "T-Shirts",
+            "color": "Black",
+            "size": "XL",
+            "sellingPrice": "20.00",
+            "availableStock": 50,
+            "currency": "USD"
+          }
+        ],
+        "scannedVariants": 1,
+        "truncated": false
+      },
+      "synthetic": true
+    },
+    {
+      "input": "ما بدي ألغي الطلب",
+      "before": {
+        "parser": {
+          "status": "needs_clarification",
+          "originalText": "ما بدي ألغي الطلب",
+          "normalizedText": "ما بدي الغي الطلب",
+          "attributes": {
+            "productType": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "color": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "size": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "quantity": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceColorId": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceSizeId": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [],
+          "colorCandidates": [],
+          "productTypeCandidates": [],
+          "productNameResidualTokens": [
+            {
+              "token": "ما",
+              "index": 0
+            },
+            {
+              "token": "بدي",
+              "index": 1
+            },
+            {
+              "token": "الغي",
+              "index": 2
+            },
+            {
+              "token": "الطلب",
+              "index": 3
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "ما",
+              "index": 0
+            },
+            {
+              "token": "بدي",
+              "index": 1
+            },
+            {
+              "token": "الغي",
+              "index": 2
+            },
+            {
+              "token": "الطلب",
+              "index": 3
+            }
+          ],
+          "conversationalTokens": [],
+          "ambiguities": [
+            {
+              "kind": "unsupported_structure",
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "ما"
+              },
+              "message": "Negation, alternatives and cancellation are not affirmative single-item requests in this MVP.",
+              "fields": [],
+              "alternatives": []
+            }
+          ],
+          "missingInformation": [
+            "productType",
+            "color",
+            "size",
+            "quantity",
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "NOT_FOUND"
+      },
+      "after": {
+        "parser": {
+          "status": "needs_clarification",
+          "originalText": "ما بدي ألغي الطلب",
+          "normalizedText": "ما بدي الغي الطلب",
+          "attributes": {
+            "productType": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "color": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "size": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "quantity": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceColorId": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceSizeId": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "commonExpressionMatches": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 4,
+                "text": "ما بدي الغي الطلب"
+              },
+              "candidates": [
+                "CHANGE_KEEP_ORDER"
+              ],
+              "categories": [
+                "ORDER_CHANGE"
+              ],
+              "status": "context_required",
+              "role": "intent",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            }
+          ],
+          "commonExpressionSafety": {
+            "salePreviewAllowed": false,
+            "reason": "INTENT_REQUIRES_CONTEXT",
+            "recognitionOnly": true,
+            "authorizesAction": false
+          },
+          "quantityIntent": {
+            "status": "missing",
+            "intent": "not_quantity",
+            "orderUnits": null,
+            "unitId": null,
+            "unitCandidates": [],
+            "resolvedPieces": null,
+            "needsCatalogMetadata": false,
+            "exactness": "unresolved",
+            "evidence": [],
+            "modifiers": [],
+            "reasons": []
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [],
+          "colorCandidates": [],
+          "productTypeCandidates": [],
+          "productNameResidualTokens": [
+            {
+              "token": "ما",
+              "index": 0
+            },
+            {
+              "token": "الطلب",
+              "index": 3
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "ما",
+              "index": 0
+            },
+            {
+              "token": "الطلب",
+              "index": 3
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "بدي",
+              "index": 1
+            },
+            {
+              "token": "الغي",
+              "index": 2
+            }
+          ],
+          "ambiguities": [],
+          "missingInformation": [
+            "productType",
+            "color",
+            "size",
+            "quantity",
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": []
+        },
+        "status": "INCOMPLETE"
+      },
+      "catalog": {
+        "variants": [
+          {
+            "productId": "product",
+            "variantId": "variant",
+            "productName": "Cedar T-Shirt",
+            "categoryName": "T-Shirts",
+            "color": "Black",
+            "size": "XL",
+            "sellingPrice": "20.00",
+            "availableStock": 50,
+            "currency": "USD"
+          }
+        ],
+        "scannedVariants": 1,
+        "truncated": false
+      },
+      "synthetic": true
+    },
+    {
+      "input": "bdi 2 tshirt soda size L",
+      "before": {
+        "parser": {
+          "status": "needs_clarification",
+          "originalText": "bdi 2 tshirt soda size L",
+          "normalizedText": "bdi 2 tshirt soda size l",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 3,
+                    "text": "tshirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "ambiguous",
+              "value": null,
+              "candidates": [
+                "BLACK"
+              ],
+              "source": null,
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 3,
+                    "endToken": 4,
+                    "text": "soda"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "L",
+              "candidates": [
+                "L"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "l"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 3,
+                  "text": "tshirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "ambiguous",
+            "value": null,
+            "candidates": [
+              "BLACK"
+            ],
+            "source": null,
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 4,
+                  "text": "soda"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_L",
+            "candidates": [
+              "ALPHA_L"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "l"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "quantityIntent": {
+            "status": "context_required",
+            "intent": "needs_review",
+            "orderUnits": 2,
+            "unitId": null,
+            "unitCandidates": [],
+            "resolvedPieces": null,
+            "needsCatalogMetadata": false,
+            "exactness": "unresolved",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 1,
+                  "endToken": 2,
+                  "text": "2"
+                },
+                "originalSpan": {
+                  "start": 4,
+                  "end": 5,
+                  "text": "2"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [],
+                "rule": "bare_number_requires_context"
+              }
+            ],
+            "modifiers": [],
+            "reasons": [
+              "Explicit order unit/context required."
+            ]
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "L",
+              "originalSpan": {
+                "start": 23,
+                "end": 24,
+                "text": "L"
+              },
+              "result": {
+                "alias": "l",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_L",
+                    "family": "ALPHA",
+                    "canonical_label": "L",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "L",
+                    "display_ar": "لارج",
+                    "display_en": "L",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 20
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000096",
+                    "size_id": "ALPHA_L",
+                    "alias": "L",
+                    "normalized_alias": "l",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "L",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_L"
+              ],
+              "resolvedId": "ALPHA_L",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": true
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 3,
+              "endToken": 4,
+              "phrase": "soda",
+              "result": {
+                "alias": "soda",
+                "status": "deferred",
+                "value": null,
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "soda",
+                    "sourceNormalized": "soda",
+                    "source": "arabizi",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 269
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": "Unreviewed generated/source spelling or existing uncertain transcription; never auto-select."
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 3,
+              "phrase": "tshirt",
+              "result": {
+                "alias": "tshirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "tshirt",
+                        "sourceNormalized": "tshirt",
+                        "source": "arabizi;internet",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "soda",
+              "index": 3
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "2",
+              "index": 1
+            },
+            {
+              "token": "soda",
+              "index": 3
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "bdi",
+              "index": 0
+            }
+          ],
+          "ambiguities": [
+            {
+              "kind": "unresolved_number",
+              "span": {
+                "startToken": 1,
+                "endToken": 2,
+                "text": "2"
+              },
+              "message": "Bare number has no explicit size or quantity context.",
+              "fields": [
+                "size",
+                "quantity"
+              ],
+              "alternatives": []
+            },
+            {
+              "kind": "uncertain_transcription",
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "soda"
+              },
+              "message": "Unreviewed generated/source spelling or existing uncertain transcription; never auto-select.",
+              "fields": [
+                "color"
+              ],
+              "alternatives": []
+            },
+            {
+              "kind": "unsupported_value",
+              "span": {
+                "startToken": 1,
+                "endToken": 2,
+                "text": "2"
+              },
+              "message": "Explicit order unit/context required.",
+              "fields": [
+                "quantity"
+              ],
+              "alternatives": []
+            }
+          ],
+          "missingInformation": [
+            "quantity",
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": [
+            "color",
+            "size",
+            "quantity"
+          ]
+        },
+        "status": "NOT_FOUND"
+      },
+      "after": {
+        "parser": {
+          "status": "needs_clarification",
+          "originalText": "bdi 2 tshirt soda size L",
+          "normalizedText": "bdi 2 tshirt soda size l",
+          "attributes": {
+            "productType": {
+              "status": "resolved",
+              "value": "T_SHIRT",
+              "candidates": [
+                "T_SHIRT"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 2,
+                    "endToken": 3,
+                    "text": "tshirt"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "color": {
+              "status": "ambiguous",
+              "value": null,
+              "candidates": [
+                "BLACK"
+              ],
+              "source": null,
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 3,
+                    "endToken": 4,
+                    "text": "soda"
+                  },
+                  "source": "explicit",
+                  "rule": "active_color_alias"
+                }
+              ]
+            },
+            "size": {
+              "status": "resolved",
+              "value": "L",
+              "candidates": [
+                "L"
+              ],
+              "source": "explicit",
+              "evidence": [
+                {
+                  "span": {
+                    "startToken": 5,
+                    "endToken": 6,
+                    "text": "l"
+                  },
+                  "source": "explicit",
+                  "rule": "dictionary_alias"
+                }
+              ]
+            },
+            "quantity": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "material": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "neckline": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "fit": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            },
+            "pattern": {
+              "status": "missing",
+              "value": null,
+              "candidates": [],
+              "source": null,
+              "evidence": []
+            }
+          },
+          "sourceProductType": {
+            "status": "resolved",
+            "value": "TSHIRT",
+            "candidates": [
+              "TSHIRT"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 2,
+                  "endToken": 3,
+                  "text": "tshirt"
+                },
+                "source": "explicit",
+                "rule": "active_source_alias"
+              }
+            ]
+          },
+          "sourceColorId": {
+            "status": "ambiguous",
+            "value": null,
+            "candidates": [
+              "BLACK"
+            ],
+            "source": null,
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 3,
+                  "endToken": 4,
+                  "text": "soda"
+                },
+                "source": "explicit",
+                "rule": "active_color_alias"
+              }
+            ]
+          },
+          "sourceSizeId": {
+            "status": "resolved",
+            "value": "ALPHA_L",
+            "candidates": [
+              "ALPHA_L"
+            ],
+            "source": "explicit",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 5,
+                  "endToken": 6,
+                  "text": "l"
+                },
+                "source": "explicit",
+                "rule": "source_size_expression"
+              }
+            ]
+          },
+          "commonExpressionMatches": [
+            {
+              "span": {
+                "startToken": 0,
+                "endToken": 1,
+                "text": "bdi"
+              },
+              "candidates": [
+                "REQ_WANT"
+              ],
+              "categories": [
+                "REQUEST"
+              ],
+              "status": "recognized",
+              "role": "intent",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            },
+            {
+              "span": {
+                "startToken": 4,
+                "endToken": 5,
+                "text": "size"
+              },
+              "candidates": [
+                "AMB_SIZE"
+              ],
+              "categories": [
+                "AMBIGUOUS"
+              ],
+              "status": "context_required",
+              "role": "grammar",
+              "polarity": "affirmative",
+              "recognitionOnly": true,
+              "authorizesAction": false,
+              "provenance": "seed_unvalidated"
+            }
+          ],
+          "commonExpressionSafety": {
+            "salePreviewAllowed": true,
+            "reason": "AFFIRMATIVE_OR_ATTRIBUTE_TEXT",
+            "recognitionOnly": true,
+            "authorizesAction": false
+          },
+          "quantityIntent": {
+            "status": "context_required",
+            "intent": "needs_review",
+            "orderUnits": 2,
+            "unitId": null,
+            "unitCandidates": [],
+            "resolvedPieces": null,
+            "needsCatalogMetadata": false,
+            "exactness": "unresolved",
+            "evidence": [
+              {
+                "span": {
+                  "startToken": 1,
+                  "endToken": 2,
+                  "text": "2"
+                },
+                "originalSpan": {
+                  "start": 4,
+                  "end": 5,
+                  "text": "2"
+                },
+                "orderUnits": 2,
+                "unitCandidates": [],
+                "rule": "bare_number_requires_context"
+              }
+            ],
+            "modifiers": [],
+            "reasons": [
+              "Explicit order unit/context required."
+            ]
+          },
+          "sourceMaterial": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "materialCandidates": [],
+          "materialComposition": [],
+          "sourceNecklineShape": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "sourceCollarType": {
+            "status": "missing",
+            "value": null,
+            "candidates": [],
+            "source": null,
+            "evidence": []
+          },
+          "necklineCandidates": [],
+          "sourceSizeCandidates": [
+            {
+              "startToken": 5,
+              "endToken": 6,
+              "phrase": "L",
+              "originalSpan": {
+                "start": 23,
+                "end": 24,
+                "text": "L"
+              },
+              "result": {
+                "alias": "l",
+                "status": "matched",
+                "candidates": [
+                  {
+                    "size_id": "ALPHA_L",
+                    "family": "ALPHA",
+                    "canonical_label": "L",
+                    "size_standard": "INTERNATIONAL",
+                    "size_value": "L",
+                    "display_ar": "لارج",
+                    "display_en": "L",
+                    "apparel_scope": "all",
+                    "required_context": "garment_size",
+                    "notes": "Alpha label; no universal cm-equivalent.",
+                    "aliases_count": 20
+                  }
+                ],
+                "records": [
+                  {
+                    "alias_id": "SZA000096",
+                    "size_id": "ALPHA_L",
+                    "alias": "L",
+                    "normalized_alias": "l",
+                    "language": "en",
+                    "alias_kind": "canonical",
+                    "match_policy": "contextual",
+                    "confidence": 0.99,
+                    "required_context": "garment_size",
+                    "notes": ""
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "legacySize": "L",
+                "reason": null
+              },
+              "candidates": [
+                "ALPHA_L"
+              ],
+              "resolvedId": "ALPHA_L",
+              "contextRequired": false,
+              "incompatibleStandard": false,
+              "sizeDomainExplicit": true
+            }
+          ],
+          "colorCandidates": [
+            {
+              "startToken": 3,
+              "endToken": 4,
+              "phrase": "soda",
+              "result": {
+                "alias": "soda",
+                "status": "deferred",
+                "value": null,
+                "candidates": [
+                  "BLACK"
+                ],
+                "legacyColor": "BLACK",
+                "records": [
+                  {
+                    "alias": "soda",
+                    "sourceNormalized": "soda",
+                    "source": "arabizi",
+                    "locale": "latin",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "sourceCsvLine": 269
+                  }
+                ],
+                "crossDomainOverlaps": [],
+                "embeddedPattern": null,
+                "colorMode": false,
+                "reason": "Unreviewed generated/source spelling or existing uncertain transcription; never auto-select."
+              },
+              "colorDomainExplicit": false
+            }
+          ],
+          "productTypeCandidates": [
+            {
+              "startToken": 2,
+              "endToken": 3,
+              "phrase": "tshirt",
+              "result": {
+                "alias": "tshirt",
+                "status": "candidate",
+                "candidates": [
+                  {
+                    "sourceTypeId": "TSHIRT",
+                    "canonicalType": "T_SHIRT",
+                    "labels": {
+                      "ar": "تيشيرت",
+                      "en": "T-Shirt"
+                    },
+                    "group": "Tops / بلايز وكنزات",
+                    "audienceHint": "unisex",
+                    "matchPolicy": "exact_candidate",
+                    "reviewStatus": "seed_review",
+                    "aliases": [
+                      {
+                        "text": "tshirt",
+                        "sourceNormalized": "tshirt",
+                        "source": "arabizi;internet",
+                        "locale": "latin",
+                        "matchPolicy": "exact_candidate",
+                        "reviewStatus": "seed_review"
+                      }
+                    ]
+                  }
+                ],
+                "context": [],
+                "crossDomainOverlaps": []
+              },
+              "requiresCatalogEvidence": false
+            }
+          ],
+          "productNameResidualTokens": [
+            {
+              "token": "soda",
+              "index": 3
+            }
+          ],
+          "unrecognizedTokens": [
+            {
+              "token": "2",
+              "index": 1
+            },
+            {
+              "token": "soda",
+              "index": 3
+            }
+          ],
+          "conversationalTokens": [
+            {
+              "token": "bdi",
+              "index": 0
+            }
+          ],
+          "ambiguities": [
+            {
+              "kind": "unresolved_number",
+              "span": {
+                "startToken": 1,
+                "endToken": 2,
+                "text": "2"
+              },
+              "message": "Bare number has no explicit size or quantity context.",
+              "fields": [
+                "size",
+                "quantity"
+              ],
+              "alternatives": []
+            },
+            {
+              "kind": "uncertain_transcription",
+              "span": {
+                "startToken": 3,
+                "endToken": 4,
+                "text": "soda"
+              },
+              "message": "Unreviewed generated/source spelling or existing uncertain transcription; never auto-select.",
+              "fields": [
+                "color"
+              ],
+              "alternatives": []
+            },
+            {
+              "kind": "unsupported_value",
+              "span": {
+                "startToken": 1,
+                "endToken": 2,
+                "text": "2"
+              },
+              "message": "Explicit order unit/context required.",
+              "fields": [
+                "quantity"
+              ],
+              "alternatives": []
+            }
+          ],
+          "missingInformation": [
+            "quantity",
+            "material",
+            "neckline",
+            "fit",
+            "pattern"
+          ],
+          "unresolvedInformation": [
+            "color",
+            "size",
+            "quantity"
+          ]
+        },
+        "status": "NOT_FOUND"
+      },
+      "catalog": {
+        "variants": [
+          {
+            "productId": "product",
+            "variantId": "variant",
+            "productName": "Cedar T-Shirt",
+            "categoryName": "T-Shirts",
+            "color": "Black",
+            "size": "XL",
+            "sellingPrice": "20.00",
+            "availableStock": 50,
+            "currency": "USD"
+          }
+        ],
+        "scannedVariants": 1,
+        "truncated": false
+      },
+      "synthetic": true
+    }
+  ],
+  "scope": "Synthetic warm timings. Saved before parser/matcher share existing current registries. Cold time/memory covers the complete dictionary/parser pipeline, not incremental Common Expressions cost. Local Node 24; production Node 22 and live Supabase not verified.",
+  "liveSupabase": false,
+  "databaseCalls": 0,
+  "writes": 0
+}

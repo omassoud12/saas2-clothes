@@ -22,6 +22,9 @@ const pageComponents = Object.freeze({
   exchanges: lazyNamed(() => import('../pages/app/ExchangesPage.jsx'), 'ExchangesPage'),
   expenses: lazyNamed(() => import('../pages/app/ExpensesPage.jsx'), 'ExpensesPage'),
   reports: lazyNamed(() => import('../pages/app/ReportsPage.jsx'), 'ReportsPage'),
+  ...(import.meta.env.DEV ? {
+    textMatchingLab: lazyNamed(() => import('../pages/app/TextMatchingLabPage.jsx'), 'TextMatchingLabPage'),
+  } : {}),
 })
 
 export function AppLayout({ pathname, navigate, profile }) {
@@ -29,7 +32,7 @@ export function AppLayout({ pathname, navigate, profile }) {
   const { loggingOut, logoutError, logout } = useLogout()
   const menuTrigger = useRef(null)
   const identity = getBusinessShellIdentity(profile)
-  const resolvedRoute = resolveAppRoute(pathname, identity.role)
+  const resolvedRoute = resolveAppRoute(pathname, identity.role, import.meta.env.DEV)
   const Page = pageComponents[resolvedRoute.route?.key] || NotFoundPage
 
   useEffect(() => {

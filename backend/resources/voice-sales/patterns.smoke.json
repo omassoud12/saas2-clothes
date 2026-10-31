@@ -1,0 +1,394 @@
+{
+  "description": "40 verbatim source test cases; additional cases are SAFETY scenarios, not claims about already running project results.",
+  "source_test_cases": [
+    {
+      "input_text": "bdi tshirt karohat",
+      "expected_pattern_ids": [
+        "CHECK_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": true
+    },
+    {
+      "input_text": "بدي قميص كاروهات",
+      "expected_pattern_ids": [
+        "CHECK_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": true
+    },
+    {
+      "input_text": "بدي بلوزة موردة",
+      "expected_pattern_ids": [
+        "FLORAL_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi t shirt mwarad",
+      "expected_pattern_ids": [
+        "FLORAL_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "قميص مخطط بالطول",
+      "expected_pattern_ids": [
+        "STRIPE_VERTICAL"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "striped shirt vertical stripes",
+      "expected_pattern_ids": [
+        "STRIPE_VERTICAL"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "قميص مخطط عريض",
+      "expected_pattern_ids": [
+        "STRIPE_BOLD"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "تيشيرت polka dots",
+      "expected_pattern_ids": [
+        "DOT_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "فستان منقط نقط كبار",
+      "expected_pattern_ids": [
+        "DOT_LARGE"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "leopard print dress",
+      "expected_pattern_ids": [
+        "ANIMAL_LEOPARD"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "زبيـرا",
+      "expected_pattern_ids": [],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "زِبرا",
+      "expected_pattern_ids": [
+        "ANIMAL_ZEBRA"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "bdi zebra print",
+      "expected_pattern_ids": [
+        "ANIMAL_ZEBRA"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "فستان زيبرا",
+      "expected_pattern_ids": [
+        "ANIMAL_ZEBRA"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "مموه عسكري",
+      "expected_pattern_ids": [
+        "CAMO_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "digital camo hoodie",
+      "expected_pattern_ids": [
+        "CAMO_DIGITAL"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي كولون سادة",
+      "expected_pattern_ids": [
+        "PLAIN_SOLID"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "منقطة مش موردة",
+      "expected_pattern_ids": [
+        "DOT_GENERIC"
+      ],
+      "expected_excluded_ids": [
+        "FLORAL_GENERIC"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "ما بدي منقط بدي مورد",
+      "expected_pattern_ids": [
+        "FLORAL_GENERIC"
+      ],
+      "expected_excluded_ids": [
+        "DOT_GENERIC"
+      ],
+      "expect_review": false
+    },
+    {
+      "input_text": "ما بدي كاروهات بدي سادة",
+      "expected_pattern_ids": [
+        "PLAIN_SOLID"
+      ],
+      "expected_excluded_ids": [
+        "CHECK_GENERIC"
+      ],
+      "expect_review": true
+    },
+    {
+      "input_text": "بدي نقشات ستيكرات نجوم",
+      "expected_pattern_ids": [
+        "KIDS_STARS"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "هودي رسمة من ورا",
+      "expected_pattern_ids": [
+        "GRAPHIC_BACK"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "tshirt with back graphic",
+      "expected_pattern_ids": [
+        "GRAPHIC_BACK"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "قميص gingham",
+      "expected_pattern_ids": [
+        "CHECK_GINGHAM"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بي دو بول",
+      "expected_pattern_ids": [
+        "CHECK_HOUNDSTOOTH"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "لبس بنقشة بيسلي",
+      "expected_pattern_ids": [
+        "HER_PAISLEY"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "تيشيرت tie dye",
+      "expected_pattern_ids": [
+        "ABS_TIE_DYE"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "dress ombre",
+      "expected_pattern_ids": [
+        "ABS_OMBRE"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": true
+    },
+    {
+      "input_text": "فستان ورد صغير",
+      "expected_pattern_ids": [
+        "FLORAL_SMALL"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "قميص طبعة ماندالا",
+      "expected_pattern_ids": [
+        "HER_MANDALA"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "في منو cartoon print",
+      "expected_pattern_ids": [
+        "KIDS_CARTOON"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بلوزة قلب",
+      "expected_pattern_ids": [
+        "KIDS_HEART"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "نقشة مخططة مع ورود",
+      "expected_pattern_ids": [
+        "STRIPE_GENERIC",
+        "FLORAL_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي بنطلون",
+      "expected_pattern_ids": [],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي مقاس L لون ابيض",
+      "expected_pattern_ids": [],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "جينز مقاس 38",
+      "expected_pattern_ids": [],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "i want an animal print",
+      "expected_pattern_ids": [
+        "ANIMAL_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بلوزة بنقشة تايغر",
+      "expected_pattern_ids": [
+        "ANIMAL_TIGER"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بدي جينز منقط",
+      "expected_pattern_ids": [
+        "DOT_GENERIC"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    },
+    {
+      "input_text": "بلا رسومات بدّي سادة",
+      "expected_pattern_ids": [
+        "PLAIN_SOLID"
+      ],
+      "expected_excluded_ids": [],
+      "expect_review": false
+    }
+  ],
+  "additional_safety_scenarios": [
+    {
+      "text": "بدي تي شيرت سادة سودا XL قطعتين",
+      "assertions": [
+        "Pattern PLAIN_SOLID stays separate from color BLACK and size XL and quantity 2",
+        "Do not automatically MATCHED without real ProductVariant and catalog proof"
+      ]
+    },
+    {
+      "text": "ما بدي منقط بدي مورّد",
+      "assertions": [
+        "Negated DOT_GENERIC must be excluded",
+        "FLORAL_GENERIC may be requested if reliable alias matches",
+        "Do not silently drop negation"
+      ]
+    },
+    {
+      "text": "bdi tshirt karohat",
+      "assertions": [
+        "Recognize CHECK_GENERIC as candidate",
+        "Keep requires_review from source; do not choose plaid/tartan/gingham without further evidence"
+      ]
+    },
+    {
+      "text": "dalmatian print",
+      "assertions": [
+        "Retain both ANIMAL_DALMATIAN and DOT_DALMATIAN candidates",
+        "No first-result selection"
+      ]
+    },
+    {
+      "text": "بدي فستان دانتيل",
+      "assertions": [
+        "Do not assert actual physical lace material from pattern appearance alone",
+        "Cross-domain ambiguity remains explicit"
+      ]
+    },
+    {
+      "text": "بدي قميص مطبوع سترايب",
+      "assertions": [
+        "Keep pattern versus application technique distinct",
+        "Do not invent actual printed-product attributes if no catalog evidence"
+      ]
+    },
+    {
+      "text": "بدي مخمل",
+      "assertions": [
+        "Do not infer a pattern from a material-only request"
+      ]
+    },
+    {
+      "text": "بدي قميص مخطط بالطول قياس 32 قطعتين",
+      "assertions": [
+        "Pattern STRIPE_VERTICAL must not consume size 32 or quantity 2"
+      ]
+    },
+    {
+      "text": "بدي تلات قطع منقط",
+      "assertions": [
+        "Recognize explicit quantity 3",
+        "Do not interpret dot patterns as numeric data"
+      ]
+    },
+    {
+      "text": "بدي نقشة جلود تمساح",
+      "assertions": [
+        "Pattern appearance must not assert genuine leather or protected-animal material"
+      ]
+    }
+  ]
+}

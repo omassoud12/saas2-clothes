@@ -1168,6 +1168,23 @@ client-side financial aggregation. Dashboard sections load independently,
 support manual refresh without polling, and reject stale request results so one
 failed source does not erase other useful sections.
 
+### Development voice transcription boundary
+
+The development-only Text Matching Lab may capture a short recording after an
+active OWNER or WAREHOUSE user presses the recording control. The browser sends
+the in-memory recording to authenticated `POST /api/voice-sales/transcribe`;
+the request cannot supply Account identity. The backend applies the normal
+active-tenant authorization, bounded write and expensive-operation rate limits,
+a 5 MiB upload limit, a 0.1-to-30-second duration contract, supported-container
+signature checks, and a bounded provider timeout.
+
+The backend alone reads `ELEVENLABS_API_KEY` and calls ElevenLabs Speech-to-Text
+with `scribe_v2`. Audio and transcript contents are not logged or persisted.
+The response contains only transcript text, a bounded language hint and model
+identity. The employee may edit the transcript and must explicitly confirm it
+before the existing `/api/voice-sales/match` request is made. Transcription and
+matching create no Cart, Sale, InventoryMovement or stock mutation.
+
 ---
 
 ## 13. Security Principles

@@ -54,6 +54,7 @@ function App() {
   if (pathname === ROUTES.pendingApproval) return <PendingApprovalPage />
   if (pathname === ROUTES.inactiveAccount) return <InactiveAccountPage />
   if (pathname === ROUTES.admin) return <AdminPage />
+  if (pathname === ROUTES.textMatchingLab && !import.meta.env.DEV) return <NotFoundPage />
   if (isBusinessPath(pathname)) {
     return <AppRouteGuard pathname={pathname} navigate={navigate} />
   }

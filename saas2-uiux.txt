@@ -1,0 +1,548 @@
+فهمت عليك: بدك **Product/UI/UX brief كامل** يشرح للمصمّم شو المشروع، مين بيستعمله، وشو لازم يصمّم. ابعتله النص التالي:
+
+---
+
+# SaaS2 Clothes — UI/UX Design Brief
+
+## 1. Product Overview
+
+SaaS2 Clothes is a multi-tenant retail management SaaS for clothing stores.
+
+Each clothing store has its own private account, users, products, inventory, sales, expenses, and reports.
+
+The product is an internal business application, not a customer-facing online store. The design should prioritize speed, clarity, accuracy, and ease of daily use.
+
+## 2. Target Users
+
+### Store Owner
+
+The Owner manages the entire store and can:
+
+- Manage products and categories
+- Manage product variants
+- View stock and inventory movements
+- Restock inventory
+- View purchase costs and profit margins
+- Create sales
+- Process returns and exchanges
+- Void eligible sales
+- Manage expenses
+- View financial reports
+- Manage warehouse employees
+
+### Warehouse Employee
+
+The Warehouse employee can:
+
+- View and create products
+- Manage categories
+- View inventory
+- Create sales
+- Process returns and exchanges
+
+The Warehouse employee must not see:
+
+- Purchase costs
+- Profit margins
+- Accounting information
+- Expenses
+- Financial reports
+- Owner-only settings
+
+### Platform Super Admin
+
+The Super Admin reviews new store registrations and can approve or reject store accounts.
+
+## 3. UX Goals
+
+The interface should help users:
+
+- Find products quickly
+- Scan barcodes and create sales quickly
+- Understand current stock immediately
+- Identify low-stock and out-of-stock items
+- Restock variants safely
+- Review inventory history
+- Detect inventory mismatches
+- Understand daily store performance
+- Complete common actions with minimal clicks
+- Avoid accidental destructive or financial operations
+
+## 4. Recommended Design Direction
+
+Use a **Modern Retail SaaS Dashboard with a subtle Premium Fashion identity**.
+
+The visual design should be:
+
+- Professional
+- Clean and modern
+- Compact
+- Easy to scan
+- Suitable for long daily use
+- Data-focused without looking overly technical
+- Responsive for desktop, tablet, and mobile
+
+Preferred visual identity:
+
+- Dark green navigation
+- Sage green primary accents
+- Warm off-white application background
+- White content surfaces
+- Neutral borders
+- Minimal shadows
+- Clear status colors
+- Sans-serif typography for operational content
+- Optional elegant serif typography for branding only
+
+Avoid:
+
+- Excessively large headings
+- Oversized cards
+- Heavy shadows
+- Too much unused space
+- Decorative e-commerce layouts
+- Too many competing colors
+- Hiding important actions inside unclear menus
+
+## 5. Information Architecture
+
+Main navigation:
+
+1. Dashboard
+2. Products
+3. Categories
+4. Inventory
+5. Sales / POS
+6. Expenses — Owner only
+7. Reports — Owner only
+8. Employees / Settings — Owner only
+9. User menu and Logout
+
+Inventory should contain:
+
+- Current Stock
+- Movement History
+- Stock Reconciliation
+
+Sales should contain:
+
+- New Sale / POS
+- Sales History
+- Sale Details
+- Returns
+- Exchanges
+
+## 6. Required Screens
+
+### Authentication
+
+Design:
+
+- Login
+- Owner signup
+- Email confirmation
+- Store onboarding
+- Pending approval
+- Rejected or suspended account
+- Password setup/reset
+- Session and authentication errors
+
+The authentication experience should feel simple, trustworthy, and secure.
+
+### Dashboard
+
+The Dashboard should answer:
+
+- What happened today?
+- Is there an urgent inventory problem?
+- What actions should the user take next?
+
+Include:
+
+- Today’s gross sales
+- Net revenue
+- Number of sales
+- Units sold
+- Low-stock variants
+- Out-of-stock variants
+- Inventory mismatch alerts
+- Recent sales
+- Recent restocks
+- Top-selling products
+- Sales trend
+- Quick actions
+
+Suggested quick actions:
+
+- New sale
+- Add product
+- Restock inventory
+- Add expense
+
+Financial cards must only be shown to the Owner.
+
+### Products
+
+Include:
+
+- Search by product name, SKU, or barcode
+- Category filter
+- Active/inactive filter
+- Product image
+- Product name and category
+- Number of variants
+- Product status
+- Add and edit product
+- Activate/deactivate product
+- Image upload, replacement, and removal
+- Pagination
+- Loading, empty, and error states
+
+Product details should be organized into:
+
+- Overview
+- Variants
+- Image
+- Activity
+
+### Product Variants
+
+Each variant can include:
+
+- SKU
+- Barcode
+- Color
+- Size
+- Selling price
+- Current stock
+- Last purchase cost — Owner only
+- Active/inactive status
+
+The user should not directly edit stock from the product form. Stock changes happen through inventory operations.
+
+### Categories
+
+Include:
+
+- Category list
+- Category name
+- Creation date
+- Default profit margin — Owner only if supported
+- Add category
+- Rename category
+- Delete/deactivate category
+- Confirmation state
+- Empty and error states
+
+Use a table on desktop and cards on mobile.
+
+### Inventory — Current Stock
+
+Include:
+
+- Search by product, SKU, or barcode
+- Category filter
+- Stock-status filter
+- Active/inactive filter
+- Product and variant details
+- Current stock
+- Low-stock status
+- Selling price
+- Last purchase cost — Owner only
+- Restock action — Owner only
+
+Recommended stock statuses:
+
+- Healthy
+- Low stock
+- Out of stock
+- Inactive
+
+Do not communicate status using color alone.
+
+### Restock Workflow
+
+The Restock dialog should show:
+
+- Product name
+- SKU
+- Color and size
+- Current stock
+- Quantity to add
+- Purchase unit cost
+- Optional note
+- New expected stock
+- Clear confirmation action
+
+It should also handle:
+
+- Validation errors
+- Loading
+- Successful restock
+- Uncertain network result
+- Safe retry of the same restock
+- Duplicate-operation warning
+- Stale product or variant information
+
+### Inventory Movement History
+
+Include:
+
+- Movement type
+- Product
+- Variant and SKU
+- Quantity change
+- Date and time
+- Employee who performed the action
+- Note — Owner only
+- Unit cost — Owner only
+
+Filters:
+
+- Product
+- Variant
+- Movement type
+- Date range
+
+Movement types:
+
+- Restock
+- Sale
+- Return
+- Sale void
+- Damage
+- Adjustment
+
+### Stock Reconciliation
+
+Show the comparison between:
+
+- Stored stock
+- Stock calculated from inventory history
+- Difference
+- Reconciled or mismatch status
+
+Include filters for product, variant, and reconciliation status.
+
+Mismatches should be highly visible without relying exclusively on red color.
+
+### Sales / POS
+
+This should be the fastest workflow in the application.
+
+Desktop layout:
+
+- Product search and catalog on the left
+- Current cart on the right
+
+Include:
+
+- Barcode scanning
+- Product search
+- Category filters
+- Product cards or compact rows
+- Variant selection
+- Current stock visibility
+- Cart items
+- Quantity controls
+- Editable selling price only if permitted
+- Remove item
+- Subtotal and total
+- Complete sale
+- Sale success receipt
+- Start new sale
+
+Prevent:
+
+- Selling unavailable stock
+- Negative quantities
+- Duplicate submission
+- Accidental loss of an active cart
+
+Mobile can use a two-step flow:
+
+1. Select products
+2. Review cart and complete sale
+
+### Sales History and Details
+
+Include:
+
+- Receipt or sale number
+- Date and time
+- Seller
+- Status
+- Total amount
+- Returned amount
+- View details
+- Return action
+- Void action — Owner only
+
+Sale details should show historical product, variant, quantity, price, and total information.
+
+### Returns and Exchanges
+
+Return workflow:
+
+- Find the original sale
+- Select eligible items
+- Show purchased and already-returned quantities
+- Choose return quantity
+- Show calculated refund
+- Optional reason
+- Confirm return
+
+Exchange workflow:
+
+- Complete a return
+- Create a replacement sale
+- Show the price difference clearly
+
+### Expenses — Owner Only
+
+Include:
+
+- Expense description
+- Amount
+- Expense date
+- Creator
+- Add expense
+- Edit/delete only if business rules permit
+- Search and date filters
+- Total expenses for the selected period
+
+Use a table on desktop and cards on mobile.
+
+### Reports — Owner Only
+
+Include:
+
+- Date or date-range filter
+- Gross revenue
+- Returned revenue
+- Voided revenue
+- Net revenue
+- Cost of goods sold
+- Gross profit
+- Operating expenses
+- Net profit
+- Sales count
+- Units sold
+- Stock value
+- Sales trend
+- Top products
+- Category performance
+
+Clearly separate:
+
+- Gross activity
+- Returns
+- Voids
+- Net results
+
+Use KPI cards, charts, and detailed tables.
+
+### Super Admin
+
+Include:
+
+- Pending store accounts
+- Store name
+- Owner name and email
+- Currency
+- Request date
+- Approve action
+- Reject action with required reason
+- Loading, empty, success, error, and unauthorized states
+
+## 7. Global Components
+
+Create reusable designs for:
+
+- Application sidebar
+- Mobile navigation
+- Header
+- Page heading
+- Buttons: primary, secondary, ghost, and danger
+- Inputs and selects
+- Search fields
+- Filter bars
+- Tables
+- Mobile data cards
+- Tabs
+- Status badges
+- KPI cards
+- Charts
+- Modals
+- Side drawers
+- Dropdown menus
+- Pagination
+- Toast notifications
+- Confirmation dialogs
+- Skeleton loading
+- Empty states
+- Error states
+- Tooltips
+
+## 8. Responsive Requirements
+
+Design for:
+
+- Desktop: 1440px
+- Small desktop/tablet: 1024px
+- Mobile: 390px
+
+Desktop should prioritize efficient data presentation.
+
+Mobile should:
+
+- Avoid compressed desktop tables
+- Convert complex rows into cards
+- Keep important actions reachable
+- Use full-screen dialogs when necessary
+- Preserve readable currency and stock values
+- Keep POS usable on a phone
+
+## 9. Accessibility
+
+The design must include:
+
+- Visible keyboard focus
+- Sufficient text and color contrast
+- Minimum 44×44px touch targets
+- Clear labels for every form field
+- Inline error messages
+- Keyboard-accessible navigation and dialogs
+- Status indicators that use text or icons with color
+- Logical heading hierarchy
+- Reduced-motion support
+- Accessible loading and success feedback
+
+## 10. Required Deliverables
+
+Please provide:
+
+1. User-flow diagrams
+2. Information architecture
+3. Low-fidelity wireframes
+4. High-fidelity desktop designs
+5. High-fidelity mobile designs
+6. Clickable prototype for primary workflows
+7. Design system and tokens
+8. Reusable component library
+9. Component states and variants
+10. Developer handoff specifications
+
+Prioritize prototypes for:
+
+1. Creating a sale
+2. Adding a product and variants
+3. Restocking inventory
+4. Processing a return
+5. Reviewing the dashboard and reports
+
+Do not modify the application code. Complete and approve the UI/UX design before implementation.
+
+---
+
+هيدا هو الـbrief يلي المصمّم بحاجة إلو ليعرف **شو المشروع وشو كل شاشة لازم تعمل**، مش بس شو ألوانها. فيك تبعتو لمصمّم، Figma AI، أو أي UI/UX tool كما هو.

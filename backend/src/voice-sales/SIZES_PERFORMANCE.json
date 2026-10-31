@@ -1,0 +1,32 @@
+{
+  "measuredAt": "2026-10-10T05:00:38.059Z",
+  "node": "v24.21.0",
+  "platform": "win32/x64",
+  "coldAllVoiceDictionaries": {
+    "iterations": 5,
+    "meanMs": 1073.95544,
+    "medianMs": 1017.3556000000001,
+    "p95Ms": 1348.3459
+  },
+  "coldHeapMiB": [
+    57.79771423339844,
+    57.729400634765625,
+    57.990516662597656,
+    57.991172790527344,
+    57.80157470703125
+  ],
+  "warmParse": {
+    "iterations": 300,
+    "meanMs": 1.5507803333333596,
+    "medianMs": 1.408900000000358,
+    "p95Ms": 2.6449000000002343
+  },
+  "matching1000Variants": {
+    "iterations": 30,
+    "meanMs": 38.835719999999824,
+    "medianMs": 37.87339999999858,
+    "p95Ms": 47.4445999999989
+  },
+  "addedRuntimeResourceBytes": 4230757,
+  "scope": "All vocabulary registries cold import; warmed mixed parsing; one product with 1000 variant rows, one exact compatible size. No DB/network latency measured."
+}

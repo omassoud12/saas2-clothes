@@ -313,6 +313,7 @@ export function createOwnerBootstrapPayload(input) {
 }
 
 export async function authenticatedApiRequest({
+  acceptedStatuses,
   supabase,
   fetchImpl,
   path,
@@ -330,6 +331,7 @@ export async function authenticatedApiRequest({
   }
 
   return apiRequest({
+    acceptedStatuses,
     accessToken: sessionResult.session.access_token,
     fallbackMessage,
     fetchImpl,

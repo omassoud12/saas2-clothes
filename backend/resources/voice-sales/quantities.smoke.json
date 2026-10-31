@@ -1,0 +1,850 @@
+{
+  "source": "source:saas2_quantities_dictionary.json",
+  "tests": [
+    {
+      "id": "SOURCE_CASE_001",
+      "input": "بدي 3 حبات تيشيرت",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "exact explicit count",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_002",
+      "input": "بدي تلات قطع من هيدا",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "spoken Lebanese",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_003",
+      "input": "بدي حبتين من هالفستان",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "dual form",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_004",
+      "input": "قطعتين من نفس اللون",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "dual form",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_005",
+      "input": "بدي ٢ قطع",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "Arabic Indic digits",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_006",
+      "input": "بدي ۴ قطع",
+      "expected": {
+        "order_units": 4,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 4,
+        "intent": "order"
+      },
+      "rationale": "Persian digits",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_007",
+      "input": "send 4 pcs",
+      "expected": {
+        "order_units": 4,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 4,
+        "intent": "order"
+      },
+      "rationale": "English shorthand",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_008",
+      "input": "2 pièces",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "French",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_009",
+      "input": "5 habbet",
+      "expected": {
+        "order_units": 5,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 5,
+        "intent": "order"
+      },
+      "rationale": "Arabizi unit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_010",
+      "input": "3 7abbet",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "Arabizi unit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_011",
+      "input": "badi 7abtein",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "Arabic dual Arabizi spelling; might need learning",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_012",
+      "input": "بدي دستة كيلوت",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 12,
+        "intent": "order"
+      },
+      "rationale": "1 dozen equals 12 pieces",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_013",
+      "input": "دستتين جرابات",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 24,
+        "intent": "order"
+      },
+      "rationale": "2 dozens",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_014",
+      "input": "نص دستة",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "HALF_DOZEN",
+        "resolved_individual_pieces": 6,
+        "intent": "order"
+      },
+      "rationale": "6 pieces",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_015",
+      "input": "ربع دزينة",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "QUARTER_DOZEN",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "3 pieces",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_016",
+      "input": "دستة ونص",
+      "expected": {
+        "order_units": 1.5,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 18,
+        "intent": "order"
+      },
+      "rationale": "18 pieces",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_017",
+      "input": "2 dozen shirts",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 24,
+        "intent": "order"
+      },
+      "rationale": "2 dozens",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_018",
+      "input": "3 دزينة",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 36,
+        "intent": "order"
+      },
+      "rationale": "3 dozens",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_019",
+      "input": "باكيتين",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "pack content unknown",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_020",
+      "input": "باكيت 3 قطع",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "pack count explicit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_021",
+      "input": "باكيتين كل واحد 3 قطع",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": 6,
+        "intent": "order"
+      },
+      "rationale": "2 packs of 3",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_022",
+      "input": "3-pack socks",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "pack of 3 sellable pieces subject to catalog",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_023",
+      "input": "2 pack",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": null,
+        "intent": "needs_review"
+      },
+      "rationale": "ambiguous: 2 packs vs 2-pack",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_024",
+      "input": "2 pack of 3",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PACK",
+        "resolved_individual_pieces": 6,
+        "intent": "order"
+      },
+      "rationale": "explicit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_025",
+      "input": "بدي طقمين",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "SET",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown components",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_026",
+      "input": "طقم بيجاما",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "SET",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown pieces unless BOM",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_027",
+      "input": "2 sets",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "SET",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown contents",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_028",
+      "input": "3 كراتين",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "CARTON",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown carton capacity",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_029",
+      "input": "كرتونة كنزات",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "CARTON",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown capacity",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_030",
+      "input": "علبتين",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "BOX",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "unknown",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_031",
+      "input": "جوز جرابات",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PAIR",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "one pair SKU",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_032",
+      "input": "جوزين كلسات",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PAIR",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "two pairs",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_033",
+      "input": "2 pairs socks",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PAIR",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "pair semantics",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_034",
+      "input": "مترين قماش",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "METER",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "length 2m",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_035",
+      "input": "متر ونص قماش",
+      "expected": {
+        "order_units": 1.5,
+        "unit_id": "METER",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "length 1.5m",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_036",
+      "input": "نص متر",
+      "expected": {
+        "order_units": 0.5,
+        "unit_id": "METER",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "length",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_037",
+      "input": "3 كيلو بالة",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "KILOGRAM",
+        "resolved_individual_pieces": null,
+        "intent": "order"
+      },
+      "rationale": "weight",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_038",
+      "input": "بدي 2 من كل لون",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": null,
+        "intent": "allocation"
+      },
+      "rationale": "requires number of colors",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_039",
+      "input": "حبة من كل قياس",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": null,
+        "intent": "allocation"
+      },
+      "rationale": "requires chosen sizes",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_040",
+      "input": "حوالي 10 قطع",
+      "expected": {
+        "order_units": 10,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 10,
+        "intent": "approx"
+      },
+      "rationale": "approximate",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_041",
+      "input": "اقل شي 5 حبات",
+      "expected": {
+        "order_units": 5,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 5,
+        "intent": "min"
+      },
+      "rationale": "bound lower",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_042",
+      "input": "اكتر شي 7 قطع",
+      "expected": {
+        "order_units": 7,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 7,
+        "intent": "max"
+      },
+      "rationale": "bound upper",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_043",
+      "input": "بين 2 و 3 قطع",
+      "expected": {
+        "order_units": null,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": null,
+        "intent": "range"
+      },
+      "rationale": "2–3 pieces, do not sum",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_044",
+      "input": "زيدلي قطعتين",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "add"
+      },
+      "rationale": "increment existing order",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_045",
+      "input": "نقص حبة",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 1,
+        "intent": "remove"
+      },
+      "rationale": "decrement existing order",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_046",
+      "input": "بدي كل الكمية",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "inventory"
+      },
+      "rationale": "query stock",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_047",
+      "input": "مقاس 38",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "size",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_048",
+      "input": "W32 L30",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "jeans sizes",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_049",
+      "input": "75B",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "bra",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_050",
+      "input": "0-3M",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "baby size",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_051",
+      "input": "price 20$",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "price",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_052",
+      "input": "SKU-24",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "product code",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_053",
+      "input": "عمري 20 سنة",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "age",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_054",
+      "input": "الساعة 12:30",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "not_quantity"
+      },
+      "rationale": "time",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_055",
+      "input": "بدي 1+1",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "needs_review"
+      },
+      "rationale": "promotion vs order",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_056",
+      "input": "بدي جوز",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "PAIR",
+        "resolved_individual_pieces": null,
+        "intent": "needs_review"
+      },
+      "rationale": "product missing",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_057",
+      "input": "طلب 40",
+      "expected": {
+        "order_units": 40,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "needs_review"
+      },
+      "rationale": "unit unclear, order context",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_058",
+      "input": "تيشيرت 40",
+      "expected": {
+        "order_units": null,
+        "unit_id": null,
+        "resolved_individual_pieces": null,
+        "intent": "needs_review"
+      },
+      "rationale": "could be size",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_059",
+      "input": "درزن كيلوت",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 12,
+        "intent": "order"
+      },
+      "rationale": "Syrian regional dozen spelling",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_060",
+      "input": "درزنين",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "DOZEN",
+        "resolved_individual_pieces": 24,
+        "intent": "order"
+      },
+      "rationale": "2 dozens in regional Arabic",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_061",
+      "input": "نص درزن",
+      "expected": {
+        "order_units": 1,
+        "unit_id": "HALF_DOZEN",
+        "resolved_individual_pieces": 6,
+        "intent": "order"
+      },
+      "rationale": "half regional dozen",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_062",
+      "input": "3pcs",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "compact English",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_063",
+      "input": "4حبة",
+      "expected": {
+        "order_units": 4,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 4,
+        "intent": "order"
+      },
+      "rationale": "joined Arabic unit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_064",
+      "input": "7abtein",
+      "expected": {
+        "order_units": 2,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 2,
+        "intent": "order"
+      },
+      "rationale": "Arabizi dual",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    },
+    {
+      "id": "SOURCE_CASE_065",
+      "input": "3habbe",
+      "expected": {
+        "order_units": 3,
+        "unit_id": "PIECE",
+        "resolved_individual_pieces": 3,
+        "intent": "order"
+      },
+      "rationale": "compact Arabizi unit",
+      "source": "saas2_quantities_dictionary.json:data.parser_test_cases",
+      "note": "Seed expectations are review-only; validate against POS SKU/pack semantics and existing business rules before asserting integration PASS."
+    }
+  ]
+}

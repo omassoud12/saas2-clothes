@@ -12,3 +12,7 @@ node-v*-win-x64.zip
 *.crt
 *.pem
 .DS_Store
+
+# Local dictionary packages and archives (kept on disk, not committed)
+*.zip
+/SAAS2_*/

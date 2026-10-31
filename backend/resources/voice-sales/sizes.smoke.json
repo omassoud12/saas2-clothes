@@ -1,0 +1,236 @@
+{
+  "source": "Original saas2_size_parser_test_cases.csv / saas2_sizes_dictionary.json",
+  "status": "reference-expectations-not-proof",
+  "tests": [
+    {
+      "request": "bdi tshirt m 2ata3",
+      "product": "T-shirt",
+      "expected_size_id": "ALPHA_M",
+      "expected_other": "quantity=2",
+      "notes": "Bare M valid because apparel context"
+    },
+    {
+      "request": "بدّي تيشيرت اكس لارج",
+      "product": "T-shirt",
+      "expected_size_id": "ALPHA_XL",
+      "expected_other": "",
+      "notes": "Dialect Arabic"
+    },
+    {
+      "request": "بدي كنزة دبل اكس لارج",
+      "product": "Sweater",
+      "expected_size_id": "ALPHA_2XL",
+      "expected_other": "",
+      "notes": "Spoken colloquial"
+    },
+    {
+      "request": "fustan size 40 EU",
+      "product": "Dress",
+      "expected_size_id": "APPAREL_EU_40",
+      "expected_other": "",
+      "notes": "Explicit standard"
+    },
+    {
+      "request": "فستان قياس 40",
+      "product": "Dress",
+      "expected_size_id": "REQUIRES_CATALOG",
+      "expected_other": "EU/US/UK size system unknown",
+      "notes": "Do not assume number format"
+    },
+    {
+      "request": "صباط 38",
+      "product": "Shoes",
+      "expected_size_id": "SHOES_EU_38",
+      "expected_other": "EU assumed only when store catalog uses EU footwear",
+      "notes": "Catalog-dependent"
+    },
+    {
+      "request": "جينز 32/30",
+      "product": "Jeans",
+      "expected_size_id": "JEANS_W32_L30",
+      "expected_other": "waist=32;inseam=30",
+      "notes": "W/L pair"
+    },
+    {
+      "request": "jeans W34 L32",
+      "product": "Jeans",
+      "expected_size_id": "JEANS_W34_L32",
+      "expected_other": "",
+      "notes": "Explicit W/L"
+    },
+    {
+      "request": "بيبي 0-3m",
+      "product": "Baby clothing",
+      "expected_size_id": "BABY_0_3M",
+      "expected_other": "",
+      "notes": "Month age range"
+    },
+    {
+      "request": "لبس بيبي 3 شهور",
+      "product": "Baby clothing",
+      "expected_size_id": "REQUIRES_CATALOG",
+      "expected_other": "3M might mean 0-3M or 1-3M brand chart",
+      "notes": "Overlapping age ranges"
+    },
+    {
+      "request": "ولادي عمر 5 سنين",
+      "product": "Kids clothing",
+      "expected_size_id": "KIDS_5Y",
+      "expected_other": "",
+      "notes": "Age expressed"
+    },
+    {
+      "request": "ولادي طول 104 سم",
+      "product": "Kids clothing",
+      "expected_size_id": "KIDS_HEIGHT_104",
+      "expected_other": "",
+      "notes": "Height size"
+    },
+    {
+      "request": "سوتيان 75B",
+      "product": "Bra",
+      "expected_size_id": "BRA_EU_75_B",
+      "expected_other": "",
+      "notes": "Common EU bra size"
+    },
+    {
+      "request": "bra 34 DD us",
+      "product": "Bra",
+      "expected_size_id": "BRA_US_UK_34_DD",
+      "expected_other": "",
+      "notes": "Explicit US label"
+    },
+    {
+      "request": "برا كاب C",
+      "product": "Bra",
+      "expected_size_id": "BRA_CUP_C",
+      "expected_other": "band_size_missing",
+      "notes": "Incomplete bra size"
+    },
+    {
+      "request": "كلسات 39-42",
+      "product": "Socks",
+      "expected_size_id": "SOCKS_39_42",
+      "expected_other": "",
+      "notes": "Sock-size range"
+    },
+    {
+      "request": "كولون نمرة 3",
+      "product": "Tights",
+      "expected_size_id": "COLLANT_3",
+      "expected_other": "",
+      "notes": "Manufacturer-dependent hosiery number"
+    },
+    {
+      "request": "قبعة محيط راس 58",
+      "product": "Cap",
+      "expected_size_id": "HEAD_58CM",
+      "expected_other": "",
+      "notes": "Circumference cm inferred from catalog"
+    },
+    {
+      "request": "زنار 100 سم",
+      "product": "Belt",
+      "expected_size_id": "BELT_100CM",
+      "expected_other": "",
+      "notes": "Belt cm"
+    },
+    {
+      "request": "size 38",
+      "product": "unknown",
+      "expected_size_id": "AMBIGUOUS",
+      "expected_other": "possible apparel / shoes / waist",
+      "notes": "Needs product catalog"
+    },
+    {
+      "request": "كبير شوي",
+      "product": "unknown",
+      "expected_size_id": "AMBIGUOUS",
+      "expected_other": "L? XL? fit adjective",
+      "notes": "Do not force canonical"
+    },
+    {
+      "request": "oversized size M",
+      "product": "Hoodie",
+      "expected_size_id": "ALPHA_M",
+      "expected_other": "fit=FIT_OVERSIZED",
+      "notes": "Fit is separate from size"
+    },
+    {
+      "request": "فري سايز نسائي",
+      "product": "Dress",
+      "expected_size_id": "SPECIAL_OS_WOMEN",
+      "expected_other": "",
+      "notes": "Special one size"
+    },
+    {
+      "request": "توب s/m",
+      "product": "Top",
+      "expected_size_id": "SPECIAL_S_M",
+      "expected_other": "",
+      "notes": "Combined alpha"
+    }
+  ],
+  "extraSafetyCases": [
+    {
+      "request": "بدي تي شيرت سودا قياس XL قطعتين",
+      "expected": "size XL and quantity 2 remain distinct; needs real catalog to match"
+    },
+    {
+      "request": "بدي بنطلون جينز قياس 32",
+      "expected": "size label 32, waist/apparel standard unresolved absent explicit catalog context; not quantity"
+    },
+    {
+      "request": "بدي 32 قطعة",
+      "expected": "quantity 32, not size 32"
+    },
+    {
+      "request": "بدي جزمة قياس 38",
+      "expected": "shoe category evidence; require real catalog size label/system for unique selection"
+    },
+    {
+      "request": "size 38",
+      "expected": "size standard unresolved without catalog/category"
+    },
+    {
+      "request": "jeans W32/L30",
+      "expected": "one composite waist/inseam expression, not two independent line items"
+    },
+    {
+      "request": "75B bra",
+      "expected": "bra composite; preserve region/brand standard uncertainty"
+    },
+    {
+      "request": "baby 0-3M",
+      "expected": "baby age range; M means months not Medium"
+    },
+    {
+      "request": "size XXL",
+      "expected": "XXL distinct from XL and XXXL"
+    },
+    {
+      "request": "two piece set",
+      "expected": "set descriptor must not be misread as requested quantity two"
+    },
+    {
+      "request": "20D tights",
+      "expected": "denier attribute not size or quantity"
+    },
+    {
+      "request": "t-shirt M",
+      "expected": "Alpha M only when garment size context sufficiently supported"
+    },
+    {
+      "request": "shirt medium 2 pieces",
+      "expected": "Medium size and quantity 2"
+    },
+    {
+      "request": "شوز 40 EU",
+      "expected": "no US/UK conversion; check catalog actual EU label"
+    },
+    {
+      "request": "W32/L30 قطعتين",
+      "expected": "composite size and explicit quantity two"
+    }
+  ]
+}
