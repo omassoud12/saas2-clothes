@@ -106,6 +106,17 @@ Frontend foundation:
   badges, page headings, empty/error/loading states, modal foundations, and
   responsive table containment. Business pages are lazy-loaded at route level
   to keep catalog and inventory code out of the initial bundle.
+- Languages: the interface is Arabic (default, right-to-left) or English, chosen
+  under More (and in the sidebar, sign-in and landing pages) and remembered in
+  the browser. Screen text is written in English in the code and wrapped in
+  `t('...')`; `frontend/src/i18n/ar.js` holds the Arabic, `{name}` marks a
+  value that is filled in, and a text without an entry shows in English.
+  `i18n.test.js` fails when a text has no Arabic entry or an entry loses a
+  value. Receipts and the WhatsApp text are built with the same translate
+  function, dates use Western digits, and stylesheets use start/end (logical)
+  properties so the page mirrors itself (`rtl-audit.test.js`). User-written
+  text (product names, notes) is never translated. The platform admin page and
+  the development lab stay in English.
 - Visual design comes from one token file, `frontend/src/styles/tokens.css`
   (colors with their contrast notes, type scale, spacing, radius, shadows,
   touch size), taken from the Sell screen. Page stylesheets read tokens with

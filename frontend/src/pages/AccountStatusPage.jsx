@@ -5,8 +5,10 @@ import { AuthAction, AuthLayout, AuthLoading, FormMessage } from '../components/
 import { Button } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
 import { LogoutAction } from '../components/auth/LogoutAction.jsx'
+import { useI18n } from '../i18n/I18nContext.js'
 
 export function AccountStatusPage({ mode }) {
+  const { t } = useI18n()
   const initialLoad = useRef(null)
   const [state, setState] = useState({ kind: 'loading' })
   const [checking, setChecking] = useState(false)
@@ -53,19 +55,19 @@ export function AccountStatusPage({ mode }) {
 
   const inactive = mode === 'inactive'
   return (
-    <AuthLayout eyebrow="Account access" title={inactive ? 'Store access is inactive' : 'Approval is in progress'} description={inactive ? 'This store is not currently available to its team.' : 'Your request exists and is waiting for platform approval.'}>
-      {state.kind === 'loading' && <><AuthLoading label="Checking your account status" /><LogoutAction /></>}
-      {state.kind === 'error' && <div className="auth-status-stack"><FormMessage>{state.message}</FormMessage><AuthAction onClick={checkStatus} disabled={checking}>{checking ? 'Checking…' : 'Try again'}</AuthAction><Button tone="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Signing out…' : 'Sign out'}</Button></div>}
+    <AuthLayout eyebrow={t('Account access')} title={inactive ? t('Store access is inactive') : t('Approval is in progress')} description={inactive ? t('This store is not currently available to its team.') : t('Your request exists and is waiting for platform approval.')}>
+      {state.kind === 'loading' && <><AuthLoading label={t('Checking your account status')} /><LogoutAction /></>}
+      {state.kind === 'error' && <div className="auth-status-stack"><FormMessage>{t(state.message)}</FormMessage><AuthAction onClick={checkStatus} disabled={checking}>{checking ? t('Checking…') : t('Try again')}</AuthAction><Button tone="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? t('Signing out…') : t('Sign out')}</Button></div>}
       {state.kind === 'ready' && <div className="auth-status-stack">
         <span className={`status-chip status-${state.view.status.toLowerCase()}`}>{state.view.status}</span>
-        <div className="auth-status-copy"><h2>{state.view.heading}</h2><p>{inactive ? state.view.message : 'Business features remain locked until the account is approved.'}</p></div>
+        <div className="auth-status-copy"><h2>{state.view.heading}</h2><p>{inactive ? t(state.view.message) : t('Business features remain locked until the account is approved.')}</p></div>
         <dl className="account-summary">
-          <div><dt>Owner</dt><dd>{state.profile.user.firstName} {state.profile.user.lastName}</dd></div>
-          <div><dt>Store</dt><dd>{state.profile.account.name}</dd></div>
-          <div><dt>Status</dt><dd>{state.view.status}</dd></div>
+          <div><dt>{t('Owner')}</dt><dd>{state.profile.user.firstName} {state.profile.user.lastName}</dd></div>
+          <div><dt>{t('Store')}</dt><dd>{state.profile.account.name}</dd></div>
+          <div><dt>{t('Status')}</dt><dd>{state.view.status}</dd></div>
         </dl>
-        {state.view.status === 'REJECTED' && state.view.rejectionReason && <div className="auth-review-note"><strong>Review note</strong><p>{state.view.rejectionReason}</p></div>}
-        <div className="auth-status-actions"><AuthAction onClick={checkStatus} disabled={checking || loggingOut}>{checking ? 'Checking status…' : 'Check status'}</AuthAction><Button tone="secondary" onClick={logout} disabled={checking || loggingOut}>{loggingOut ? 'Signing out…' : 'Sign out'}</Button></div>
+        {state.view.status === 'REJECTED' && state.view.rejectionReason && <div className="auth-review-note"><strong>{t('Review note')}</strong><p>{state.view.rejectionReason}</p></div>}
+        <div className="auth-status-actions"><AuthAction onClick={checkStatus} disabled={checking || loggingOut}>{checking ? t('Checking status…') : t('Check status')}</AuthAction><Button tone="secondary" onClick={logout} disabled={checking || loggingOut}>{loggingOut ? t('Signing out…') : t('Sign out')}</Button></div>
       </div>}
     </AuthLayout>
   )

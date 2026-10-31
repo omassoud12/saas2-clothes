@@ -2,6 +2,8 @@ import {
   getAppNavigation,
   isNavigationItemActive,
 } from './app-navigation.js'
+import { useI18n } from '../i18n/I18nContext.js'
+import { LanguageSwitch } from '../i18n/LanguageSwitch.jsx'
 
 export function NavigationIcon({ name }) {
   const paths = {
@@ -35,6 +37,7 @@ export function AppSidebar({
   loggingOut,
   onLogout,
 }) {
+  const { t } = useI18n()
   const navigation = getAppNavigation(identity.role)
   const storeInitial = [...String(identity.storeName || 'S').trim()][0]?.toLocaleUpperCase() || 'S'
 
@@ -62,13 +65,13 @@ export function AppSidebar({
       <div className="business-brand">
         <span className="business-brand-mark" aria-hidden="true">C</span>
         <div>
-          <strong>SaaS2 Clothes</strong>
-          <span>Retail operations</span>
+          <strong>{t('SaaS2 Clothes')}</strong>
+          <span>{t('Retail operations')}</span>
         </div>
         <button
           className="sidebar-close-button"
           type="button"
-          aria-label="Close navigation"
+          aria-label={t('Close navigation')}
           onClick={onClose}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
@@ -78,14 +81,14 @@ export function AppSidebar({
       <div className="sidebar-store-context">
         <span className="sidebar-store-mark" aria-hidden="true">{storeInitial}</span>
         <div className="sidebar-store-copy">
-          <small>Current store</small>
+          <small>{t('Current store')}</small>
           <strong>{identity.storeName}</strong>
         </div>
         <span className="sidebar-role-badge">{identity.role}</span>
       </div>
 
-      <p className="sidebar-navigation-label">Workspace</p>
-      <nav className="business-navigation" aria-label="Business modules">
+      <p className="sidebar-navigation-label">{t('Workspace')}</p>
+      <nav className="business-navigation" aria-label={t('Business modules')}>
         {navigation.map((item) => {
           const active = isNavigationItemActive(pathname, item.path)
           return (
@@ -97,7 +100,7 @@ export function AppSidebar({
               onClick={(event) => handleNavigation(event, item.path)}
             >
               <NavigationIcon name={item.icon} />
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </a>
           )
         })}
@@ -106,9 +109,10 @@ export function AppSidebar({
       <div className="sidebar-footer">
         <button className="sidebar-logout-button" type="button" disabled={loggingOut} onClick={onLogout}>
           <svg className="business-nav-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 4H4v16h5M10 12h10m-4-4 4 4-4 4" /></svg>
-          <span>{loggingOut ? 'Signing out...' : 'Logout'}</span>
+          <span>{loggingOut ? t('Signing out...') : t('Logout')}</span>
         </button>
-        <p className="sidebar-security-note">Access is scoped to your authenticated store.</p>
+        <LanguageSwitch className="sidebar-language" />
+        <p className="sidebar-security-note">{t('Access is scoped to your authenticated store.')}</p>
       </div>
     </aside>
   )

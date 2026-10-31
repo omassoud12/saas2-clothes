@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 export function ProductNavigation({ role, section, onSelect }) {
+  const { t } = useI18n()
   const tabs = useRef(null)
   const sections = [['overview', 'Overview'], ['stock', 'Stock'], ...(role === 'OWNER' ? [['restock', 'Restock']] : []), ['count', 'Count Check'], ['movements', 'Movements'], ['receipts', 'Receipts']]
   useEffect(() => { tabs.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }, [section])
@@ -13,7 +15,7 @@ export function ProductNavigation({ role, section, onSelect }) {
     buttons[next]?.focus()
     buttons[next]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }
-  return <nav className="product-section-nav" aria-label="Product management sections"><div ref={tabs} role="tablist" aria-label="Product sections" onKeyDown={keyboard}>
-    {sections.map(([key, label]) => <button type="button" role="tab" key={key} id={`product-section-${key}`} aria-controls={`product-panel-${key}`} aria-selected={section === key} tabIndex={section === key ? 0 : -1} className={section === key ? 'is-current' : ''} onClick={() => onSelect(key)}>{label}</button>)}
+  return <nav className="product-section-nav" aria-label={t('Product management sections')}><div ref={tabs} role="tablist" aria-label={t('Product sections')} onKeyDown={keyboard}>
+    {sections.map(([key, label]) => <button type="button" role="tab" key={key} id={`product-section-${key}`} aria-controls={`product-panel-${key}`} aria-selected={section === key} tabIndex={section === key ? 0 : -1} className={section === key ? 'is-current' : ''} onClick={() => onSelect(key)}>{t(label)}</button>)}
   </div></nav>
 }

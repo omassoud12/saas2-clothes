@@ -13,6 +13,7 @@ import {
 } from '../../features/categories/category-flow.js'
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/index.jsx'
 import { supabase } from '../../lib/supabase.js'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -39,6 +40,7 @@ function resultRedirected(result) {
 }
 
 export function CategoriesPage() {
+  const { t } = useI18n()
   const [state, setState] = useState(CATEGORIES_INITIAL_STATE)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [name, setName] = useState('')
@@ -104,7 +106,7 @@ export function CategoriesPage() {
       categories: upsertCategoryInList(current.categories, result.category),
     }))
     setName('')
-    setFeedback({ kind: 'success', message: 'Category added.' })
+    setFeedback({ kind: 'success', message: t('Category added.') })
   }
 
   function handleOpenEdit(category) {
@@ -135,7 +137,7 @@ export function CategoriesPage() {
         kind: 'ready',
         categories: upsertCategoryInList(current.categories, result.category),
       }))
-      setFeedback({ kind: 'success', message: 'Category renamed.' })
+      setFeedback({ kind: 'success', message: t('Category renamed.') })
     }
     setEditDraft(null)
   }
@@ -176,7 +178,7 @@ export function CategoriesPage() {
       ),
     }))
     setDeleteConfirmation(null)
-    setFeedback({ kind: 'success', message: 'Category deleted.' })
+    setFeedback({ kind: 'success', message: t('Category deleted.') })
   }
 
   const mutationPending = Boolean(busyAction)
@@ -184,26 +186,26 @@ export function CategoriesPage() {
   return (
     <section className="business-page categories-page">
       <header className="business-page-heading">
-        <span className="eyebrow">Catalog structure</span>
-        <h1>Categories</h1>
-        <p>Organize products into reusable groups.</p>
+        <span className="eyebrow">{t('Catalog structure')}</span>
+        <h1>{t('Categories')}</h1>
+        <p>{t('Organize products into reusable groups.')}</p>
       </header>
 
       <form className="category-create-form" onSubmit={handleCreate}>
         <div>
-          <label htmlFor="category-name">Category name</label>
+          <label htmlFor="category-name">{t('Category name')}</label>
           <input
             id="category-name"
             name="name"
             value={name}
             maxLength={100}
-            placeholder="e.g. T-Shirts"
+            placeholder={t('e.g. T-Shirts')}
             onChange={(event) => setName(event.target.value)}
             disabled={mutationPending}
           />
         </div>
         <button type="submit" disabled={mutationPending}>
-          {busyAction === 'create' ? 'Adding...' : 'Add category'}
+          {busyAction === 'create' ? t('Adding...') : t('Add category')}
         </button>
       </form>
 
@@ -212,30 +214,30 @@ export function CategoriesPage() {
           className={`category-feedback ${feedback.kind}-message`}
           role={feedback.kind === 'error' ? 'alert' : 'status'}
         >
-          {feedback.message}
+          {t(feedback.message)}
         </p>
       )}
 
-      {state.kind === 'loading' && <LoadingState label="Loading categories..." />}
+      {state.kind === 'loading' && <LoadingState label={t('Loading categories...')} />}
 
       {state.kind === 'error' && (
         <ErrorState
-          title="Categories unavailable"
-          description={state.message}
-          action={<button type="button" onClick={handleRetry}>Try again</button>}
+          title={t('Categories unavailable')}
+          description={t(state.message)}
+          action={<button type="button" onClick={handleRetry}>{t('Try again')}</button>}
         />
       )}
 
       {state.kind === 'ready' && state.categories.length === 0 && (
-        <EmptyState title="No categories yet." description="Add your first category using the form above." />
+        <EmptyState title={t('No categories yet.')} description={t('Add your first category using the form above.')} />
       )}
 
       {state.kind === 'ready' && state.categories.length > 0 && (
-        <div className="category-list" aria-label="Categories">
+        <div className="category-list" aria-label={t('Categories')}>
           <div className="category-list-heading" aria-hidden="true">
-            <span>Category name</span>
-            <span>Created</span>
-            <span>Actions</span>
+            <span>{t('Category name')}</span>
+            <span>{t('Created')}</span>
+            <span>{t('Actions')}</span>
           </div>
           {state.categories.map((category) => {
             const editing = editDraft?.id === category.id
@@ -252,7 +254,7 @@ export function CategoriesPage() {
                     onSubmit={(event) => handleRename(event, category)}
                   >
                     <label className="sr-only" htmlFor={`edit-${category.id}`}>
-                      Rename {category.name}
+                      {t('Rename {name}', { name: category.name })}
                     </label>
                     <input
                       id={`edit-${category.id}`}
@@ -266,7 +268,7 @@ export function CategoriesPage() {
                     />
                     <div className="category-inline-actions">
                       <button type="submit" disabled={mutationPending}>
-                        {editingBusy ? 'Saving...' : 'Save'}
+                        {editingBusy ? t('Saving...') : t('Save')}
                       </button>
                       <button
                         className="secondary-action"
@@ -274,7 +276,7 @@ export function CategoriesPage() {
                         onClick={() => setEditDraft(null)}
                         disabled={mutationPending}
                       >
-                        Cancel
+                        {t('Cancel')}
                       </button>
                     </div>
                   </form>
@@ -291,7 +293,7 @@ export function CategoriesPage() {
                         onClick={() => handleOpenEdit(category)}
                         disabled={mutationPending}
                       >
-                        Edit
+                        {t('Edit')}
                       </button>
                       <button
                         className="category-delete-button"
@@ -299,7 +301,7 @@ export function CategoriesPage() {
                         onClick={() => handleRequestDelete(category)}
                         disabled={mutationPending}
                       >
-                        Delete
+                        {t('Delete')}
                       </button>
                     </div>
                   </>
@@ -307,8 +309,8 @@ export function CategoriesPage() {
 
                 {confirmingDelete && !editing && (
                   <div className="category-delete-confirmation" role="group">
-                    <p>Delete “{deleteConfirmation.categoryName}”?</p>
-                    <span>This action cannot be undone.</span>
+                    <p>{t('Delete “{categoryName}”?', { categoryName: deleteConfirmation.categoryName })}</p>
+                    <span>{t('This action cannot be undone.')}</span>
                     <div className="category-inline-actions">
                       <button
                         className="danger-action"
@@ -316,7 +318,7 @@ export function CategoriesPage() {
                         onClick={handleConfirmDelete}
                         disabled={mutationPending}
                       >
-                        {deletingBusy ? 'Deleting...' : 'Confirm delete'}
+                        {deletingBusy ? t('Deleting...') : t('Confirm delete')}
                       </button>
                       <button
                         className="secondary-action"
@@ -324,7 +326,7 @@ export function CategoriesPage() {
                         onClick={() => setDeleteConfirmation(null)}
                         disabled={mutationPending}
                       >
-                        Cancel
+                        {t('Cancel')}
                       </button>
                     </div>
                   </div>

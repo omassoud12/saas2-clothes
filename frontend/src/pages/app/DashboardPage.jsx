@@ -5,6 +5,7 @@ import { ROUTES } from '../../app/routes.js'
 import { Badge, ErrorState, LoadingSpinner, PageHeader } from '../../components/ui/index.jsx'
 import { formatSignedMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -21,60 +22,66 @@ function DashboardLink({ children, className, navigate, path }) {
 }
 
 function SectionLoading({ label }) {
-  return <div className="dashboard-section-state" aria-live="polite"><LoadingSpinner label={label} /><span>{label}</span></div>
+  const { t } = useI18n()
+  return <div className="dashboard-section-state" aria-live="polite"><LoadingSpinner label={t(label)} /><span>{t(label)}</span></div>
 }
 
 function OwnerFinance({ state, onRetry }) {
-  if (state.kind === 'loading') return <section className="dashboard-finance" aria-label="Today's financial performance"><SectionLoading label="Loading today’s financial performance" /></section>
-  if (state.kind === 'error') return <section className="dashboard-finance"><ErrorState title="Financial overview unavailable" description={state.message} action={<button type="button" onClick={onRetry}>Try again</button>} /></section>
+  const { t } = useI18n()
+  if (state.kind === 'loading') return <section className="dashboard-finance" aria-label={t('Today\'s financial performance')}><SectionLoading label={t('Loading today’s financial performance')} /></section>
+  if (state.kind === 'error') return <section className="dashboard-finance"><ErrorState title={t('Financial overview unavailable')} description={t(state.message)} action={<button type="button" onClick={onRetry}>{t('Try again')}</button>} /></section>
   const report = state.report
   const negative = (value) => typeof value === 'string' && value.startsWith('-') && value !== '-0.00'
   return <section className="dashboard-finance" aria-labelledby="dashboard-finance-title">
-    <div className="dashboard-section-heading"><div><span className="eyebrow">Today · {report.reportDate}</span><h2 id="dashboard-finance-title">Business performance</h2></div><span className="dashboard-source-label">Live report</span></div>
-    {report.costStatus === 'INCOMPLETE' && <p className="dashboard-zero" role="status">Cost data incomplete. Revenue is available; final COGS and profit are unavailable.</p>}
-    {isZeroReport(report) && <p className="dashboard-zero">No financial activity has been recorded today yet.</p>}
+    <div className="dashboard-section-heading"><div><span className="eyebrow">{t('Today · {reportDate}', { reportDate: report.reportDate })}</span><h2 id="dashboard-finance-title">{t('Business performance')}</h2></div><span className="dashboard-source-label">{t('Live report')}</span></div>
+    {report.costStatus === 'INCOMPLETE' && <p className="dashboard-zero" role="status">{t('Cost data incomplete. Revenue is available; final COGS and profit are unavailable.')}</p>}
+    {isZeroReport(report) && <p className="dashboard-zero">{t('No financial activity has been recorded today yet.')}</p>}
     <dl className="dashboard-kpis">
-      <div className="is-primary"><dt>Net profit</dt><dd className={negative(report.netProfit) ? 'is-negative' : ''}>{formatSignedMoney(report.netProfit, report.currency)}</dd><small>After operating expenses</small></div>
-      <div><dt>Net revenue</dt><dd className={negative(report.netRevenue) ? 'is-negative' : ''}>{formatSignedMoney(report.netRevenue, report.currency)}</dd><small>After returns and voids</small></div>
-      <div><dt>Operating expenses</dt><dd>{formatSignedMoney(report.operatingExpenses, report.currency)}</dd><small>Expenses dated today</small></div>
-      <div><dt>Sales created</dt><dd>{report.salesCount}</dd><small>{report.totalUnitsSold} gross unit{report.totalUnitsSold === 1 ? '' : 's'}</small></div>
+      <div className="is-primary"><dt>{t('Net profit')}</dt><dd className={negative(report.netProfit) ? 'is-negative' : ''}>{formatSignedMoney(report.netProfit, report.currency)}</dd><small>{t('After operating expenses')}</small></div>
+      <div><dt>{t('Net revenue')}</dt><dd className={negative(report.netRevenue) ? 'is-negative' : ''}>{formatSignedMoney(report.netRevenue, report.currency)}</dd><small>{t('After returns and voids')}</small></div>
+      <div><dt>{t('Operating expenses')}</dt><dd>{formatSignedMoney(report.operatingExpenses, report.currency)}</dd><small>{t('Expenses dated today')}</small></div>
+      <div><dt>{t('Sales created')}</dt><dd>{report.salesCount}</dd><small>{t('{totalUnitsSold} gross unit', { totalUnitsSold: report.totalUnitsSold })}{report.totalUnitsSold === 1 ? '' : 's'}</small></div>
     </dl>
   </section>
 }
 
 function QuickActions({ actions, navigate }) {
-  return <section className="dashboard-actions" aria-labelledby="dashboard-actions-title"><div className="dashboard-section-heading"><div><span className="eyebrow">Shortcuts</span><h2 id="dashboard-actions-title">Move quickly</h2></div></div><div>{actions.map((action) => <DashboardLink key={action.path} className={`dashboard-action ${action.primary ? 'is-primary' : ''}`} navigate={navigate} path={action.path}><strong>{action.label}</strong><span>{action.description}</span><span aria-hidden="true">→</span></DashboardLink>)}</div></section>
+  const { t } = useI18n()
+  return <section className="dashboard-actions" aria-labelledby="dashboard-actions-title"><div className="dashboard-section-heading"><div><span className="eyebrow">{t('Shortcuts')}</span><h2 id="dashboard-actions-title">{t('Move quickly')}</h2></div></div><div>{actions.map((action) => <DashboardLink key={action.path} className={`dashboard-action ${action.primary ? 'is-primary' : ''}`} navigate={navigate} path={action.path}><strong>{t(action.label)}</strong><span>{t(action.description)}</span><span aria-hidden="true">→</span></DashboardLink>)}</div></section>
 }
 
 function RecentSales({ navigate, role, state, onRetry }) {
+  const { t, locale } = useI18n()
   return <section className="dashboard-panel dashboard-sales" aria-labelledby="dashboard-sales-title">
-    <div className="dashboard-section-heading"><div><span className="eyebrow">Latest activity</span><h2 id="dashboard-sales-title">Recent Sales</h2></div><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.sales}>View Sales</DashboardLink></div>
-    {state.kind === 'loading' && <SectionLoading label="Loading recent Sales" />}
-    {state.kind === 'error' && <ErrorState title="Recent Sales unavailable" description={state.message} action={<button type="button" onClick={onRetry}>Try again</button>} />}
-    {state.kind === 'ready' && state.sales.length === 0 && <div className="dashboard-empty"><strong>No Sales yet</strong><p>Completed Sales will appear here. Start when the store is ready.</p><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.sales}>Create the first Sale</DashboardLink></div>}
+    <div className="dashboard-section-heading"><div><span className="eyebrow">{t('Latest activity')}</span><h2 id="dashboard-sales-title">{t('Recent Sales')}</h2></div><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.sales}>{t('View Sales')}</DashboardLink></div>
+    {state.kind === 'loading' && <SectionLoading label={t('Loading recent Sales')} />}
+    {state.kind === 'error' && <ErrorState title={t('Recent Sales unavailable')} description={t(state.message)} action={<button type="button" onClick={onRetry}>{t('Try again')}</button>} />}
+    {state.kind === 'ready' && state.sales.length === 0 && <div className="dashboard-empty"><strong>{t('No Sales yet')}</strong><p>{t('Completed Sales will appear here. Start when the store is ready.')}</p><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.sales}>{t('Create the first Sale')}</DashboardLink></div>}
     {state.kind === 'ready' && state.sales.length > 0 && <div className="dashboard-sales-list">{state.sales.map((sale) => <article key={sale.id}>
-      <div><strong>Sale {sale.id.slice(0, 8)}</strong><time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleString()}</time></div>
-      <div><span>{sale.totalUnits} unit{sale.totalUnits === 1 ? '' : 's'} · {sale.itemCount} line{sale.itemCount === 1 ? '' : 's'}</span><small>{sale.seller.name}</small></div>
+      <div><strong>{t('Sale {slice}', { slice: sale.id.slice(0, 8) })}</strong><time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleString(locale)}</time></div>
+      <div><span>{t('{totalUnits} unit', { totalUnits: sale.totalUnits })}{sale.totalUnits === 1 ? '' : 's'} {t('· {itemCount} line', { itemCount: sale.itemCount })}{sale.itemCount === 1 ? '' : 's'}</span><small>{sale.seller.name}</small></div>
       {role === 'OWNER' && <strong className="dashboard-sale-total">{formatSignedMoney(sale.totalAmount, sale.currency)}</strong>}
-      <Badge tone={sale.status === 'VOIDED' ? 'danger' : 'success'}>{sale.status === 'VOIDED' ? 'Voided' : 'Completed'}</Badge>
+      <Badge tone={sale.status === 'VOIDED' ? 'danger' : 'success'}>{sale.status === 'VOIDED' ? t('Voided') : t('Completed')}</Badge>
     </article>)}</div>}
   </section>
 }
 
 function StockOverview({ navigate, state, onRetry }) {
+  const { t } = useI18n()
   return <section className="dashboard-panel dashboard-stock" aria-labelledby="dashboard-stock-title">
-    <div className="dashboard-section-heading"><div><span className="eyebrow">Operational snapshot</span><h2 id="dashboard-stock-title">Stock overview</h2></div><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.inventory}>View Inventory</DashboardLink></div>
-    {state.kind === 'loading' && <SectionLoading label="Loading stock overview" />}
-    {state.kind === 'error' && <ErrorState title="Stock overview unavailable" description={state.message} action={<button type="button" onClick={onRetry}>Try again</button>} />}
-    {state.kind === 'ready' && state.summary.activeProducts === 0 && <div className="dashboard-empty"><strong>No active Products</strong><p>Add a Product and its variants to begin tracking stock.</p><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.products}>Open Products</DashboardLink></div>}
+    <div className="dashboard-section-heading"><div><span className="eyebrow">{t('Operational snapshot')}</span><h2 id="dashboard-stock-title">{t('Stock overview')}</h2></div><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.inventory}>{t('View Inventory')}</DashboardLink></div>
+    {state.kind === 'loading' && <SectionLoading label={t('Loading stock overview')} />}
+    {state.kind === 'error' && <ErrorState title={t('Stock overview unavailable')} description={t(state.message)} action={<button type="button" onClick={onRetry}>{t('Try again')}</button>} />}
+    {state.kind === 'ready' && state.summary.activeProducts === 0 && <div className="dashboard-empty"><strong>{t('No active Products')}</strong><p>{t('Add a Product and its variants to begin tracking stock.')}</p><DashboardLink className="dashboard-text-link" navigate={navigate} path={ROUTES.products}>{t('Open Products')}</DashboardLink></div>}
     {state.kind === 'ready' && state.summary.activeProducts > 0 && <>
-      <dl className="dashboard-stock-counts"><div><dt>Active Products</dt><dd>{state.summary.activeProducts}</dd><small>Entire active catalog</small></div><div><dt>Active variants</dt><dd>{state.summary.activeVariants}</dd><small>Newest {state.summary.sampledProducts} Products</small></div><div><dt>Units on hand</dt><dd>{state.summary.unitsOnHand}</dd><small>Newest {state.summary.sampledProducts} Products</small></div></dl>
-      <div className="dashboard-stock-signals"><div><h3>Out of stock</h3><span>Newest catalog page</span></div>{state.summary.outOfStock.length === 0 ? <p className="dashboard-all-stocked">No active out-of-stock variants in this bounded view.</p> : <ul>{state.summary.outOfStock.map((item) => <li key={item.variantId}><div><strong>{item.productName}</strong><span>{item.sku} · {item.details}</span></div><span>0 units</span></li>)}</ul>}</div>
+      <dl className="dashboard-stock-counts"><div><dt>{t('Active Products')}</dt><dd>{state.summary.activeProducts}</dd><small>{t('Entire active catalog')}</small></div><div><dt>{t('Active variants')}</dt><dd>{state.summary.activeVariants}</dd><small>{t('Newest {sampledProducts} Products', { sampledProducts: state.summary.sampledProducts })}</small></div><div><dt>{t('Units on hand')}</dt><dd>{state.summary.unitsOnHand}</dd><small>{t('Newest {sampledProducts} Products', { sampledProducts: state.summary.sampledProducts })}</small></div></dl>
+      <div className="dashboard-stock-signals"><div><h3>{t('Out of stock')}</h3><span>{t('Newest catalog page')}</span></div>{state.summary.outOfStock.length === 0 ? <p className="dashboard-all-stocked">{t('No active out-of-stock variants in this bounded view.')}</p> : <ul>{state.summary.outOfStock.map((item) => <li key={item.variantId}><div><strong>{item.productName}</strong><span>{item.sku} · {item.details}</span></div><span>{t('0 units')}</span></li>)}</ul>}</div>
     </>}
   </section>
 }
 
 export function DashboardPage({ profile, navigate }) {
+  const { t } = useI18n()
   const role = profile.user.role
   const date = localBusinessDate()
   const [finance, setFinance] = useState(() => ({ kind: role === 'OWNER' ? 'loading' : 'hidden' }))
@@ -111,7 +118,7 @@ export function DashboardPage({ profile, navigate }) {
   }
 
   return <section className={`business-page dashboard-page ${role === 'WAREHOUSE' ? 'is-warehouse' : ''}`}>
-    <PageHeader eyebrow="Store overview" title={`Good day, ${profile.user.firstName}`} description={`${profile.account.name} · ${date} business view`} actions={<button type="button" className="secondary-action dashboard-refresh" onClick={refresh}>Refresh overview</button>} />
+    <PageHeader eyebrow={t('Store overview')} title={t('Good day, {firstName}', { firstName: profile.user.firstName })} description={t('{name} · {date} business view', { name: profile.account.name, date })} actions={<button type="button" className="secondary-action dashboard-refresh" onClick={refresh}>{t('Refresh overview')}</button>} />
     {role === 'OWNER' && <OwnerFinance state={finance} onRetry={refresh} />}
     <QuickActions actions={dashboardQuickActions(role)} navigate={navigate} />
     <div className="dashboard-operations"><RecentSales navigate={navigate} role={role} state={sales} onRetry={refresh} /><StockOverview navigate={navigate} state={catalog} onRetry={refresh} /></div>

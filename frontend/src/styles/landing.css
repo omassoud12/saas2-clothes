@@ -6,7 +6,7 @@
   position: fixed;
   z-index: 200;
   top: .75rem;
-  left: .75rem;
+  inset-inline-start: .75rem;
   transform: translateY(-180%);
   border-radius: var(--radius-sm);
   padding: .7rem 1rem;
@@ -218,10 +218,10 @@
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
 }
-.preview-float--stock { bottom: -2rem; left: -2.2rem; }
+.preview-float--stock { bottom: -2rem; inset-inline-start: -2.2rem; }
 .preview-float--stock strong { color: var(--color-primary); font-size: var(--font-size-xl); }
 .preview-float--stock span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
-.preview-float--sale { top: 4.4rem; right: -1.6rem; display: flex; align-items: center; gap: .65rem; }
+.preview-float--sale { top: 4.4rem; inset-inline-end: -1.6rem; display: flex; align-items: center; gap: .65rem; }
 .preview-float--sale > span {
   display: grid;
   width: 30px;
@@ -240,13 +240,13 @@
 .landing-summary p strong { color: var(--color-primary); }
 .landing-summary ul { display: flex; flex-wrap: wrap; gap: 1.6rem; margin: 0; padding: 0; list-style: none; }
 .landing-summary li { position: relative; color: var(--color-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-heavy); }
-.landing-summary li::before { margin-right: .5rem; color: var(--color-text-muted); content: '•'; }
+.landing-summary li::before { margin-inline-end: .5rem; color: var(--color-text-muted); content: '•'; }
 .landing-section { padding: clamp(5.5rem, 9vw, 8.5rem) 0; scroll-margin-top: 76px; }
 .landing-section h2, .landing-workspace h2, .landing-final-cta h2 { color: var(--color-text); font-weight: var(--font-weight-medium); letter-spacing: -.04em; }
 .landing-section h2 { margin: .9rem 0 1rem; font-size: clamp(2.3rem, 4vw, 4rem); line-height: 1.04; }
 .landing-problem-grid { display: grid; grid-template-columns: 1fr .8fr; align-items: start; gap: clamp(3rem, 8vw, 7rem); }
 .landing-problem h2 { max-width: 650px; }
-.landing-problem-grid > div:last-child { border-left: 1px solid var(--color-border); padding-left: clamp(1.5rem, 4vw, 3.5rem); }
+.landing-problem-grid > div:last-child { border-inline-start: 1px solid var(--color-border); padding-inline-start: clamp(1.5rem, 4vw, 3.5rem); }
 .landing-problem p { margin: 0 0 1.15rem; color: var(--color-text); font-size: var(--font-size-md); line-height: 1.75; }
 .landing-features { background: var(--color-primary); }
 .landing-features .landing-kicker, .landing-final-cta .landing-kicker { color: var(--color-on-primary-muted); }
@@ -258,11 +258,11 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 3.8rem;
   border-top: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
-  border-left: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
+  border-inline-start: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
 }
 .landing-feature-grid article {
   min-width: 0;
-  border-right: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
+  border-inline-end: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 18%, transparent);
   padding: 1.7rem;
 }
@@ -282,13 +282,22 @@
   line-height: 1.25;
 }
 .landing-feature-grid ul { display: grid; gap: .7rem; margin: 0; padding: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); list-style: none; }
-.landing-feature-grid li::before { margin-right: .55rem; color: var(--color-text-muted); content: '—'; }
+.landing-feature-grid li::before { margin-inline-end: .55rem; color: var(--color-text-muted); content: '—'; }
 .landing-section-heading.is-centered { margin-inline: auto; text-align: center; }
 .landing-section-heading.is-centered h2 { color: var(--color-primary); }
 .landing-workflow { background: var(--color-background); }
 .landing-workflow ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 4rem 0 0; padding: 0; list-style: none; }
 .landing-workflow li { position: relative; padding: 0 1.1rem; }
-.landing-workflow li::before { position: absolute; z-index: 0; top: 17px; right: 50%; left: -50%; height: 1px; background: var(--color-surface-active); content: ''; }
+.landing-workflow li::before {
+  position: absolute;
+  z-index: 0;
+  top: 17px;
+  inset-inline-end: 50%;
+  inset-inline-start: -50%;
+  height: 1px;
+  background: var(--color-surface-active);
+  content: '';
+}
 .landing-workflow li:first-child::before { display: none; }
 .landing-workflow li > span {
   position: relative;
@@ -393,7 +402,7 @@
   .landing-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-workflow ol { grid-template-columns: 1fr; gap: 0; width: min(650px, 100%); margin-inline: auto; }
   .landing-workflow li { display: grid; grid-template-columns: 48px 1fr; gap: 1rem; padding: 0 0 1.8rem; }
-  .landing-workflow li::before { top: 0; bottom: 0; left: 17px; width: 1px; height: auto; }
+  .landing-workflow li::before { top: 0; bottom: 0; inset-inline-start: 17px; width: 1px; height: auto; }
   .landing-workflow li:first-child::before { display: block; top: 18px; }
   .landing-workflow li:last-child::before { bottom: auto; height: 18px; }
   .landing-workflow li > span { margin: 0; }
@@ -413,7 +422,7 @@
   .landing-summary .landing-shell { align-items: flex-start; flex-direction: column; justify-content: center; gap: .75rem; padding-block: 1.25rem; }
   .landing-summary ul { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem 1.4rem; }
   .landing-problem-grid, .landing-roles-grid, .landing-workspace .landing-shell { grid-template-columns: 1fr; gap: 2rem; }
-  .landing-problem-grid > div:last-child { border-top: 1px solid var(--color-border); border-left: 0; padding-top: 1.5rem; padding-left: 0; }
+  .landing-problem-grid > div:last-child { border-top: 1px solid var(--color-border); border-inline-start: 0; padding-top: 1.5rem; padding-inline-start: 0; }
   .landing-showcase article, .landing-showcase article.is-reversed { grid-template-columns: 1fr; gap: 1.8rem; }
   .landing-showcase article.is-reversed .showcase-copy, .landing-showcase article.is-reversed .showcase-ui { grid-column: 1; }
   .landing-showcase article.is-reversed .showcase-copy { grid-row: 1; }

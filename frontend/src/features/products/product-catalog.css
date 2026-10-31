@@ -40,7 +40,7 @@
 .product-management .product-catalog-list :is(.product-row-count,.product-row-stock) { grid-column: auto; grid-row: auto; padding: 0; margin: 0; }
 .product-management .product-catalog-list .product-row-count { font-size: var(--font-size-sm); padding: 0; }
 .product-management .product-catalog-list :is(.product-cell-label,.product-row-count-suffix) { display: none; }
-.product-management .product-catalog-list .product-row-stock { font-size: var(--font-size-sm); text-align: left; line-height: 1.4; }
+.product-management .product-catalog-list .product-row-stock { font-size: var(--font-size-sm); text-align: start; line-height: 1.4; }
 .product-management .product-catalog-list .product-row-stock.is-empty { color: var(--color-danger); font-weight: var(--font-weight-medium); }
 .product-management .product-catalog-list .product-row-inactive-stock { display: block; color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .product-management .product-catalog-list .product-row-price { font-size: var(--font-size-sm); line-height: 1.4; font-weight: var(--font-weight-medium); }
@@ -78,7 +78,7 @@
   }
   .product-management .product-catalog-list :is(.product-row-count,.product-row-count-suffix) { display: inline; color: var(--color-text-muted); font-size: var(--font-size-xs); }
   .product-management .product-catalog-list .product-row-stock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: var(--font-size-xs); }
-  .product-management .product-catalog-list .product-row-stock::before { content: '·'; color: var(--color-text-muted); margin-right: 4px; }
+  .product-management .product-catalog-list .product-row-stock::before { content: '·'; color: var(--color-text-muted); margin-inline-end: 4px; }
   .product-management .product-catalog-list .product-row-inactive-stock::before { content: '· '; }
   .product-management .product-catalog-list .product-card .product-row-price { grid-column: 1; grid-row: 3; }
   .product-management .product-catalog-list .product-card .product-row-open { grid-column: 2; grid-row: 3; justify-self: end; }

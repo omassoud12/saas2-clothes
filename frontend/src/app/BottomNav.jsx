@@ -1,8 +1,10 @@
 import { getMobileNavigation, isNavigationItemActive, isPlainLeftClick } from './app-navigation.js'
 import { NavigationIcon } from './AppSidebar.jsx'
+import { useI18n } from '../i18n/I18nContext.js'
 
 // Phone navigation: Home, Products, Sell (center), History and More. Shown only on narrow screens (see index.css).
 export function BottomNav({ role, pathname, onNavigate, onOpenMore, moreOpen }) {
+  const { t } = useI18n()
   const { bar, more } = getMobileNavigation(role)
   const moreActive = more.some((item) => isNavigationItemActive(pathname, item.path))
 
@@ -13,7 +15,7 @@ export function BottomNav({ role, pathname, onNavigate, onOpenMore, moreOpen }) 
   }
 
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav className="bottom-nav" aria-label={t('Main navigation')}>
       <ul>
         {bar.map((item) => {
           const active = isNavigationItemActive(pathname, item.path)
@@ -27,7 +29,7 @@ export function BottomNav({ role, pathname, onNavigate, onOpenMore, moreOpen }) 
                 onClick={(event) => follow(event, item.path)}
               >
                 <span className="bottom-nav-icon"><NavigationIcon name={item.icon} /></span>
-                <span>{item.mobileLabel || item.label}</span>
+                <span>{item.mobileLabel || t(item.label)}</span>
               </a>
             </li>
           )
@@ -41,7 +43,7 @@ export function BottomNav({ role, pathname, onNavigate, onOpenMore, moreOpen }) 
             onClick={onOpenMore}
           >
             <span className="bottom-nav-icon"><NavigationIcon name="more" /></span>
-            <span>More</span>
+            <span>{t('More')}</span>
           </button>
         </li>
       </ul>

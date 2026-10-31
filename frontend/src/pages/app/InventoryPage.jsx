@@ -11,17 +11,20 @@ import { supabase } from '../../lib/supabase.js'
 import '../../features/inventory/receiving.css'
 import '../../features/products/product-workspace.css'
 import '../../features/inventory/entry-polish.css'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 // Preserve existing bookmarks. Existing-product receiving now belongs to Products.
 export function InventoryPage({ profile, navigate }) {
+  const { t } = useI18n()
   const [legacyProductId] = useState(() => new URLSearchParams(window.location.search).get('productId'))
   useEffect(() => {
     if (legacyProductId) navigate(`/app/products/${encodeURIComponent(legacyProductId)}?section=restock`, { replace: true })
   }, [legacyProductId, navigate])
-  return legacyProductId ? <p role="status">Opening product restock...</p> : <ProductEntry profile={profile} navigate={navigate} />
+  return legacyProductId ? <p role="status">{t('Opening product restock...')}</p> : <ProductEntry profile={profile} navigate={navigate} />
 }
 
 function ProductEntry({ profile, navigate }) {
+  const { t } = useI18n()
   const owner = profile.user.role === 'OWNER'
   const [categories, setCategories] = useState([])
   const [categoryState, setCategoryState] = useState({ kind: 'loading' })
@@ -57,15 +60,15 @@ function ProductEntry({ profile, navigate }) {
     clearDirty(); setDuplicate(null); setDefinition(null); setEditingDefinition(false); setSuccess(null); setError(''); setAttempt(value => value + 1)
   }
   return <section className="business-page inventory-page entry-page entry-polish">
-    <header className="inventory-page-header"><div className="inventory-header-copy"><span className="eyebrow">New product</span><h1>Product Entry</h1><p>{owner ? 'Create a new product for your catalog. Add first stock now or save with zero stock.' : 'Create a new product with zero stock. An owner handles pricing and receiving.'}</p></div><button type="button" className="text-button entry-view-products" aria-label="View products" onClick={() => { if (confirmDiscardChanges()) navigate('/app/products') }}>View Products <span aria-hidden="true">↗</span></button></header>
+    <header className="inventory-page-header"><div className="inventory-header-copy"><span className="eyebrow">{t('New product')}</span><h1>{t('Product Entry')}</h1><p>{owner ? t('Create a new product for your catalog. Add first stock now or save with zero stock.') : t('Create a new product with zero stock. An owner handles pricing and receiving.')}</p></div><button type="button" className="text-button entry-view-products" aria-label={t('View products')} onClick={() => { if (confirmDiscardChanges()) navigate('/app/products') }}>{t('View Products')} <span aria-hidden="true">↗</span></button></header>
     {recovery.recoveryError && <InventoryFeedback kind="error">{recovery.recoveryError}</InventoryFeedback>}
     {recovery.pending.map(record => record.path === '/api/inventory/product-setups'
       ? <ReceiptRecoveryBanner key={record.operationId} record={record} profile={profile} products={[]} retrying={recovery.retrying} onRetry={recovery.retry} onCheck={recovery.checkOriginal} onHistory={() => navigate('/app/products')} />
-      : <InventoryFeedback key={record.operationId} kind="pending">An existing product has a receipt awaiting confirmation. <button className="text-button" onClick={() => { if (confirmDiscardChanges()) navigate(`/app/products/${encodeURIComponent(record.payload.productId)}?section=restock`) }}>Open product to resolve it</button></InventoryFeedback>)}
-    {(error || recovery.feedback) && <InventoryFeedback kind={recovery.feedback?.kind || 'error'}>{error || recovery.feedback?.message}</InventoryFeedback>}
-    {categoryState.kind === 'error' && <InventoryFeedback kind="error">{categoryState.message} <button className="text-button" onClick={() => { setCategoryState({ kind: 'loading' }); setCategoryAttempt(value => value + 1) }}>Retry categories</button></InventoryFeedback>}
-    {success ? <section className="product-panel receipt-success" aria-label="Product created"><InventoryFeedback kind="success"><h2 tabIndex={-1} ref={node => node?.focus()}>Product created successfully</h2><p>{success.name}</p><p>{success.result.receipt ? `${success.result.receipt.totalQuantity ?? 'Confirmed'} pieces received in its first delivery.` : 'Saved with zero stock.'}</p>{success.result.idempotentReplay && <p>The original save was already processed; it was not applied again.</p>}</InventoryFeedback><div className="product-actions"><button onClick={() => navigate(`/app/products/${encodeURIComponent(success.result.productId)}`)}>View Product</button><button className="secondary-action" onClick={reset}>Add Another Product</button></div></section> : <>
-      {(!definition || editingDefinition) && <div className="inventory-definition products-page"><ReceiptSteps owner={owner} newProduct current={0} />{duplicate && !editingDefinition && <p className="product-feedback" role="status">Copy of {duplicate.sourceName || 'a product'}: the category, price, colors and sizes are filled in. Enter the new product name.</p>}<ProductCreateForm key={editingDefinition ? 'editing' : attempt} role={profile.user.role} currency={profile.account?.baseCurrency} categories={categories} categoriesLoading={categoryState.kind === 'loading'} initialDraft={editingDefinition ? definitionDraft(definition?.draft) : duplicate?.draft} initialImageFile={editingDefinition ? definition?.imageFile : undefined} onBusy={() => {}} onCancel={reset} onDefine={(draft, imageFile) => { setDefinition({ draft, imageFile }); setEditingDefinition(false); setError('') }} /></div>}
+      : <InventoryFeedback key={record.operationId} kind="pending">{t('An existing product has a receipt awaiting confirmation.')} <button className="text-button" onClick={() => { if (confirmDiscardChanges()) navigate(`/app/products/${encodeURIComponent(record.payload.productId)}?section=restock`) }}>{t('Open product to resolve it')}</button></InventoryFeedback>)}
+    {(error || recovery.feedback) && <InventoryFeedback kind={recovery.feedback?.kind || 'error'}>{error || t(recovery.feedback?.message)}</InventoryFeedback>}
+    {categoryState.kind === 'error' && <InventoryFeedback kind="error">{t(categoryState.message)} <button className="text-button" onClick={() => { setCategoryState({ kind: 'loading' }); setCategoryAttempt(value => value + 1) }}>{t('Retry categories')}</button></InventoryFeedback>}
+    {success ? <section className="product-panel receipt-success" aria-label={t('Product created')}><InventoryFeedback kind="success"><h2 tabIndex={-1} ref={node => node?.focus()}>{t('Product created successfully')}</h2><p>{success.name}</p><p>{success.result.receipt ? `${success.result.receipt.totalQuantity ?? 'Confirmed'} pieces received in its first delivery.` : t('Saved with zero stock.')}</p>{success.result.idempotentReplay && <p>{t('The original save was already processed; it was not applied again.')}</p>}</InventoryFeedback><div className="product-actions"><button onClick={() => navigate(`/app/products/${encodeURIComponent(success.result.productId)}`)}>{t('View Product')}</button><button className="secondary-action" onClick={reset}>{t('Add Another Product')}</button></div></section> : <>
+      {(!definition || editingDefinition) && <div className="inventory-definition products-page"><ReceiptSteps owner={owner} newProduct current={0} />{duplicate && !editingDefinition && <p className="product-feedback" role="status">{t('Copy of')} {duplicate.sourceName || t('a product')}{t(': the category, price, colors and sizes are filled in. Enter the new product name.')}</p>}<ProductCreateForm key={editingDefinition ? 'editing' : attempt} role={profile.user.role} currency={profile.account?.baseCurrency} categories={categories} categoriesLoading={categoryState.kind === 'loading'} initialDraft={editingDefinition ? definitionDraft(definition?.draft) : duplicate?.draft} initialImageFile={editingDefinition ? definition?.imageFile : undefined} onBusy={() => {}} onCancel={reset} onDefine={(draft, imageFile) => { setDefinition({ draft, imageFile }); setEditingDefinition(false); setError('') }} /></div>}
       {definition && <div hidden={editingDefinition}><StockReceiptForm profile={profile} scope={recovery.scope} definition={definition.draft} imageFile={definition.imageFile} blocked={recovery.blocked} onSaved={received} onEditDefinition={() => setEditingDefinition(true)} onTerminal={result => setError(result.message)} onCancel={reset} /></div>}
     </>}
   </section>

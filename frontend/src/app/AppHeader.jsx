@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n/I18nContext.js'
 function MenuIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -11,13 +12,14 @@ export function AppHeader({
   mobileMenuOpen,
   onOpenMenu,
 }) {
+  const { t } = useI18n()
   return (
     <header className="business-header">
       <div className="business-header-title">
         <button
           className="mobile-menu-button"
           type="button"
-          aria-label="Open navigation"
+          aria-label={t('Open navigation')}
           aria-controls="business-sidebar"
           aria-expanded={mobileMenuOpen}
           onClick={onOpenMenu}

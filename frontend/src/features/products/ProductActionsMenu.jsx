@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 export function ProductActionsMenu({ label, items, children, className = '' }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const root = useRef(null)
   const trigger = useRef(null)
@@ -30,9 +32,9 @@ export function ProductActionsMenu({ label, items, children, className = '' }) {
   }
 
   return <div ref={root} className={`product-context-menu ${className}`} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
-    <button ref={trigger} type="button" className="product-menu-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true) } }}><span aria-hidden="true">•••</span></button>
-    {open && <div id={menuId} className="product-menu-panel" role="menu" aria-label={label} onKeyDown={menuKey}>
-      {items.map(item => <button key={item.label} role="menuitem" tabIndex={-1} type="button" disabled={item.disabled} className={item.danger ? 'product-danger-button' : ''} onClick={() => { setOpen(false); trigger.current?.focus(); item.action() }}>{item.label}</button>)}
+    <button ref={trigger} type="button" className="product-menu-trigger" aria-label={t(label)} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true) } }}><span aria-hidden="true">•••</span></button>
+    {open && <div id={menuId} className="product-menu-panel" role="menu" aria-label={t(label)} onKeyDown={menuKey}>
+      {items.map(item => <button key={item.label} role="menuitem" tabIndex={-1} type="button" disabled={item.disabled} className={item.danger ? 'product-danger-button' : ''} onClick={() => { setOpen(false); trigger.current?.focus(); item.action() }}>{t(item.label)}</button>)}
       {children && <div className="product-menu-context" role="none">{children}</div>}
     </div>}
   </div>

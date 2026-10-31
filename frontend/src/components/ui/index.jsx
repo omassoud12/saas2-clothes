@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useId, useRef } from 'react'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 function classes(...values) {
   return values.filter(Boolean).join(' ')
@@ -19,33 +20,36 @@ export const Button = forwardRef(function Button(
 })
 
 function Field({ children, descriptionId, error, hint, id, label }) {
+  const { t } = useI18n()
   return (
     <div className="ui-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       {children}
-      {hint && !error && <small id={descriptionId}>{hint}</small>}
+      {hint && !error && <small id={descriptionId}>{t(hint)}</small>}
       {error && <small id={descriptionId} className="ui-field-error" role="alert">{error}</small>}
     </div>
   )
 }
 
 export function Input({ error, hint, id: suppliedId, label, ...props }) {
+  const { t } = useI18n()
   const generatedId = useId()
   const id = suppliedId ?? generatedId
   const descriptionId = error || hint ? `${id}-description` : undefined
   return (
-    <Field descriptionId={descriptionId} error={error} hint={hint} id={id} label={label}>
+    <Field descriptionId={descriptionId} error={error} hint={t(hint)} id={id} label={t(label)}>
       <input id={id} aria-describedby={descriptionId} aria-invalid={Boolean(error)} {...props} />
     </Field>
   )
 }
 
 export function Select({ children, error, hint, id: suppliedId, label, ...props }) {
+  const { t } = useI18n()
   const generatedId = useId()
   const id = suppliedId ?? generatedId
   const descriptionId = error || hint ? `${id}-description` : undefined
   return (
-    <Field descriptionId={descriptionId} error={error} hint={hint} id={id} label={label}>
+    <Field descriptionId={descriptionId} error={error} hint={t(hint)} id={id} label={t(label)}>
       <select id={id} aria-describedby={descriptionId} aria-invalid={Boolean(error)} {...props}>{children}</select>
     </Field>
   )
@@ -60,12 +64,13 @@ export function Badge({ children, tone = 'neutral' }) {
 }
 
 export function PageHeader({ actions, description, eyebrow, title }) {
+  const { t } = useI18n()
   return (
     <header className="business-page-heading ui-page-header">
       <div>
-        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
+        {eyebrow && <span className="eyebrow">{t(eyebrow)}</span>}
+        <h1>{t(title)}</h1>
+        {description && <p>{t(description)}</p>}
       </div>
       {actions && <div className="ui-page-actions">{actions}</div>}
     </header>
@@ -73,25 +78,28 @@ export function PageHeader({ actions, description, eyebrow, title }) {
 }
 
 export function EmptyState({ action, description, icon = '+', title }) {
+  const { t } = useI18n()
   return (
     <div className="ui-state ui-empty-state">
       <span className="ui-state-icon" aria-hidden="true">{icon}</span>
-      <h2>{title}</h2>
-      <p>{description}</p>
+      <h2>{t(title)}</h2>
+      <p>{t(description)}</p>
       {action && <div className="ui-state-action">{action}</div>}
     </div>
   )
 }
 
 export function LoadingSpinner({ label = 'Loading' }) {
-  return <span className="ui-spinner" role="status" aria-label={label} />
+  const { t } = useI18n()
+  return <span className="ui-spinner" role="status" aria-label={t(label)} />
 }
 
 export function LoadingState({ label = 'Loading workspace' }) {
+  const { t } = useI18n()
   return (
     <div className="ui-state" aria-live="polite">
-      <LoadingSpinner label={label} />
-      <p>{label}</p>
+      <LoadingSpinner label={t(label)} />
+      <p>{t(label)}</p>
     </div>
   )
 }
@@ -101,25 +109,28 @@ export function Skeleton({ className }) {
 }
 
 export function ErrorState({ action, description, title = 'Something went wrong' }) {
+  const { t } = useI18n()
   return (
     <div className="ui-state ui-error-state" role="alert">
       <span className="ui-state-icon" aria-hidden="true">!</span>
-      <h2>{title}</h2>
-      <p>{description}</p>
+      <h2>{t(title)}</h2>
+      <p>{t(description)}</p>
       {action && <div className="ui-state-action">{action}</div>}
     </div>
   )
 }
 
 export function TableContainer({ children, label = 'Data table' }) {
+  const { t } = useI18n()
   return (
-    <div className="ui-table-container" role="region" aria-label={label} tabIndex="0">
+    <div className="ui-table-container" role="region" aria-label={t(label)} tabIndex="0">
       {children}
     </div>
   )
 }
 
 export function Modal({ children, description, onClose, open, title }) {
+  const { t } = useI18n()
   const titleId = useId()
   const descriptionId = useId()
   const closeButton = useRef(null)
@@ -173,10 +184,10 @@ export function Modal({ children, description, onClose, open, title }) {
       >
         <header>
           <div>
-            <h2 id={titleId}>{title}</h2>
-            {description && <p id={descriptionId}>{description}</p>}
+            <h2 id={titleId}>{t(title)}</h2>
+            {description && <p id={descriptionId}>{t(description)}</p>}
           </div>
-          <Button ref={closeButton} tone="ghost" aria-label="Close dialog" onClick={onClose}>
+          <Button ref={closeButton} tone="ghost" aria-label={t('Close dialog')} onClick={onClose}>
             &times;
           </Button>
         </header>

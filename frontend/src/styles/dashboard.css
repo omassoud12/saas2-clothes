@@ -21,15 +21,15 @@
 }
 .dashboard-zero {
   margin: .8rem 0 0;
-  border-left: 4px solid var(--color-text-muted);
+  border-inline-start: 4px solid var(--color-text-muted);
   border-radius: var(--radius-sm);
   padding: .7rem .85rem;
   background: var(--color-background);
   color: var(--color-text);
 }
 .dashboard-kpis { display: grid; grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr)); gap: .7rem; margin: 1rem 0 0; }
-.dashboard-kpis > div { display: grid; min-width: 0; gap: .3rem; border-left: 1px solid var(--color-border); padding: .4rem .9rem; }
-.dashboard-kpis > div:first-child { border-left: 0; }
+.dashboard-kpis > div { display: grid; min-width: 0; gap: .3rem; border-inline-start: 1px solid var(--color-border); padding: .4rem .9rem; }
+.dashboard-kpis > div:first-child { border-inline-start: 0; }
 .dashboard-kpis > div.is-primary { border-radius: var(--radius-md); padding: .8rem .9rem; background: var(--color-background); }
 .dashboard-kpis dt, .dashboard-kpis small { color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .dashboard-kpis dd { margin: 0; overflow-wrap: anywhere; color: var(--color-text); font-size: clamp(1.05rem, 2vw, 1.3rem); font-weight: var(--font-weight-heavy); }
@@ -79,7 +79,7 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
-.dashboard-sale-total { text-align: right; }
+.dashboard-sale-total { text-align: end; }
 .dashboard-stock-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0; }
 .dashboard-stock-counts > div {
   display: grid;
@@ -139,5 +139,5 @@
   .dashboard-section-heading { flex-direction: column; }
   .dashboard-source-label, .dashboard-text-link { align-self: flex-start; }
   .dashboard-sales-list article { grid-template-columns: 1fr; }
-  .dashboard-sales-list article > div:nth-child(2), .dashboard-sale-total { grid-column: 1; grid-row: auto; justify-self: start; text-align: left; }
+  .dashboard-sales-list article > div:nth-child(2), .dashboard-sale-total { grid-column: 1; grid-row: auto; justify-self: start; text-align: start; }
 }

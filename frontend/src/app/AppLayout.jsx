@@ -9,6 +9,7 @@ import { LoadingState } from '../components/ui/index.jsx'
 import { useLogout } from './useLogout.js'
 import { NotFoundPage } from '../pages/NotFoundPage.jsx'
 import { ROUTES } from './routes.js'
+import { useI18n } from '../i18n/I18nContext.js'
 
 function lazyNamed(loader, exportName) {
   return lazy(() => loader().then((module) => ({ default: module[exportName] })))
@@ -32,6 +33,7 @@ const pageComponents = Object.freeze({
 })
 
 export function AppLayout({ pathname, navigate, profile }) {
+  const { t } = useI18n()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [typing, setTyping] = useState(false)
@@ -116,7 +118,7 @@ export function AppLayout({ pathname, navigate, profile }) {
         <button
           className="sidebar-backdrop"
           type="button"
-          aria-label="Close navigation"
+          aria-label={t('Close navigation')}
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -133,7 +135,7 @@ export function AppLayout({ pathname, navigate, profile }) {
               {logoutError}
             </p>
           )}
-          <Suspense fallback={<LoadingState label="Loading page" />}>
+          <Suspense fallback={<LoadingState label={t('Loading page')} />}>
             <Page key={resolvedRoute.productId || resolvedRoute.route?.key || 'not-found'} profile={profile} navigate={navigate} productId={resolvedRoute.productId} homePath={ROUTES.dashboard} />
           </Suspense>
         </main>

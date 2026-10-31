@@ -1,24 +1,28 @@
 import { useId, useState } from 'react'
 import { Button, Card, Input, LoadingState } from '../ui/index.jsx'
+import { useI18n } from '../../i18n/I18nContext.js'
+import { LanguageSwitch } from '../../i18n/LanguageSwitch.jsx'
 
 export function AuthLayout({ children, description, eyebrow, title }) {
+  const { t } = useI18n()
   return (
     <main className="auth-page">
       <div className="auth-layout">
-        <section className="auth-context" aria-label="SaaS2 Clothes">
-          <a className="auth-brand" href="/">SaaS2 Clothes</a>
+        <LanguageSwitch className="auth-language" />
+        <section className="auth-context" aria-label={t('SaaS2 Clothes')}>
+          <a className="auth-brand" href="/">{t('SaaS2 Clothes')}</a>
           <div>
-            <span className="eyebrow">Secure business workspace</span>
-            <h2>Run store operations with a clear, controlled account.</h2>
-            <p>Authentication, tenant access, and business permissions stay intentionally separate.</p>
+            <span className="eyebrow">{t('Secure business workspace')}</span>
+            <h2>{t('Run store operations with a clear, controlled account.')}</h2>
+            <p>{t('Authentication, tenant access, and business permissions stay intentionally separate.')}</p>
           </div>
-          <small>Protected access for owners and warehouse teams.</small>
+          <small>{t('Protected access for owners and warehouse teams.')}</small>
         </section>
         <Card className="auth-panel" aria-live="polite">
           <header className="auth-header">
-            <span className="eyebrow">{eyebrow}</span>
-            <h1>{title}</h1>
-            {description && <p>{description}</p>}
+            <span className="eyebrow">{t(eyebrow)}</span>
+            <h1>{t(title)}</h1>
+            {description && <p>{t(description)}</p>}
           </header>
           {children}
         </Card>
@@ -28,6 +32,7 @@ export function AuthLayout({ children, description, eyebrow, title }) {
 }
 
 export function PasswordField({ error, hint, id: suppliedId, label, ...props }) {
+  const { t } = useI18n()
   const generatedId = useId()
   const id = suppliedId ?? generatedId
   const [visible, setVisible] = useState(false)
@@ -35,7 +40,7 @@ export function PasswordField({ error, hint, id: suppliedId, label, ...props }) 
 
   return (
     <div className="ui-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       <div className="auth-password-field">
         <input
           {...props}
@@ -48,17 +53,17 @@ export function PasswordField({ error, hint, id: suppliedId, label, ...props }) 
           className="auth-password-toggle"
           type="button"
           aria-controls={id}
-          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          aria-label={visible ? t('Hide {toLowerCase}', { toLowerCase: label.toLowerCase() }) : t('Show {toLowerCase}', { toLowerCase: label.toLowerCase() })}
           aria-pressed={visible}
           onClick={() => setVisible((current) => !current)}
           disabled={props.disabled}
         >
-          {visible ? 'Hide' : 'Show'}
+          {visible ? t('Hide') : t('Show')}
         </button>
       </div>
       {(error || hint) && (
         <small id={descriptionId} className={error ? 'ui-field-error' : undefined} role={error ? 'alert' : undefined}>
-          {error || hint}
+          {error || t(hint)}
         </small>
       )}
     </div>
@@ -75,7 +80,8 @@ export function FormMessage({ children, kind = 'error' }) {
 }
 
 export function AuthLoading({ label }) {
-  return <LoadingState label={label} />
+  const { t } = useI18n()
+  return <LoadingState label={t(label)} />
 }
 
 export function AuthAction({ children, ...props }) {

@@ -1,4 +1,5 @@
 import { formatMoneyCompact, minorUnitsToDecimal } from '../../lib/money.js'
+import { plainTranslate } from '../../lib/interpolate.js'
 
 export const UNCATEGORIZED_ID = 'uncategorized'
 
@@ -13,15 +14,17 @@ export function money(cents, currency = 'USD') {
 const LOW_STOCK_LIMIT = 5
 
 // What the product list shows for the stock that can still be sold: normal, low (warning) or out (red).
-export function stockBadge(available) {
-  if (available <= 0) return Object.freeze({ tone: 'is-out', text: 'Out of stock' })
-  if (available <= LOW_STOCK_LIMIT) return Object.freeze({ tone: 'is-low', text: `Low · ${available} left` })
-  return Object.freeze({ tone: 'is-ok', text: `${available} in stock` })
+export function stockBadge(available, translate = plainTranslate) {
+  if (available <= 0) return Object.freeze({ tone: 'is-out', text: translate('Out of stock') })
+  if (available <= LOW_STOCK_LIMIT) return Object.freeze({ tone: 'is-low', text: translate('Low · {count} left', { count: available }) })
+  return Object.freeze({ tone: 'is-ok', text: translate('{count} in stock', { count: available }) })
 }
 
 // "1 color", "2 colors" (regular nouns only).
-export function plural(count, noun) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
+// "1 item" / "3 items". With a translate function the phrase is looked up as "{count} item" / "{count} items".
+export function plural(count, noun, translate = null) {
+  const phrase = `{count} ${noun}${count === 1 ? '' : 's'}`
+  return translate ? translate(phrase, { count }) : phrase.replace('{count}', String(count))
 }
 
 export function variantKey(productId, colorId, size, variantId = '') {

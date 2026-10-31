@@ -104,7 +104,15 @@
 .entry-polish .product-create-footer .secondary-action { background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
 .entry-polish .receipt-steps { display: flex; flex-wrap: nowrap; align-items: center; gap: 0; width: 100%; max-width: none; margin: 0 0 24px; padding: 0; }
 .entry-polish .receipt-steps li { min-width: 0; flex: 1; gap: 8px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-muted); }
-.entry-polish .receipt-steps li:not(:last-child)::after { content: ''; height: 1px; min-width: 8px; flex: 1; margin: 0 16px 0 8px; background: var(--color-surface-active); }
+.entry-polish .receipt-steps li:not(:last-child)::after {
+  content: '';
+  height: 1px;
+  min-width: 8px;
+  flex: 1;
+  margin-block: 0 0;
+  margin-inline: 8px 16px;
+  background: var(--color-surface-active);
+}
 .entry-polish .receipt-steps li:last-child { flex: 0 0 auto; }
 .entry-polish .receipt-steps li > span { flex: 0 0 24px; width: 24px; height: 24px; background: white; border-color: var(--color-border-strong); }
 .entry-polish .receipt-steps li.is-current { color: var(--color-primary); font-weight: var(--font-weight-medium); }

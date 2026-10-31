@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { formatMoney } from '../../lib/money.js'
 import { recoverySummary } from './inventory-presentation.js'
 import { RECEIPT_OUTCOME, canRetryReceiptOperation } from './stock-receipt-outcome.js'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 export function InventoryFeedback({ kind = 'info', children }) {
   const symbol = { success: '✓', error: '!', pending: '◇', info: 'i' }[kind]
@@ -9,26 +10,29 @@ export function InventoryFeedback({ kind = 'info', children }) {
 }
 
 export function ReceiptSteps({ owner, newProduct, current = 0 }) {
+  const { t } = useI18n()
   const labels = owner ? newProduct ? ['Product', 'Quantities & Cost', 'Review'] : ['Quantities & cost', 'Review'] : ['Product details', 'Product review']
-  return <ol className="receipt-steps" aria-label="Workflow progress">{labels.map((label, index) => <li key={label} className={index === current ? 'is-current' : index < current ? 'is-complete' : ''} aria-label={`Step ${index + 1}: ${label}, ${index === current ? 'current' : index < current ? 'completed' : 'upcoming'}`} aria-current={index === current ? 'step' : undefined}><span aria-hidden="true">{index < current ? '✓' : index + 1}</span>{label}</li>)}</ol>
+  return <ol className="receipt-steps" aria-label={t('Workflow progress')}>{labels.map((label, index) => <li key={label} className={index === current ? 'is-current' : index < current ? 'is-complete' : ''} aria-label={`Step ${index + 1}: ${label}, ${index === current ? 'current' : index < current ? 'completed' : 'upcoming'}`} aria-current={index === current ? 'step' : undefined}><span aria-hidden="true">{index < current ? '✓' : index + 1}</span>{t(label)}</li>)}</ol>
 }
 
 export function ReceiptReview({ review, name, variants, currency }) {
+  const { t } = useI18n()
   const focus = useRef(null)
   useEffect(() => { focus.current?.focus() }, [])
   const items = review.summary?.payload.items ?? []
   const rows = items.map((item) => {
     const option = variants.find((variant) => (variant.id ?? variant.sku) === (item.variantId ?? item.sku))
-    return <li key={item.variantId ?? item.sku}><span>{option?.color || 'No color'} / {option?.size || 'No size'}</span><strong>+{item.quantity} received{item.unitCost ? ` · ${formatMoney(item.unitCost, currency, 4)} each` : ''}</strong></li>
+    return <li key={item.variantId ?? item.sku}><span>{option?.color || t('No color')} / {option?.size || t('No size')}</span><strong>{t('+{quantity} received', { quantity: item.quantity })}{item.unitCost ? t(' · {formatMoney} each', { formatMoney: formatMoney(item.unitCost, currency, 4) }) : ''}</strong></li>
   })
-  return <section className="receipt-review" aria-labelledby="receipt-review-title"><h2 id="receipt-review-title" tabIndex={-1} ref={focus}>{review.receive ? 'Review receiving' : 'Review product'}</h2><p className="receipt-review-product">{name}</p>
-    {review.receive ? <><p>Confirming adds these pieces to current stock.</p><ul className="receipt-review-items">{rows.slice(0, 8)}</ul>{rows.length > 8 && <details><summary>Show {rows.length - 8} more options</summary><ul className="receipt-review-items">{rows.slice(8)}</ul></details>}
-      <dl className="receipt-summary"><div><dt>Options</dt><dd>{items.length}</dd></div><div><dt>Total pieces</dt><dd>{review.summary.totalQuantity}</dd></div>{review.summary.payload.unitCost !== undefined && <div><dt>Unit cost</dt><dd>{formatMoney(review.summary.payload.unitCost, currency, 4)}</dd></div>}<div className="receipt-summary-total"><dt>Purchase total</dt><dd>{formatMoney(review.summary.totalCost, currency, 4)}</dd></div></dl></>
-      : <><p>The product will be created with zero stock and no purchase cost.</p><ul className="receipt-review-items">{variants.slice(0,8).map(variant => <li key={variant.id ?? variant.sku}><span>{variant.color || 'No color'} / {variant.size || 'No size'}</span>{variant.sellingPrice != null && variant.sellingPrice !== '' && <strong>{formatMoney(variant.sellingPrice,currency)}</strong>}</li>)}</ul>{variants.length > 8 && <p>{variants.length - 8} more options included.</p>}</>}
+  return <section className="receipt-review" aria-labelledby="receipt-review-title"><h2 id="receipt-review-title" tabIndex={-1} ref={focus}>{review.receive ? t('Review receiving') : t('Review product')}</h2><p className="receipt-review-product">{name}</p>
+    {review.receive ? <><p>{t('Confirming adds these pieces to current stock.')}</p><ul className="receipt-review-items">{rows.slice(0, 8)}</ul>{rows.length > 8 && <details><summary>{t('Show {value} more options', { value: rows.length - 8 })}</summary><ul className="receipt-review-items">{rows.slice(8)}</ul></details>}
+      <dl className="receipt-summary"><div><dt>{t('Options')}</dt><dd>{items.length}</dd></div><div><dt>{t('Total pieces')}</dt><dd>{review.summary.totalQuantity}</dd></div>{review.summary.payload.unitCost !== undefined && <div><dt>{t('Unit cost')}</dt><dd>{formatMoney(review.summary.payload.unitCost, currency, 4)}</dd></div>}<div className="receipt-summary-total"><dt>{t('Purchase total')}</dt><dd>{formatMoney(review.summary.totalCost, currency, 4)}</dd></div></dl></>
+      : <><p>{t('The product will be created with zero stock and no purchase cost.')}</p><ul className="receipt-review-items">{variants.slice(0,8).map(variant => <li key={variant.id ?? variant.sku}><span>{variant.color || t('No color')} / {variant.size || t('No size')}</span>{variant.sellingPrice != null && variant.sellingPrice !== '' && <strong>{formatMoney(variant.sellingPrice,currency)}</strong>}</li>)}</ul>{variants.length > 8 && <p>{t('{value} more options included.', { value: variants.length - 8 })}</p>}</>}
   </section>
 }
 
 export function ReceiptRecoveryBanner({ record, profile, products, retrying, onRetry, onCheck, onHistory }) {
+  const { t } = useI18n()
   const info = recoverySummary(record, profile.user.role === 'OWNER')
   const name = info.name || products.find((product) => product.id === info.productId)?.name || 'Saved product selection'
   const quantityText = `${info.quantity} pieces · ${info.options} option${info.options === 1 ? '' : 's'}`
@@ -44,11 +48,12 @@ export function ReceiptRecoveryBanner({ record, profile, products, retrying, onR
       : outcome === RECEIPT_OUTCOME.ACCOUNT_PAUSE ? record.recovery.message
         : `Retry the original ${info.saveOnly ? 'product save' : 'receiving request'} to confirm its result.`
   const retryLabel = info.saveOnly ? 'Retry original product save' : 'Retry original receiving request'
-  return <section className="receipt-recovery" aria-label={info.saveOnly ? 'Pending product save' : 'Pending receiving operation'} data-outcome={outcome || RECEIPT_OUTCOME.UNCERTAIN}><InventoryFeedback kind="pending"><strong>{heading}</strong><p>{name}</p><p>{info.saveOnly ? 'Zero-stock product definition' : quantityText}{info.total !== null && ` · ${formatMoney(info.total, profile.account?.baseCurrency, 4)}`}</p><p>Started {new Date(record.createdAt).toLocaleString()}. {guidance}</p><details open={conflict || undefined}><summary>Original operation details</summary><p>Original request preserved for safe confirmation.</p>{info.unitCost != null && <p>Unit cost {formatMoney(info.unitCost, profile.account?.baseCurrency, 4)}</p>}</details><div className="product-actions">{retryAllowed && <button disabled={retrying} onClick={() => onRetry(record)}>{retrying ? `Confirming original ${info.saveOnly ? 'product save' : 'receiving request'}…` : retryLabel}</button>}{conflict && profile.user.role === 'OWNER' && <button className="secondary-action" disabled={retrying} onClick={() => onCheck(record)}>{retrying ? 'Checking original result…' : 'Check original result'}</button>}{conflict && !info.saveOnly && <button className="secondary-action" disabled={retrying} onClick={onHistory}>View receipt history</button>}</div></InventoryFeedback></section>
+  return <section className="receipt-recovery" aria-label={info.saveOnly ? t('Pending product save') : t('Pending receiving operation')} data-outcome={outcome || RECEIPT_OUTCOME.UNCERTAIN}><InventoryFeedback kind="pending"><strong>{heading}</strong><p>{name}</p><p>{info.saveOnly ? t('Zero-stock product definition') : quantityText}{info.total !== null && ` · ${formatMoney(info.total, profile.account?.baseCurrency, 4)}`}</p><p>{t('Started')} {new Date(record.createdAt).toLocaleString()}. {guidance}</p><details open={conflict || undefined}><summary>{t('Original operation details')}</summary><p>{t('Original request preserved for safe confirmation.')}</p>{info.unitCost != null && <p>{t('Unit cost')} {formatMoney(info.unitCost, profile.account?.baseCurrency, 4)}</p>}</details><div className="product-actions">{retryAllowed && <button disabled={retrying} onClick={() => onRetry(record)}>{retrying ? `Confirming original ${info.saveOnly ? 'product save' : 'receiving request'}…` : retryLabel}</button>}{conflict && profile.user.role === 'OWNER' && <button className="secondary-action" disabled={retrying} onClick={() => onCheck(record)}>{retrying ? t('Checking original result…') : t('Check original result')}</button>}{conflict && !info.saveOnly && <button className="secondary-action" disabled={retrying} onClick={onHistory}>{t('View receipt history')}</button>}</div></InventoryFeedback></section>
 }
 
 export function ReceiptSuccess({ result, name, currency, owner, onBack, onHistory, onMore }) {
+  const { t } = useI18n()
   const focus = useRef(null)
   useEffect(() => { focus.current?.focus() }, [])
-  return <section className="product-panel receipt-success"><InventoryFeedback kind="success"><h2 ref={focus} tabIndex={-1}>{result.receipt ? 'Stock received successfully' : 'Product saved'}</h2><p>{name}</p><p>{result.receipt ? `${result.receipt.totalQuantity ?? 'Confirmed'} pieces received` : 'The product was created with zero stock.'}</p>{result.receipt && <><p>Receipt #{result.receipt.id}</p>{owner && result.receipt.totalCost != null && <p>Purchase total: {formatMoney(result.receipt.totalCost, currency, 4)}</p>}</>}{result.idempotentReplay && <p>This original operation was already processed; it was not applied again.</p>}</InventoryFeedback><div className="product-actions">{result.receipt && <button onClick={onHistory}>View receipt history</button>}{onMore && <button className="secondary-action" onClick={onMore}>Receive more stock</button>}<button className="secondary-action" onClick={onBack}>Back to inventory</button></div></section>
+  return <section className="product-panel receipt-success"><InventoryFeedback kind="success"><h2 ref={focus} tabIndex={-1}>{result.receipt ? t('Stock received successfully') : t('Product saved')}</h2><p>{name}</p><p>{result.receipt ? `${result.receipt.totalQuantity ?? 'Confirmed'} pieces received` : t('The product was created with zero stock.')}</p>{result.receipt && <><p>{t('Receipt #{id}', { id: result.receipt.id })}</p>{owner && result.receipt.totalCost != null && <p>{t('Purchase total: {formatMoney}', { formatMoney: formatMoney(result.receipt.totalCost, currency, 4) })}</p>}</>}{result.idempotentReplay && <p>{t('This original operation was already processed; it was not applied again.')}</p>}</InventoryFeedback><div className="product-actions">{result.receipt && <button onClick={onHistory}>{t('View receipt history')}</button>}{onMore && <button className="secondary-action" onClick={onMore}>{t('Receive more stock')}</button>}<button className="secondary-action" onClick={onBack}>{t('Back to inventory')}</button></div></section>
 }

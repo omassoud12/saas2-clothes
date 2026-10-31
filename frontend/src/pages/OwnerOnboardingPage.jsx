@@ -5,10 +5,12 @@ import { Select } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
 import { LogoutAction } from '../components/auth/LogoutAction.jsx'
 import { useDirtyState } from '../app/dirty-state.js'
+import { useI18n } from '../i18n/I18nContext.js'
 
 const initialForm = { firstName: '', lastName: '', accountName: '', baseCurrency: 'USD', employeeCode: '' }
 
 export function OwnerOnboardingPage() {
+  const { t } = useI18n()
   const sessionCheckPromise = useRef(null)
   const [submissionGuard] = useState(() => createSubmissionGuard())
   const [pageState, setPageState] = useState('loading')
@@ -38,19 +40,19 @@ export function OwnerOnboardingPage() {
     if (result.code === 'SESSION_REQUIRED' || result.status === 401) { window.location.replace('/login'); return }
     setMessage(result.message); setSubmitting(false)
   }
-  return <AuthLayout eyebrow="Store setup" title="Set up your store" description="Add the essentials, then submit the account for platform approval.">
-    {pageState === 'loading' && <AuthLoading label="Checking your secure session" />}
-    {pageState === 'error' && <div className="auth-status-stack"><FormMessage>{message}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/login">Return to sign in</a></div>}
+  return <AuthLayout eyebrow={t('Store setup')} title={t('Set up your store')} description={t('Add the essentials, then submit the account for platform approval.')}>
+    {pageState === 'loading' && <AuthLoading label={t('Checking your secure session')} />}
+    {pageState === 'error' && <div className="auth-status-stack"><FormMessage>{t(message)}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/login">{t('Return to sign in')}</a></div>}
     {pageState === 'ready' && <form className="auth-form auth-onboarding-form" onSubmit={handleSubmit} noValidate>
       <div className="auth-form-grid">
-        <Input id="first-name" name="firstName" label="First name" autoComplete="given-name" maxLength={100} value={form.firstName} onChange={updateField} disabled={submitting} required />
-        <Input id="last-name" name="lastName" label="Last name" autoComplete="family-name" maxLength={100} value={form.lastName} onChange={updateField} disabled={submitting} required />
+        <Input id="first-name" name="firstName" label={t('First name')} autoComplete="given-name" maxLength={100} value={form.firstName} onChange={updateField} disabled={submitting} required />
+        <Input id="last-name" name="lastName" label={t('Last name')} autoComplete="family-name" maxLength={100} value={form.lastName} onChange={updateField} disabled={submitting} required />
       </div>
-      <Input id="account-name" name="accountName" label="Store name" autoComplete="organization" maxLength={160} value={form.accountName} onChange={updateField} disabled={submitting} required />
-      <Select id="base-currency" name="baseCurrency" label="Base currency" hint="This becomes the store's financial reporting currency." value={form.baseCurrency} onChange={updateField} disabled={submitting}><option value="USD">USD</option><option value="LBP">LBP</option></Select>
-      <Input id="employee-code" name="employeeCode" label="Employee code (optional)" hint="Letters, numbers, hyphens, and underscores only." maxLength={50} value={form.employeeCode} onChange={updateField} disabled={submitting} />
-      <FormMessage>{message}</FormMessage>
-      <AuthAction type="submit" disabled={submitting}>{submitting ? 'Submitting…' : 'Submit for approval'}</AuthAction>
+      <Input id="account-name" name="accountName" label={t('Store name')} autoComplete="organization" maxLength={160} value={form.accountName} onChange={updateField} disabled={submitting} required />
+      <Select id="base-currency" name="baseCurrency" label={t('Base currency')} hint={t('This becomes the store\'s financial reporting currency.')} value={form.baseCurrency} onChange={updateField} disabled={submitting}><option value="USD">{t('USD')}</option><option value="LBP">{t('LBP')}</option></Select>
+      <Input id="employee-code" name="employeeCode" label={t('Employee code (optional)')} hint={t('Letters, numbers, hyphens, and underscores only.')} maxLength={50} value={form.employeeCode} onChange={updateField} disabled={submitting} />
+      <FormMessage>{t(message)}</FormMessage>
+      <AuthAction type="submit" disabled={submitting}>{submitting ? t('Submitting…') : t('Submit for approval')}</AuthAction>
     </form>}
     <LogoutAction disabled={submitting} />
   </AuthLayout>

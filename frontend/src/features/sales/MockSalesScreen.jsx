@@ -12,6 +12,7 @@ import { requestTextMatch } from '../voice-sales/text-matching-flow.js'
 import { CartSheet, ProductPickerSheet, SalesHistorySheet } from './MockSalesSheets.jsx'
 import { SaleCompletedSheet } from './SaleReceipt.jsx'
 import './mock-sales.css'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 const SALES_VOICE_SEARCH_LANGUAGE = 'ar-LB'
 const RESTORED_CHECKOUT_MESSAGE = 'A sale was still being confirmed when this page closed. It may have gone through. Press Try again: it will not create a duplicate.'
@@ -66,7 +67,8 @@ function applyTodaySales(setToday, result) {
 }
 
 export function ProductRow({ product, availableStock, currency, onOpen }) {
-  const badge = stockBadge(availableStock)
+  const { t } = useI18n()
+  const badge = stockBadge(availableStock, t)
   return <article className={`mock-pos-product${availableStock === 0 ? ' is-out' : ''}`}>
     <button type="button" className="mock-pos-product-main" disabled={availableStock === 0} onClick={onOpen}>
       <span className="mock-pos-product-art" style={{ '--garment': product.colors[0]?.hex || '#829182' }}>
@@ -74,13 +76,14 @@ export function ProductRow({ product, availableStock, currency, onOpen }) {
       </span>
       <span className="mock-pos-product-copy">
         <span className="mock-pos-product-line"><strong>{product.name}</strong><b>{productPrice(product, currency)}</b></span>
-        <span className="mock-pos-product-line"><small>{plural(product.colors.length, 'color')}</small><small className={`mock-pos-stock ${badge.tone}`}>{badge.text}</small></span>
+        <span className="mock-pos-product-line"><small>{plural(product.colors.length, 'color', t)}</small><small className={`mock-pos-stock ${badge.tone}`}>{t(badge.text)}</small></span>
       </span>
     </button>
   </article>
 }
 
 export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', storageScope = '', storeName = '' }) {
+  const { t } = useI18n()
   const storage = useMemo(() => browserMockSalesStorage(), [])
   const [salesState, setSalesState] = useState({ categories: [], products: [] })
   const [catalog, setCatalog] = useState({ kind: 'loading', complete: true })
@@ -133,11 +136,11 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       setSalesState(current => ({ ...current, categories: result.categories, products: result.products }))
       // A sale that may already be on the server keeps its cart untouched so its retry stays identical.
       const reconciled = operationRef.current ? { changed: false } : reconcileMockCart(cartRef.current, result.products)
-      if (reconciled.changed) { setCart(reconciled.cart); setToast('Your saved cart was updated to match current prices and stock.') }
+      if (reconciled.changed) { setCart(reconciled.cart); setToast(t('Your saved cart was updated to match current prices and stock.')) }
       setCatalog({ kind: 'ready', complete: result.complete, total: result.total, refreshing: false })
     })
     return () => controller.abort()
-  }, [catalogVersion, supabase])
+  }, [catalogVersion, supabase, t])
   useEffect(() => {
     if (!toast) return undefined
     const timer = window.setTimeout(() => setToast(''), 3200)
@@ -176,7 +179,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     const revision = ++voiceSearchRevision.current
     setQuery(transcript)
     setVoiceCatalogFilter(null)
-    setVoiceMessage('Searching your catalog…')
+    setVoiceMessage(t('Searching your catalog…'))
     const response = await requestTextMatch({ supabase, text: transcript })
     if (revision !== voiceSearchRevision.current) return
     const localProductIds = searchLoadedCatalogByVoice(transcript, salesState.products)
@@ -186,7 +189,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
         setVoiceMessage(`${localProductIds.length} matching ${localProductIds.length === 1 ? 'product' : 'products'} found locally. Engine: ${response.message}`)
         return
       }
-      setVoiceMessage(response.message || 'Voice catalog search is unavailable. Try typing the product name.')
+      setVoiceMessage(response.message || t('Voice catalog search is unavailable. Try typing the product name.'))
       return
     }
     const engineSelection = voiceCatalogSelection(response.result)
@@ -199,29 +202,29 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
       : salesState.products.filter(product => selection.categoryIds.includes(product.categoryId)).length
     setVoiceMessage(matchedProducts
       ? `${matchedProducts} matching ${matchedProducts === 1 ? 'product' : 'products'} found.`
-      : 'No matching product was found in this store catalog.')
+      : t('No matching product was found in this store catalog.'))
   }
 
   function startVoiceSearch() {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!Recognition) { setVoiceMessage('Voice search is not supported in this browser. Type a product name or SKU instead.'); return }
+    if (!Recognition) { setVoiceMessage(t('Voice search is not supported in this browser. Type a product name or SKU instead.')); return }
     recognition.current?.abort()
     const instance = new Recognition()
     recognition.current = instance
     instance.lang = SALES_VOICE_SEARCH_LANGUAGE
     instance.interimResults = false
     instance.maxAlternatives = 1
-    instance.onstart = () => { setListening(true); setVoiceMessage('Listening in Lebanese Arabic…') }
+    instance.onstart = () => { setListening(true); setVoiceMessage(t('Listening in Lebanese Arabic…')) }
     instance.onresult = event => { void searchVoiceCatalog(event.results[0][0].transcript) }
-    instance.onerror = () => setVoiceMessage('Voice search could not hear that. Try again or type the product name.')
+    instance.onerror = () => setVoiceMessage(t('Voice search could not hear that. Try again or type the product name.'))
     instance.onend = () => setListening(false)
     instance.start()
   }
 
   function addToCart(product, color, size, quantity) {
-    if (busy || checkout.locked) return { ok: false, message: 'Finish or cancel the sale being confirmed before adding more items.' }
+    if (busy || checkout.locked) return { ok: false, message: t('Finish or cancel the sale being confirmed before adding more items.') }
     const result = addCartSelection(cart, product, color, size, quantity)
-    if (result.ok) { setCart(result.cart); setToast(`${product.name} added to cart.`) }
+    if (result.ok) { setCart(result.cart); setToast(t('{name} added to cart.', { name: product.name })) }
     return result
   }
 
@@ -231,13 +234,13 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     const line = cart[index]
     setCart(current => current.filter(row => row.key !== key))
     setToast('')
-    setUndo({ message: `${line.productName} removed from cart.`, restore: () => setCart(current => restoreMockCartLine(current, line, index)) })
+    setUndo({ message: t('{productName} removed from cart.', { productName: line.productName }), restore: () => setCart(current => restoreMockCartLine(current, line, index)) })
   }
 
   function clearCart() {
     const previous = cart
     setCart([]); setSheet(null); setToast('')
-    setUndo({ message: 'Cart cleared.', restore: () => setCart(current => current.length ? current : previous) })
+    setUndo({ message: t('Cart cleared.'), restore: () => setCart(current => current.length ? current : previous) })
   }
 
   function reloadToday() { void fetchTodaySales(supabase).then(result => applyTodaySales(setToday, result)) }
@@ -272,7 +275,7 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     const updated = new Map(analysis.cart.map(line => [line.key, line]))
     setCart(current => current.map(line => updated.get(line.key) || line))
     setCheckout(current => ({ ...current, issues: analysis.issues,
-      message: fresh.failed ? `${current.message} Some stock could not be refreshed.` : current.message }))
+      message: fresh.failed ? t('{message} Some stock could not be refreshed.', { message: current.message }) : current.message }))
   }
 
   function finishSale(result, summary, soldLines) {
@@ -328,43 +331,43 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
 
   const selectedProduct = sheet && typeof sheet === 'object'
     ? salesState.products.find(product => product.id === sheet.productId) : null
-  return <section className="mock-pos-page" aria-label="Sales point of sale">
+  return <section className="mock-pos-page" aria-label={t('Sales point of sale')}>
     <div className="mock-pos-shell">
-      <header className="mock-pos-header"><h1>Sell</h1>
-        <button type="button" className="mock-pos-today" aria-label="Today's sales: open the list" onClick={() => setSheet('history')}>
-          {role === 'OWNER' ? <><span>Sales today</span><strong>{todaySummary ? todaySummary.total : '—'}</strong><span aria-hidden="true">·</span></> : <span>Today</span>}
+      <header className="mock-pos-header"><h1>{t('Sell')}</h1>
+        <button type="button" className="mock-pos-today" aria-label={t('Today\'s sales: open the list')} onClick={() => setSheet('history')}>
+          {role === 'OWNER' ? <><span>{t('Sales today')}</span><strong>{todaySummary ? todaySummary.total : '—'}</strong><span aria-hidden="true">·</span></> : <span>{t('Today')}</span>}
           <strong>{todaySummary ? todaySummary.count : '—'}</strong><span>{todaySummary?.count === 1 ? 'receipt' : 'receipts'}</span><ChevronIcon />
         </button>
       </header>
 
-      <div className="mock-pos-search"><SearchIcon /><label className="sr-only" htmlFor="mock-pos-search">Search products</label>
-        <input id="mock-pos-search" type="search" value={query} placeholder="Search products" onChange={event => {
+      <div className="mock-pos-search"><SearchIcon /><label className="sr-only" htmlFor="mock-pos-search">{t('Search products')}</label>
+        <input id="mock-pos-search" type="search" value={query} placeholder={t('Search products')} onChange={event => {
           voiceSearchRevision.current += 1
           setVoiceCatalogFilter(null)
           setQuery(event.target.value)
         }} />
-        <button type="button" className={listening ? 'is-listening' : ''} aria-label="Search with voice" onClick={startVoiceSearch}><MicIcon /></button>
+        <button type="button" className={listening ? 'is-listening' : ''} aria-label={t('Search with voice')} onClick={startVoiceSearch}><MicIcon /></button>
       </div>
       {voiceMessage && <p className="mock-pos-voice-message" role="status">{voiceMessage}</p>}
 
-      <nav className="mock-pos-chips" aria-label="Product categories"><button type="button" aria-pressed={categoryId === 'all'} onClick={() => setCategoryId('all')}>All</button>
+      <nav className="mock-pos-chips" aria-label={t('Product categories')}><button type="button" aria-pressed={categoryId === 'all'} onClick={() => setCategoryId('all')}>{t('All')}</button>
         {visibleCategories.map(category => <button key={category.id} type="button" aria-pressed={categoryId === category.id}
           onClick={() => setCategoryId(category.id)}>{category.name}</button>)}
       </nav>
 
       <main className="mock-pos-products" aria-live="polite" aria-busy={catalog.kind === 'loading' || catalog.refreshing === true}>
-        <div className="mock-pos-list-heading"><h2>Products</h2><span>{catalog.kind === 'ready' ? plural(products.length, 'product') : 'Live catalog'}</span></div>
-        {catalog.kind === 'loading' && <div className="mock-pos-catalog-state" role="status"><span className="mock-pos-spinner" />Loading real products…</div>}
-        {catalog.kind === 'error' && <div className="mock-pos-catalog-state is-error" role="alert"><strong>Products could not load</strong><p>{catalog.message}</p>
-          <button type="button" onClick={() => { setCatalog({ kind: 'loading', complete: true }); setCatalogVersion(version => version + 1) }}>Try again</button></div>}
-        {catalog.kind === 'ready' && !catalog.complete && <p className="mock-pos-catalog-note">Showing the first {salesState.products.length} of {catalog.total} products. Search coverage is limited.</p>}
+        <div className="mock-pos-list-heading"><h2>{t('Products')}</h2><span>{catalog.kind === 'ready' ? plural(products.length, 'product', t) : t('Live catalog')}</span></div>
+        {catalog.kind === 'loading' && <div className="mock-pos-catalog-state" role="status"><span className="mock-pos-spinner" />{t('Loading real products…')}</div>}
+        {catalog.kind === 'error' && <div className="mock-pos-catalog-state is-error" role="alert"><strong>{t('Products could not load')}</strong><p>{t(catalog.message)}</p>
+          <button type="button" onClick={() => { setCatalog({ kind: 'loading', complete: true }); setCatalogVersion(version => version + 1) }}>{t('Try again')}</button></div>}
+        {catalog.kind === 'ready' && !catalog.complete && <p className="mock-pos-catalog-note">{t('Showing the first {length} of {total} products. Search coverage is limited.', { length: salesState.products.length, total: catalog.total })}</p>}
         {catalog.kind === 'ready' && products.length ? products.map(product => <ProductRow key={product.id} product={product} currency={currency}
           availableStock={productAvailable(product)} onOpen={() => setSheet({ type: 'product', productId: product.id })} />)
-          : catalog.kind === 'ready' && <div className="mock-pos-empty"><strong>No products found</strong><p>Try another name, SKU, or category.</p></div>}
+          : catalog.kind === 'ready' && <div className="mock-pos-empty"><strong>{t('No products found')}</strong><p>{t('Try another name, SKU, or category.')}</p></div>}
       </main>
 
       {cart.length ? <footer className="mock-pos-sticky"><button type="button" className="mock-pos-primary" onClick={() => setSheet('cart')}>
-        <span>View cart · {plural(cartUnits(cart), 'item')}</span><strong>{money(totals.totalCents, currency)}</strong>
+        <span>{t('View cart ·')} {plural(cartUnits(cart), 'item', t)}</span><strong>{money(totals.totalCents, currency)}</strong>
       </button></footer> : <div className="mock-pos-end-space" aria-hidden="true" />}
     </div>
 
@@ -378,8 +381,8 @@ export function MockSalesScreen({ supabase, role = 'OWNER', currency = 'USD', st
     {sheet === 'receipt' && completed && <SaleCompletedSheet completed={completed} storeName={storeName} onNewSale={() => { setSheet(null); setCompleted(null) }} />}
     {sheet?.type === 'product' && selectedProduct && <ProductPickerSheet key={selectedProduct.id} product={selectedProduct} cart={cart} currency={currency}
       onAdd={addToCart} onClose={() => setSheet(null)} />}
-    {undo ? <div className="mock-pos-toast has-action" role="status"><span>{undo.message}</span>
-      <button type="button" onClick={() => { undo.restore(); setUndo(null) }}>Undo</button></div>
+    {undo ? <div className="mock-pos-toast has-action" role="status"><span>{t(undo.message)}</span>
+      <button type="button" onClick={() => { undo.restore(); setUndo(null) }}>{t('Undo')}</button></div>
       : toast && <div className="mock-pos-toast" role="status">{toast}</div>}
   </section>
 }

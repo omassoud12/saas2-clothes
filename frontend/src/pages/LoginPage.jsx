@@ -3,8 +3,10 @@ import { requestPasswordRecovery } from '../auth/auth-flow.js'
 import { createSubmissionGuard, resolveExistingSessionDestination, signInApplicationUser } from '../auth/owner-flow.js'
 import { AuthAction, AuthLayout, AuthLoading, FormMessage, Input, PasswordField } from '../components/auth/AuthLayout.jsx'
 import { supabase } from '../lib/supabase.js'
+import { useI18n } from '../i18n/I18nContext.js'
 
 export function LoginPage() {
+  const { t } = useI18n()
   const sessionPromise = useRef(null)
   const [actionGuard] = useState(() => createSubmissionGuard())
   const [pageState, setPageState] = useState('initializing')
@@ -61,17 +63,17 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout eyebrow="Welcome back" title="Sign in to your workspace" description="Use your confirmed business email and password.">
-      {pageState === 'initializing' ? <AuthLoading label="Restoring your secure session" /> : (
+    <AuthLayout eyebrow={t('Welcome back')} title={t('Sign in to your workspace')} description={t('Use your confirmed business email and password.')}>
+      {pageState === 'initializing' ? <AuthLoading label={t('Restoring your secure session')} /> : (
         <>
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
-            <Input id="email" label="Email address" type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={Boolean(busyAction)} required />
-            <PasswordField id="password" label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={Boolean(busyAction)} required />
-            <div className="auth-form-secondary-action"><button className="text-button" type="button" disabled={Boolean(busyAction)} onClick={handlePasswordRecovery}>{busyAction === 'recovery' ? 'Sending recovery email…' : 'Forgot password?'}</button></div>
-            <FormMessage kind={messageKind}>{message}</FormMessage>
-            <AuthAction type="submit" disabled={Boolean(busyAction)}>{busyAction === 'login' ? 'Signing in…' : 'Sign in'}</AuthAction>
+            <Input id="email" label={t('Email address')} type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={Boolean(busyAction)} required />
+            <PasswordField id="password" label={t('Password')} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={Boolean(busyAction)} required />
+            <div className="auth-form-secondary-action"><button className="text-button" type="button" disabled={Boolean(busyAction)} onClick={handlePasswordRecovery}>{busyAction === 'recovery' ? t('Sending recovery email…') : t('Forgot password?')}</button></div>
+            <FormMessage kind={messageKind}>{t(message)}</FormMessage>
+            <AuthAction type="submit" disabled={Boolean(busyAction)}>{busyAction === 'login' ? t('Signing in…') : t('Sign in')}</AuthAction>
           </form>
-          <p className="auth-link-row">Opening a new store? <a href="/signup">Create an owner account</a></p>
+          <p className="auth-link-row">{t('Opening a new store?')} <a href="/signup">{t('Create an owner account')}</a></p>
         </>
       )}
     </AuthLayout>

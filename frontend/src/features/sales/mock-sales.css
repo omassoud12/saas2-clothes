@@ -25,7 +25,8 @@
   gap: 5px;
   min-width: 0;
   margin: 0;
-  padding: 0 6px 0 12px;
+  padding-block: 0 0;
+  padding-inline: 12px 6px;
   border: 1px solid var(--pos-line);
   border-radius: 12px;
   background: var(--pos-surface);
@@ -432,7 +433,7 @@
   .mock-pos-shell { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .mock-pos-header { padding: 0 0 6px; }
   .mock-pos-header h1 { font-size: 19px; }
-  .mock-pos-page .mock-pos-today { padding-left: 10px; font-size: 12px; }
+  .mock-pos-page .mock-pos-today { padding-inline-start: 10px; font-size: 12px; }
   .mock-pos-search { grid-template-columns: 20px minmax(0, 1fr) 44px; height: 48px; gap: 7px; padding-inline: 12px 4px; border-radius: 13px; }
   .mock-pos-search input { height: 44px; font-size: 16px; }
   .mock-pos-search button { width: 44px; height: 44px; min-height: 44px; }
@@ -513,11 +514,20 @@
 .mock-pos-page .mock-history-status span { font-size: 12px; overflow-wrap: anywhere; }
 .mock-pos-page .mock-history-status.is-void { background: var(--pos-warn-bg); color: var(--pos-warn); }
 .mock-pos-page .mock-history-status.is-returned { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
-
 /* Payment method, debt customer, USD + LBP totals and the change calculator in the cart. */
 .mock-pos-page .mock-pos-payment-fields { display: grid; gap: 6px; margin-top: 12px; }
 .mock-pos-payment-fields label, .mock-pos-cash-fields label { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); }
-.mock-pos-payment-fields input, .mock-pos-cash-fields input { width: 100%; height: var(--touch-target); min-width: 0; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-md); }
+.mock-pos-payment-fields input, .mock-pos-cash-fields input {
+  width: 100%;
+  height: var(--touch-target);
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
 .mock-pos-payment-fields input[aria-invalid="true"], .mock-pos-cash-fields input[aria-invalid="true"] { border-color: var(--color-danger); }
 .mock-pos-page .mock-pos-note.is-error { color: var(--color-danger); }
 .mock-pos-cash { display: grid; gap: 8px; margin-top: 12px; }

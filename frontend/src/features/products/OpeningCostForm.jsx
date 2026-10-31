@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useDirtyState } from '../../app/dirty-state.js'
 import { setOpeningCost } from './product-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -10,6 +11,7 @@ function redirectIfNeeded(result) {
 }
 
 export function OpeningCostForm({ product, variant, currency, onSaved }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [cost, setCost] = useState('')
   const [busy, setBusy] = useState(false)
@@ -18,7 +20,7 @@ export function OpeningCostForm({ product, variant, currency, onSaved }) {
   async function submit(event) {
     event.preventDefault()
     if (busy) return
-    if (!/^(?:0|[1-9]\d{0,13})(?:\.\d{1,4})?$/.test(cost) || !/[1-9]/.test(cost)) { setError('Enter a positive purchase cost with up to four decimal places.'); return }
+    if (!/^(?:0|[1-9]\d{0,13})(?:\.\d{1,4})?$/.test(cost) || !/[1-9]/.test(cost)) { setError(t('Enter a positive purchase cost with up to four decimal places.')); return }
     setBusy(true); setError('')
     try {
       const result = await setOpeningCost({ supabase, productId: product.id, variantId: variant.id, unitCost: cost })
@@ -27,12 +29,12 @@ export function OpeningCostForm({ product, variant, currency, onSaved }) {
       else setError(result.message)
     } finally { setBusy(false) }
   }
-  return <div>{!open ? <button type="button" className="secondary-action" onClick={() => setOpen(true)}>Set cost</button> : <form onSubmit={submit}>
-    <label htmlFor={`opening-cost-${variant.id}`}>Purchase cost per piece{currency ? ` (${currency})` : ''}</label>
+  return <div>{!open ? <button type="button" className="secondary-action" onClick={() => setOpen(true)}>{t('Set cost')}</button> : <form onSubmit={submit}>
+    <label htmlFor={`opening-cost-${variant.id}`}>{t('Purchase cost per piece')}{currency ? ` (${currency})` : ''}</label>
     <input id={`opening-cost-${variant.id}`} autoFocus required inputMode="decimal" maxLength={19} value={cost} disabled={busy} onChange={(event) => setCost(event.target.value)} />
-    <small>Sets current purchase cost. Quantity and historical sale costs stay unchanged.</small>
+    <small>{t('Sets current purchase cost. Quantity and historical sale costs stay unchanged.')}</small>
     {error && <p role="alert" className="error-message">{error}</p>}
-    <div className="product-actions"><button disabled={busy} type="submit">{busy ? 'Saving...' : 'Save cost'}</button><button disabled={busy} type="button" className="secondary-action" onClick={() => { if (cost && !window.confirm('Discard this unsaved purchase cost?')) return; clearDirty(); setOpen(false); setCost(''); setError('') }}>Cancel</button></div>
+    <div className="product-actions"><button disabled={busy} type="submit">{busy ? t('Saving...') : t('Save cost')}</button><button disabled={busy} type="button" className="secondary-action" onClick={() => { if (cost && !window.confirm('Discard this unsaved purchase cost?')) return; clearDirty(); setOpen(false); setCost(''); setError('') }}>{t('Cancel')}</button></div>
   </form>}</div>
 }
 

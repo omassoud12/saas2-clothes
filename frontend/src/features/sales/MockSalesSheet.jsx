@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 export function MockSalesSheet({ title, subtitle, onClose, children, footer, className = '' }) {
+  const { t } = useI18n()
   const closeRef = useRef(null)
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -17,8 +19,8 @@ export function MockSalesSheet({ title, subtitle, onClose, children, footer, cla
     <section className={`mock-pos-sheet ${className}`} role="dialog" aria-modal="true" aria-labelledby="mock-sheet-title">
       <div className="mock-pos-sheet-grip" aria-hidden="true" />
       <header className="mock-pos-sheet-header">
-        <div><h2 id="mock-sheet-title">{title}</h2>{subtitle && <p>{subtitle}</p>}</div>
-        <button ref={closeRef} type="button" className="mock-pos-icon-button" aria-label={`Close ${title}`} onClick={onClose}>
+        <div><h2 id="mock-sheet-title">{t(title)}</h2>{subtitle && <p>{t(subtitle)}</p>}</div>
+        <button ref={closeRef} type="button" className="mock-pos-icon-button" aria-label={t('Close {title}', { title })} onClick={onClose}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </header>

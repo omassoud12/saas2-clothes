@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { buildReceipt } from './pos-receipt.js'
 import { useReceiptActions } from './use-receipt-actions.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 export function ReceiptView({ receipt, className = '' }) {
+  const { t } = useI18n()
   return <article className={`mock-pos-receipt ${className}`} aria-label={`${receipt.labels.receipt} ${receipt.number}`}>
     {receipt.storeName && <h3 className="mock-pos-receipt-store">{receipt.storeName}</h3>}
     <p className="mock-pos-receipt-meta"><span>{receipt.labels.receipt} {receipt.number}</span>{receipt.dateText && <time dateTime={receipt.isoDate}>{receipt.dateText}</time>}</p>
@@ -21,7 +23,7 @@ export function ReceiptView({ receipt, className = '' }) {
       </>}
       <div className="is-total"><dt>{receipt.labels.total}</dt><dd>{receipt.total}</dd></div>
       {receipt.totalLbp && <div><dt>{receipt.labels.totalLbp}</dt><dd>{receipt.totalLbp}</dd></div>}
-      {receipt.debt && <div><dt>{receipt.labels.debt}</dt><dd>{receipt.debt.text}</dd></div>}
+      {receipt.debt && <div><dt>{receipt.labels.debt}</dt><dd>{t(receipt.debt.text)}</dd></div>}
     </dl>
     <p className="mock-pos-receipt-thanks">{receipt.labels.thanks}</p>
   </article>
@@ -33,19 +35,20 @@ export function PrintCopy({ receipt, printRoot }) {
 }
 
 export function SaleCompletedSheet({ completed, storeName = '', onNewSale }) {
-  const receipt = useMemo(() => buildReceipt({ sale: completed.sale, summary: completed.summary, storeName }), [completed, storeName])
+  const { t, locale } = useI18n()
+  const receipt = useMemo(() => buildReceipt({ sale: completed.sale, summary: completed.summary, storeName, t, locale }), [completed, storeName, t, locale])
   const { share, print, shareMessage, printRoot } = useReceiptActions(receipt)
 
-  return <MockSalesSheet title="Sale completed" subtitle={`Receipt ${receipt.number}`} onClose={onNewSale}
+  return <MockSalesSheet title={t('Sale completed')} subtitle={t('Receipt {number}', { number: receipt.number })} onClose={onNewSale}
     footer={<div className="mock-pos-receipt-actions">
       <div className="mock-pos-receipt-secondary">
-        <button type="button" onClick={share}>Share on WhatsApp</button>
-        <button type="button" onClick={print}>Print / PDF</button>
+        <button type="button" onClick={share}>{t('Share on WhatsApp')}</button>
+        <button type="button" onClick={print}>{t('Print / PDF')}</button>
       </div>
-      <button type="button" className="mock-pos-primary" onClick={onNewSale}>New sale</button>
+      <button type="button" className="mock-pos-primary" onClick={onNewSale}>{t('New sale')}</button>
     </div>}>
     <div className="mock-pos-sale-done"><span aria-hidden="true">✓</span>
-      <p>{completed.replay ? 'Confirmed from the original attempt.' : 'The sale was saved.'}</p></div>
+      <p>{completed.replay ? t('Confirmed from the original attempt.') : t('The sale was saved.')}</p></div>
     <ReceiptView receipt={receipt} />
     {shareMessage && <p className="mock-pos-error" role="alert">{shareMessage}</p>}
     <PrintCopy receipt={receipt} printRoot={printRoot} />

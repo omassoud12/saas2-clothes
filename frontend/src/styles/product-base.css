@@ -33,7 +33,7 @@
   font-size: var(--font-size-base);
 }
 .product-feedback.error-message, .product-inline-error { background: var(--color-danger-soft); }
-.product-inline-error .text-button { margin-left: .35rem; }
+.product-inline-error .text-button { margin-inline-start: .35rem; }
 .product-state { display: grid; min-height: 190px; place-items: center; align-content: center; text-align: center; }
 .product-state .spinner { margin: 0 0 .65rem; }
 .product-state h2, .product-panel h2 { margin: .3rem 0 .5rem; color: var(--color-text); font-size: var(--font-size-2xl); font-weight: var(--font-weight-medium); }
@@ -64,7 +64,7 @@
   padding: .6rem .75rem;
   background: var(--color-surface);
   color: inherit;
-  text-align: left;
+  text-align: start;
   box-shadow: var(--shadow-card);
 }
 .product-card:hover, .product-card.is-selected { border-color: var(--color-text-muted); background: var(--color-background); }
@@ -154,9 +154,9 @@
     display: none;
     position: fixed;
     z-index: 90;
-    right: 0;
+    inset-inline-end: 0;
     bottom: 0;
-    left: 0;
+    inset-inline-start: 0;
     max-height: min(82vh, 620px);
     overflow-y: auto;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;

@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import { AppErrorBoundary } from './components/AppErrorBoundary.jsx'
+import { I18nProvider } from './i18n/I18nProvider.jsx'
 import './styles/tokens.css'
 import './index.css'
 import './styles/landing.css'
@@ -16,8 +17,10 @@ import './styles/shell-phone.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AppErrorBoundary>
-      <App />
-    </AppErrorBoundary>
+    <I18nProvider>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </I18nProvider>
   </StrictMode>,
 )

@@ -32,7 +32,7 @@
 .expense-row + .expense-row { border-top: 1px solid var(--color-border); }
 .expense-row strong, .expense-row span, .expense-row small { display: block; overflow-wrap: anywhere; }
 .expense-row span, .expense-row small { margin-top: .2rem; color: var(--color-text-muted); font-size: var(--font-size-xs); }
-.expense-amount { text-align: right; }
+.expense-amount { text-align: end; }
 .finance-empty { display: grid; min-height: 180px; place-items: center; align-content: center; padding: 1.2rem; text-align: center; }
 .finance-load-more { display: block; margin: .8rem auto 0; }
 .report-tabs {
@@ -57,7 +57,7 @@
 .report-period > span { border-radius: var(--radius-pill); padding: .35rem .65rem; background: var(--color-background); color: var(--color-text); font-size: var(--font-size-xs); }
 .report-zero-state {
   margin: .8rem 0 0;
-  border-left: 4px solid var(--color-text-muted);
+  border-inline-start: 4px solid var(--color-text-muted);
   border-radius: var(--radius-sm);
   padding: .75rem .9rem;
   background: var(--color-background);
@@ -82,7 +82,7 @@
 .finance-breakdown dl > div, .report-supporting dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .5rem 0; }
 .finance-breakdown dl > div + div, .report-supporting dl > div + div { border-top: 1px solid var(--color-border); }
 .finance-breakdown dt, .report-supporting dt { color: var(--color-text-muted); }
-.finance-breakdown dd, .report-supporting dd { margin: 0; overflow-wrap: anywhere; text-align: right; font-weight: var(--font-weight-bold); }
+.finance-breakdown dd, .report-supporting dd { margin: 0; overflow-wrap: anywhere; text-align: end; font-weight: var(--font-weight-bold); }
 .finance-breakdown dl > div:last-child { color: var(--color-text); font-weight: var(--font-weight-bold); }
 .report-supporting { margin-top: .8rem; }
 .report-supporting section > strong { display: block; margin-top: .65rem; color: var(--color-text); font-size: var(--font-size-md); }
@@ -112,7 +112,7 @@
   .expense-filters > div:first-child, .finance-filter-actions { grid-column: auto; }
   .expense-row { grid-template-columns: 1fr; padding: .8rem; }
   .expense-description { grid-column: auto; }
-  .expense-amount { text-align: left; }
+  .expense-amount { text-align: start; }
   .report-tabs { display: grid; grid-template-columns: 1fr 1fr; }
   .report-period { align-items: flex-start; flex-direction: column; }
 }

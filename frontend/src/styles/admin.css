@@ -22,7 +22,7 @@
 .admin-account-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
 .admin-account-heading h2 { margin: .65rem 0 0; font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: var(--font-weight-medium); letter-spacing: -.025em; }
 .admin-account-heading .status-chip { margin-top: 0; }
-.request-date { color: var(--color-text-muted); font-size: var(--font-size-base); text-align: right; }
+.request-date { color: var(--color-text-muted); font-size: var(--font-size-base); text-align: end; }
 .admin-account-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
 .admin-account-details div { min-width: 0; border-radius: var(--radius-md); padding: 1rem; background: var(--color-surface-soft); }
 .admin-account-details dt {
@@ -44,7 +44,7 @@
   .admin-header button { width: 100%; }
   .admin-header-actions { width: 100%; }
   .admin-header-actions > * { flex: 1 1 140px; }
-  .request-date { text-align: left; }
+  .request-date { text-align: start; }
   .admin-account-details { grid-template-columns: 1fr; }
   .admin-actions button { flex: 1 1 160px; }
 }

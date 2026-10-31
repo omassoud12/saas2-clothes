@@ -4,8 +4,10 @@ import { AppLayout } from './AppLayout.jsx'
 import { Button, Card, ErrorState, LoadingState } from '../components/ui/index.jsx'
 import { supabase } from '../lib/supabase.js'
 import { LogoutAction } from '../components/auth/LogoutAction.jsx'
+import { useI18n } from '../i18n/I18nContext.js'
 
 export function AppRouteGuard({ pathname, navigate }) {
+  const { t } = useI18n()
   const profilePromise = useRef(null)
   const [state, setState] = useState({ kind: 'loading' })
 
@@ -36,9 +38,9 @@ export function AppRouteGuard({ pathname, navigate }) {
     return (
       <main className="foundation-page">
         <Card className="auth-card">
-          <span className="eyebrow">Store workspace</span>
-          <h1>Opening your workspace...</h1>
-          <LoadingState label="Loading your account and store" />
+          <span className="eyebrow">{t('Store workspace')}</span>
+          <h1>{t('Opening your workspace...')}</h1>
+          <LoadingState label={t('Loading your account and store')} />
         </Card>
       </main>
     )
@@ -48,11 +50,11 @@ export function AppRouteGuard({ pathname, navigate }) {
     return (
       <main className="foundation-page">
         <Card className="auth-card">
-          <span className="eyebrow">Store workspace</span>
+          <span className="eyebrow">{t('Store workspace')}</span>
           <ErrorState
-            title="Workspace unavailable"
-            description={state.message}
-            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
+            title={t('Workspace unavailable')}
+            description={t(state.message)}
+            action={<Button onClick={() => window.location.reload()}>{t('Try again')}</Button>}
           />
           <LogoutAction />
         </Card>

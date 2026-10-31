@@ -5,12 +5,14 @@ import { lineIssueText, receiptLabel } from './pos-checkout.js'
 import { PAYMENT_METHODS, validatePayment } from './payment.js'
 import { calculateChange, parseLbpAmount, parseUsdAmount, usdCentsToLbp } from '../../lib/currency.js'
 import { MockSalesSheet } from './MockSalesSheet.jsx'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 function Stepper({ value, min = 1, max, onChange, label, disabled = false }) {
-  return <div className="mock-pos-stepper" aria-label={label}>
-    <button type="button" aria-label={`Decrease ${label}`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>−</button>
+  const { t } = useI18n()
+  return <div className="mock-pos-stepper" aria-label={t(label)}>
+    <button type="button" aria-label={t('Decrease {label}', { label })} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>−</button>
     <output>{value}</output>
-    <button type="button" aria-label={`Increase ${label}`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>+</button>
+    <button type="button" aria-label={t('Increase {label}', { label })} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>+</button>
   </div>
 }
 
@@ -22,6 +24,7 @@ function pickerPrice(product, currency) {
 }
 
 export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, onAdd }) {
+  const { t } = useI18n()
   const [colorId, setColorId] = useState(product.colors[0]?.id ?? '')
   const color = product.colors.find(row => row.id === colorId) ?? product.colors[0]
   const initialSize = color?.sizes.length === 1 ? color.sizes[0].variantId : ''
@@ -37,8 +40,8 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   }
 
   function add() {
-    if (!size) { setError('Choose a size before adding this product.'); return }
-    if (!Number.isSafeInteger(size.priceCents)) { setError('This option has no selling price. Ask an owner to set one and try again.'); return }
+    if (!size) { setError(t('Choose a size before adding this product.')); return }
+    if (!Number.isSafeInteger(size.priceCents)) { setError(t('This option has no selling price. Ask an owner to set one and try again.')); return }
     const result = onAdd(product, color, size, quantity)
     if (!result.ok) { setError(result.message); return }
     onClose()
@@ -47,28 +50,28 @@ export function ProductPickerSheet({ product, cart, currency = 'USD', onClose, o
   const selectedTotal = Number.isSafeInteger(size?.priceCents) ? money(size.priceCents * quantity, currency) : 'Price missing'
   return <MockSalesSheet title={product.name} subtitle={pickerPrice(product, currency)} onClose={onClose}
     footer={<button type="button" className="mock-pos-primary" disabled={!size || available < 1 || !Number.isSafeInteger(size.priceCents)} onClick={add}>
-      {size ? `Add to cart · ${selectedTotal}` : `Add to cart · ${pickerPrice(product, currency)}`}
+      {size ? t('Add to cart · {selectedTotal}', { selectedTotal }) : t('Add to cart · {pickerPrice}', { pickerPrice: pickerPrice(product, currency) })}
     </button>}>
-    {!product.colors.length && <div className="mock-pos-empty"><strong>No sellable options</strong><p>Add an active product variant before selling this product.</p></div>}
-    {product.colors.length > 0 && <><fieldset className="mock-pos-fieldset"><legend>Color</legend><div className="mock-pos-swatches">
+    {!product.colors.length && <div className="mock-pos-empty"><strong>{t('No sellable options')}</strong><p>{t('Add an active product variant before selling this product.')}</p></div>}
+    {product.colors.length > 0 && <><fieldset className="mock-pos-fieldset"><legend>{t('Color')}</legend><div className="mock-pos-swatches">
       {product.colors.map(item => <button key={item.id} type="button" className="mock-pos-swatch" aria-pressed={item.id === color.id}
         aria-label={item.name} title={item.name} onClick={() => selectColor(item.id)}>
         <span style={{ '--swatch': item.hex }} /><small>{item.name}</small>
       </button>)}
     </div></fieldset>
-    <fieldset className="mock-pos-fieldset"><legend>Size</legend><div className="mock-pos-sizes">
+    <fieldset className="mock-pos-fieldset"><legend>{t('Size')}</legend><div className="mock-pos-sizes">
       {color.sizes.map(item => {
         const left = Math.max(0, item.stock - reservedUnits(cart, product.id, color.id, item.name, item.variantId))
         const unavailable = left === 0 || !Number.isSafeInteger(item.priceCents)
         return <button key={item.variantId} type="button" aria-pressed={item.variantId === variantId} disabled={unavailable}
           className={left === 0 ? 'is-empty' : ''} onClick={() => { setVariantId(item.variantId); setQuantity(1); setError('') }}>
-          {item.name}{left === 0 ? <small>Sold out</small> : !Number.isSafeInteger(item.priceCents) ? <small>No price</small>
-          : <><small>{left} left</small><small>{money(item.priceCents, currency)}</small></>}
+          {item.name}{left === 0 ? <small>{t('Sold out')}</small> : !Number.isSafeInteger(item.priceCents) ? <small>{t('No price')}</small>
+          : <><small>{t('{left} left', { left })}</small><small>{money(item.priceCents, currency)}</small></>}
         </button>
       })}
     </div></fieldset>
-    <div className="mock-pos-quantity-row"><div><strong>Quantity</strong><small>{size ? `${available} available` : 'Choose a size'}</small></div>
-      <Stepper value={quantity} max={Math.max(1, available)} onChange={setQuantity} label={`${product.name} quantity`} />
+    <div className="mock-pos-quantity-row"><div><strong>{t('Quantity')}</strong><small>{size ? t('{available} available', { available }) : t('Choose a size')}</small></div>
+      <Stepper value={quantity} max={Math.max(1, available)} onChange={setQuantity} label={t('{name} quantity', { name: product.name })} />
     </div></>}
     {error && <p className="mock-pos-error" role="alert">{error}</p>}
   </MockSalesSheet>
@@ -78,6 +81,7 @@ function formatLbp(value) { return formatMoneyCompact(String(value), 'LBP', 0) }
 
 // What the customer hands over, in dollars and/or pounds, against the total: shows what is still due or the change to give back.
 function CashCalculator({ totalCents, currency, rate, disabled }) {
+  const { t } = useI18n()
   const [usd, setUsd] = useState('')
   const [lbp, setLbp] = useState('')
   const usdCents = parseUsdAmount(usd)
@@ -88,24 +92,25 @@ function CashCalculator({ totalCents, currency, rate, disabled }) {
   const both = diff ? (diff.lbp !== null ? `${formatLbp(diff.lbp)} (≈ ${money(diff.usdCents, currency)})` : money(diff.usdCents, currency)) : ''
   return <div className="mock-pos-cash">
     <div className="mock-pos-cash-fields">
-      <label htmlFor="pos-received-usd">Received ({currency})</label>
+      <label htmlFor="pos-received-usd">{t('Received ({currency})', { currency })}</label>
       <input id="pos-received-usd" inputMode="decimal" autoComplete="off" placeholder="0" value={usd} disabled={disabled} aria-invalid={usdCents === null}
         onChange={event => setUsd(event.target.value)} />
       {rate && <>
-        <label htmlFor="pos-received-lbp">Received (LBP)</label>
+        <label htmlFor="pos-received-lbp">{t('Received (LBP)')}</label>
         <input id="pos-received-lbp" inputMode="numeric" autoComplete="off" placeholder="0" value={lbp} disabled={disabled} aria-invalid={lbpAmount === null}
           onChange={event => setLbp(event.target.value)} />
       </>}
     </div>
-    {invalid && <p className="mock-pos-error" role="alert">Enter the amounts as numbers.</p>}
-    {result?.status === 'short' && <p className="mock-pos-cash-result is-short" role="status">Still due: {both}</p>}
-    {result?.status === 'exact' && <p className="mock-pos-cash-result is-exact" role="status">Exact amount. No change.</p>}
-    {result?.status === 'change' && <p className="mock-pos-cash-result is-change" role="status">Change to give back: {both}</p>}
+    {invalid && <p className="mock-pos-error" role="alert">{t('Enter the amounts as numbers.')}</p>}
+    {result?.status === 'short' && <p className="mock-pos-cash-result is-short" role="status">{t('Still due: {both}', { both })}</p>}
+    {result?.status === 'exact' && <p className="mock-pos-cash-result is-exact" role="status">{t('Exact amount. No change.')}</p>}
+    {result?.status === 'change' && <p className="mock-pos-cash-result is-change" role="status">{t('Change to give back: {both}', { both })}</p>}
   </div>
 }
 
 export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDiscount, payment, onPayment, rate = null, busy = false, locked = false, message = '', issues = [], blocked = false,
   onQuantity, onRemove, onClear, onComplete, onDiscard, onHistory, onClose }) {
+  const { t } = useI18n()
   const totals = cartTotals(cart, discount)
   const lbpTotal = rate && currency === 'USD' ? usdCentsToLbp(totals.totalCents, rate) : null
   const paymentCheck = validatePayment(payment)
@@ -114,84 +119,85 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const frozen = busy || locked
   const issueByKey = new Map(issues.map(issue => [issue.key, issue]))
-  return <MockSalesSheet title="Cart" subtitle={plural(cart.reduce((sum, line) => sum + line.quantity, 0), 'item')} onClose={onClose}
+  return <MockSalesSheet title={t('Cart')} subtitle={plural(cart.reduce((sum, line) => sum + line.quantity, 0), 'item', t)} onClose={onClose}
     className="mock-pos-cart-sheet" footer={<>
       {cart.length > 0 && <dl className="mock-pos-totals">
         {discount > 0 && totals.discountCents > 0 && <>
-          <div><dt>Subtotal</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
-          <div><dt>Discount ({discount}%)</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
+          <div><dt>{t('Subtotal')}</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
+          <div><dt>{t('Discount ({discount}%)', { discount })}</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
         </>}
-        <div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div>
-        {lbpTotal !== null && <div className="is-lbp"><dt>Total (LBP)</dt><dd>{formatLbp(lbpTotal)}</dd></div>}
+        <div className="is-total"><dt>{t('Total')}</dt><dd>{money(totals.totalCents, currency)}</dd></div>
+        {lbpTotal !== null && <div className="is-lbp"><dt>{t('Total (LBP)')}</dt><dd>{formatLbp(lbpTotal)}</dd></div>}
       </dl>}
       <button type="button" className="mock-pos-primary" aria-busy={busy}
         disabled={!cart.length || busy || (!locked && (blocked || !paymentCheck.ok))} onClick={onComplete}>
-        {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />Completing sale…</>
-          : locked ? 'Try again' : cart.length ? `Complete sale · ${money(totals.totalCents, currency)}` : 'Complete sale'}
+        {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />{t('Completing sale…')}</>
+          : locked ? t('Try again') : cart.length ? t('Complete sale · {money}', { money: money(totals.totalCents, currency) }) : t('Complete sale')}
       </button>
     </>}>
-    {message && <p className={`mock-pos-checkout-message${locked ? ' is-pending' : ''}`} role="alert">{message}</p>}
+    {message && <p className={`mock-pos-checkout-message${locked ? ' is-pending' : ''}`} role="alert">{t(message)}</p>}
     {locked && !busy && <div className="mock-pos-checkout-actions">
-      <button type="button" onClick={onHistory}>Check sales history</button>
-      {!confirmingDiscard && <button type="button" className="is-danger" onClick={() => setConfirmingDiscard(true)}>Cancel this sale</button>}
+      <button type="button" onClick={onHistory}>{t('Check sales history')}</button>
+      {!confirmingDiscard && <button type="button" className="is-danger" onClick={() => setConfirmingDiscard(true)}>{t('Cancel this sale')}</button>}
     </div>}
     {locked && confirmingDiscard && <div className="mock-pos-delete-confirm" role="alert">
-      <p>Only cancel if Sales history does not show this sale. If it went through, selling again would charge the customer twice.</p>
-      <div><button type="button" className="is-danger" onClick={() => { setConfirmingDiscard(false); onDiscard() }}>Cancel this sale</button>
-        <button type="button" onClick={() => setConfirmingDiscard(false)}>Keep it</button></div>
+      <p>{t('Only cancel if Sales history does not show this sale. If it went through, selling again would charge the customer twice.')}</p>
+      <div><button type="button" className="is-danger" onClick={() => { setConfirmingDiscard(false); onDiscard() }}>{t('Cancel this sale')}</button>
+        <button type="button" onClick={() => setConfirmingDiscard(false)}>{t('Keep it')}</button></div>
     </div>}
-    {!cart.length ? <div className="mock-pos-empty"><strong>Your cart is empty</strong><p>Add a product to start a sale.</p></div>
+    {!cart.length ? <div className="mock-pos-empty"><strong>{t('Your cart is empty')}</strong><p>{t('Add a product to start a sale.')}</p></div>
       : <div className="mock-pos-cart-lines">{cart.map(line => {
         const issue = issueByKey.get(line.key)
         return <article key={line.key} className="mock-pos-cart-line">
           <div><strong>{line.productName}</strong><span>{line.colorName} · {line.size} · {money(line.priceCents, currency)}</span></div>
-          <Stepper value={line.quantity} max={line.stock} disabled={frozen} onChange={value => onQuantity(line.key, value)} label={`${line.productName} quantity`} />
+          <Stepper value={line.quantity} max={line.stock} disabled={frozen} onChange={value => onQuantity(line.key, value)} label={t('{productName} quantity', { productName: line.productName })} />
           {issue && <p className="mock-pos-line-issue" role="alert">{lineIssueText(issue, currency)}</p>}
-          <button type="button" className="mock-pos-remove" disabled={frozen} onClick={() => onRemove(line.key)}>Remove</button>
+          <button type="button" className="mock-pos-remove" disabled={frozen} onClick={() => onRemove(line.key)}>{t('Remove')}</button>
         </article>
       })}</div>}
-    {canDiscount && <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
-      {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
+    {canDiscount && <section className="mock-pos-choice-section"><h3>{t('Discount')}</h3><div className="mock-pos-segmented">
+      {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : t('None')}</button>)}
     </div></section>}
-    {cart.length > 0 && <section className="mock-pos-choice-section"><h3>Payment</h3>
-      <div className="mock-pos-segmented" role="group" aria-label="Payment method">
+    {cart.length > 0 && <section className="mock-pos-choice-section"><h3>{t('Payment')}</h3>
+      <div className="mock-pos-segmented" role="group" aria-label={t('Payment method')}>
         {PAYMENT_METHODS.map(item => <button key={item.id} type="button" aria-pressed={payment.method === item.id} disabled={frozen}
-          onClick={() => onPayment({ ...payment, method: item.id })}>{item.label}</button>)}
+          onClick={() => onPayment({ ...payment, method: item.id })}>{t(item.label)}</button>)}
       </div>
       {payment.method === 'DEBT' && <div className="mock-pos-payment-fields">
-        <label htmlFor="pos-customer-name">Customer name</label>
+        <label htmlFor="pos-customer-name">{t('Customer name')}</label>
         <input id="pos-customer-name" autoComplete="off" maxLength={120} value={payment.customerName} disabled={frozen}
           aria-invalid={nameTouched && paymentCheck.field === 'customerName'} aria-describedby="pos-customer-hint"
           onBlur={() => setNameTouched(true)} onChange={event => onPayment({ ...payment, customerName: event.target.value })} />
-        <label htmlFor="pos-customer-phone">Phone (optional)</label>
+        <label htmlFor="pos-customer-phone">{t('Phone (optional)')}</label>
         <input id="pos-customer-phone" type="tel" inputMode="tel" autoComplete="off" maxLength={30} value={payment.customerPhone} disabled={frozen}
           aria-invalid={paymentCheck.field === 'customerPhone'} onChange={event => onPayment({ ...payment, customerPhone: event.target.value })} />
         <p id="pos-customer-hint" className={`mock-pos-note${!paymentCheck.ok && (nameTouched || paymentCheck.field === 'customerPhone') ? ' is-error' : ''}`}
           role={!paymentCheck.ok && nameTouched ? 'alert' : undefined}>
-          {!paymentCheck.ok && (nameTouched || paymentCheck.field === 'customerPhone') ? paymentCheck.message : 'The debt stays open until you mark it as paid in Sales history.'}</p>
+          {!paymentCheck.ok && (nameTouched || paymentCheck.field === 'customerPhone') ? t(paymentCheck.message) : t('The debt stays open until you mark it as paid in Sales history.')}</p>
       </div>}
       {payment.method === 'CASH' && <CashCalculator key={`${totals.totalCents}|${rate}`} totalCents={totals.totalCents} currency={currency} rate={rate} disabled={frozen} />}
     </section>}
-    {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
+    {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>{t('Clear cart')}</button>}
     {cart.length > 0 && !frozen && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
-      <p>Remove {cart.reduce((sum, line) => sum + line.quantity, 0) === 1 ? 'the item' : 'all items'} from the cart?</p>
-      <div><button type="button" className="is-danger" onClick={onClear}>Clear cart</button>
-        <button type="button" onClick={() => setConfirmingClear(false)}>Keep cart</button></div>
+      <p>{t('Remove')} {cart.reduce((sum, line) => sum + line.quantity, 0) === 1 ? t('the item') : t('all items')} {t('from the cart?')}</p>
+      <div><button type="button" className="is-danger" onClick={onClear}>{t('Clear cart')}</button>
+        <button type="button" onClick={() => setConfirmingClear(false)}>{t('Keep cart')}</button></div>
     </div>}
   </MockSalesSheet>
 }
 
 export function SalesHistorySheet({ state, role, currency = 'USD', onRetry, onClose }) {
-  return <MockSalesSheet title="Sales history" subtitle="Today" onClose={onClose}>
-    {state.kind === 'loading' && <div className="mock-pos-empty" role="status"><span className="mock-pos-spinner" /><p>Loading today's sales…</p></div>}
-    {state.kind === 'error' && <div className="mock-pos-empty" role="alert"><strong>Sales could not load</strong><p>{state.message}</p>
-      <button type="button" onClick={onRetry}>Try again</button></div>}
-    {state.kind === 'ready' && !state.sales.length && <div className="mock-pos-empty"><strong>No sales yet today</strong><p>Completed sales show up here.</p></div>}
+  const { t, locale } = useI18n()
+  return <MockSalesSheet title={t('Sales history')} subtitle={t('Today')} onClose={onClose}>
+    {state.kind === 'loading' && <div className="mock-pos-empty" role="status"><span className="mock-pos-spinner" /><p>{t('Loading today\'s sales…')}</p></div>}
+    {state.kind === 'error' && <div className="mock-pos-empty" role="alert"><strong>{t('Sales could not load')}</strong><p>{t(state.message)}</p>
+      <button type="button" onClick={onRetry}>{t('Try again')}</button></div>}
+    {state.kind === 'ready' && !state.sales.length && <div className="mock-pos-empty"><strong>{t('No sales yet today')}</strong><p>{t('Completed sales show up here.')}</p></div>}
     {state.kind === 'ready' && state.sales.length > 0 && <div className="mock-pos-receipts">{state.sales.map(sale => <article key={sale.id}>
-      <div><strong>{receiptLabel(sale)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? ' · Voided' : ''}</span></div>
+      <div><strong>{receiptLabel(sale)}</strong><span>{sale.totalUnits} {sale.totalUnits === 1 ? 'item' : 'items'}{sale.status === 'VOIDED' ? t(' · Voided') : ''}</span></div>
       <div>{role === 'OWNER' && <strong>{formatMoneyCompact(sale.totalAmount, sale.currency || currency)}</strong>}
-        <time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
+        <time dateTime={sale.createdAt}>{new Date(sale.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</time></div>
     </article>)}</div>}
-    {state.kind === 'ready' && state.truncated && <p className="mock-pos-note">Showing the latest 500 sales of today.</p>}
+    {state.kind === 'ready' && state.truncated && <p className="mock-pos-note">{t('Showing the latest 500 sales of today.')}</p>}
   </MockSalesSheet>
 }

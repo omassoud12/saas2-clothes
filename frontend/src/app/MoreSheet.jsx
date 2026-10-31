@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { getMobileNavigation, isNavigationItemActive, isPlainLeftClick } from './app-navigation.js'
 import { NavigationIcon } from './AppSidebar.jsx'
+import { useI18n } from '../i18n/I18nContext.js'
+import { LanguageSwitch } from '../i18n/LanguageSwitch.jsx'
 
 // Everything that is not in the bottom bar. A native modal dialog keeps the page behind it inert and traps focus.
 export function MoreSheet({ role, identity, pathname, loggingOut, onNavigate, onLogout, onClose }) {
+  const { t } = useI18n()
   const dialog = useRef(null)
   const { more } = getMobileNavigation(role)
 
@@ -37,8 +40,8 @@ export function MoreSheet({ role, identity, pathname, loggingOut, onNavigate, on
     >
       <div className="more-sheet-panel">
         <header className="more-sheet-header">
-          <h2 id="more-sheet-title">More</h2>
-          <button type="button" className="more-sheet-close" aria-label="Close more" onClick={onClose}>
+          <h2 id="more-sheet-title">{t('More')}</h2>
+          <button type="button" className="more-sheet-close" aria-label={t('Close more')} onClick={onClose}>
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
         </header>
@@ -49,16 +52,20 @@ export function MoreSheet({ role, identity, pathname, loggingOut, onNavigate, on
               <li key={item.key}>
                 <a className={active ? 'is-active' : undefined} href={item.path} aria-current={active ? 'page' : undefined} onClick={(event) => follow(event, item.path)}>
                   <NavigationIcon name={item.icon} />
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </a>
               </li>
             )
           })}
         </ul>
+        <section className="more-sheet-language" aria-labelledby="more-sheet-language-title">
+          <h3 id="more-sheet-language-title">{t('Language')}</h3>
+          <LanguageSwitch />
+        </section>
         <footer className="more-sheet-footer">
           <p><strong>{identity.storeName}</strong><span>{identity.userName} · {identity.role}</span></p>
           <button type="button" className="more-sheet-logout" disabled={loggingOut} onClick={onLogout}>
-            {loggingOut ? 'Signing out...' : 'Logout'}
+            {loggingOut ? t('Signing out...') : t('Logout')}
           </button>
         </footer>
       </div>

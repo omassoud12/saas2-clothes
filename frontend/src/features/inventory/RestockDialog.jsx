@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { createRestockWorkflow, postRestock } from './restock-flow.js'
 import { supabase } from '../../lib/supabase.js'
+import { useI18n } from '../../i18n/I18nContext.js'
 
 const blankDraft = { quantity: '', unitCost: '', note: '' }
 
 export function RestockDialog({ product, variant, onClose, onSuccess, onRefresh }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState(blankDraft)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -83,17 +85,17 @@ export function RestockDialog({ product, variant, onClose, onSuccess, onRefresh 
   const conflict = feedback?.code === 'RESTOCK_IDEMPOTENCY_CONFLICT'
   const locked = busy || (uncertain && !editingUncertain) || conflict || stale
   return <div className="restock-overlay"><section ref={dialog} className="restock-dialog" role="dialog" aria-modal="true" aria-labelledby="restock-title" aria-describedby="restock-context">
-    <div className="product-section-heading"><div><span className="eyebrow">Inventory</span><h2 id="restock-title">Restock variant</h2></div><button type="button" className="secondary-action" disabled={busy || uncertain} onClick={onClose} aria-label="Close Restock form">Close</button></div>
+    <div className="product-section-heading"><div><span className="eyebrow">{t('Inventory')}</span><h2 id="restock-title">{t('Restock variant')}</h2></div><button type="button" className="secondary-action" disabled={busy || uncertain} onClick={onClose} aria-label={t('Close Restock form')}>{t('Close')}</button></div>
     <p id="restock-context" className="product-muted">{product.name} · {variant.sku}{[variant.color, variant.size].filter(Boolean).length ? ` · ${[variant.color, variant.size].filter(Boolean).join(' / ')}` : ''}</p>
-    <p>Current stock: <strong>{variant.currentStock}</strong> <small>(read-only)</small></p>
-    {feedback && <p className="product-feedback error-message" role="alert">{feedback.message}</p>}
-    {uncertain && <p className="product-muted">Starting a different Restock could add stock again if the first request succeeded. Retry the same details first when possible.</p>}
+    <p>{t('Current stock:')} <strong>{variant.currentStock}</strong> <small>{t('(read-only)')}</small></p>
+    {feedback && <p className="product-feedback error-message" role="alert">{t(feedback.message)}</p>}
+    {uncertain && <p className="product-muted">{t('Starting a different Restock could add stock again if the first request succeeded. Retry the same details first when possible.')}</p>}
     <form className="product-form" onSubmit={submit} noValidate>
-      <div className="product-form-grid"><div><label htmlFor="restock-quantity">Quantity to add</label><input id="restock-quantity" autoFocus required inputMode="numeric" pattern="[0-9]*" value={draft.quantity} disabled={locked} aria-invalid={feedback?.field === 'quantity'} aria-describedby={feedback?.field === 'quantity' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /><small>Whole units, 1–1,000,000.</small></div>
-        <div><label htmlFor="restock-cost">Purchase unit cost</label><input id="restock-cost" required inputMode="decimal" value={draft.unitCost} disabled={locked} aria-invalid={feedback?.field === 'unitCost'} aria-describedby={feedback?.field === 'unitCost' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, unitCost: event.target.value })} /><small>Greater than zero; up to four decimals.</small></div></div>
-      <div><label htmlFor="restock-note">Note (optional)</label><textarea id="restock-note" rows="3" value={draft.note} disabled={locked} aria-invalid={feedback?.field === 'note'} aria-describedby={feedback?.field === 'note' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, note: event.target.value })} /><small>Up to 500 characters.</small></div>
-      {feedback?.field && <span id="restock-error" className="sr-only">{feedback.message}</span>}
-      <div className="product-actions"><button type="submit" disabled={locked}>{busy ? 'Saving Restock...' : 'Confirm Restock'}</button>{uncertain && <><button type="button" disabled={busy} onClick={retry}>Retry same Restock</button>{!editingUncertain && <button type="button" className="secondary-action" disabled={busy} onClick={() => { setEditingUncertain(true); setFeedback(null) }}>Edit details</button>}</>}{conflict && <button type="button" className="secondary-action" onClick={() => { workflow.reset(); setFeedback(null) }}>Start new Restock</button>}<button type="button" className="secondary-action" disabled={busy || uncertain} onClick={onClose}>Cancel</button></div>
+      <div className="product-form-grid"><div><label htmlFor="restock-quantity">{t('Quantity to add')}</label><input id="restock-quantity" autoFocus required inputMode="numeric" pattern="[0-9]*" value={draft.quantity} disabled={locked} aria-invalid={feedback?.field === 'quantity'} aria-describedby={feedback?.field === 'quantity' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /><small>{t('Whole units, 1–1,000,000.')}</small></div>
+        <div><label htmlFor="restock-cost">{t('Purchase unit cost')}</label><input id="restock-cost" required inputMode="decimal" value={draft.unitCost} disabled={locked} aria-invalid={feedback?.field === 'unitCost'} aria-describedby={feedback?.field === 'unitCost' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, unitCost: event.target.value })} /><small>{t('Greater than zero; up to four decimals.')}</small></div></div>
+      <div><label htmlFor="restock-note">{t('Note (optional)')}</label><textarea id="restock-note" rows="3" value={draft.note} disabled={locked} aria-invalid={feedback?.field === 'note'} aria-describedby={feedback?.field === 'note' ? 'restock-error' : undefined} onChange={(event) => setDraft({ ...draft, note: event.target.value })} /><small>{t('Up to 500 characters.')}</small></div>
+      {feedback?.field && <span id="restock-error" className="sr-only">{t(feedback.message)}</span>}
+      <div className="product-actions"><button type="submit" disabled={locked}>{busy ? t('Saving Restock...') : t('Confirm Restock')}</button>{uncertain && <><button type="button" disabled={busy} onClick={retry}>{t('Retry same Restock')}</button>{!editingUncertain && <button type="button" className="secondary-action" disabled={busy} onClick={() => { setEditingUncertain(true); setFeedback(null) }}>{t('Edit details')}</button>}</>}{conflict && <button type="button" className="secondary-action" onClick={() => { workflow.reset(); setFeedback(null) }}>{t('Start new Restock')}</button>}<button type="button" className="secondary-action" disabled={busy || uncertain} onClick={onClose}>{t('Cancel')}</button></div>
     </form>
   </section></div>
 }

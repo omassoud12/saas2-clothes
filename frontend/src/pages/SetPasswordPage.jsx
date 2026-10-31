@@ -4,8 +4,10 @@ import { AuthAction, AuthLayout, AuthLoading, FormMessage, PasswordField } from 
 import { supabase } from '../lib/supabase.js'
 import { LogoutAction } from '../components/auth/LogoutAction.jsx'
 import { useDirtyState } from '../app/dirty-state.js'
+import { useI18n } from '../i18n/I18nContext.js'
 
 export function SetPasswordPage() {
+  const { t } = useI18n()
   const sessionCheckPromise = useRef(null)
   const redirectTimer = useRef(null)
   const submissionLock = useRef(false)
@@ -26,18 +28,18 @@ export function SetPasswordPage() {
     submissionLock.current = true; setSubmitting(true); setMessage('')
     const result = await updateInvitedUserPassword({ supabase, storage: window.sessionStorage, newPassword, confirmPassword })
     if (!result.ok) { setMessage(result.message); submissionLock.current = false; setSubmitting(false); return }
-    clearDirty(); setNewPassword(''); setConfirmPassword(''); setPageState('success'); setMessage('Your password is ready. Redirecting you to sign in…')
+    clearDirty(); setNewPassword(''); setConfirmPassword(''); setPageState('success'); setMessage(t('Your password is ready. Redirecting you to sign in…'))
     redirectTimer.current = window.setTimeout(() => window.location.replace(result.redirectTo), 1200)
   }
   const title = pageState === 'success' ? 'Password updated' : pageState === 'error' ? 'Password setup unavailable' : 'Choose your password'
-  return <AuthLayout eyebrow="Account security" title={title} description="Invitation sessions are verified before a password can be changed.">
-    {pageState === 'loading' && <AuthLoading label="Preparing secure password setup" />}
-    {pageState === 'error' && <div className="auth-status-stack"><FormMessage>{message}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/login">Return to sign in</a></div>}
-    {pageState === 'success' && <div className="auth-confirmation-state"><span className="auth-state-mark auth-state-mark--success" aria-hidden="true">✓</span><FormMessage kind="success">{message}</FormMessage></div>}
+  return <AuthLayout eyebrow={t('Account security')} title={t(title)} description={t('Invitation sessions are verified before a password can be changed.')}>
+    {pageState === 'loading' && <AuthLoading label={t('Preparing secure password setup')} />}
+    {pageState === 'error' && <div className="auth-status-stack"><FormMessage>{t(message)}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/login">{t('Return to sign in')}</a></div>}
+    {pageState === 'success' && <div className="auth-confirmation-state"><span className="auth-state-mark auth-state-mark--success" aria-hidden="true">✓</span><FormMessage kind="success">{t(message)}</FormMessage></div>}
     {pageState === 'ready' && <form className="auth-form" onSubmit={handleSubmit} noValidate>
-      <PasswordField id="new-password" label="New password" hint={`Use at least ${PASSWORD_MIN_LENGTH} characters.`} autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={submitting} required />
-      <PasswordField id="confirm-password" label="Confirm password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={submitting} required />
-      <FormMessage>{message}</FormMessage><AuthAction type="submit" disabled={submitting}>{submitting ? 'Updating…' : 'Set password'}</AuthAction>
+      <PasswordField id="new-password" label={t('New password')} hint={t('Use at least {PASSWORD_MIN_LENGTH} characters.', { PASSWORD_MIN_LENGTH })} autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={submitting} required />
+      <PasswordField id="confirm-password" label={t('Confirm password')} autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={submitting} required />
+      <FormMessage>{t(message)}</FormMessage><AuthAction type="submit" disabled={submitting}>{submitting ? t('Updating…') : t('Set password')}</AuthAction>
     </form>}
     {pageState === 'ready' && <LogoutAction disabled={submitting} />}
   </AuthLayout>
