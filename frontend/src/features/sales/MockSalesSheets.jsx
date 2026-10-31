@@ -79,10 +79,20 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
   const frozen = busy || locked
   const issueByKey = new Map(issues.map(issue => [issue.key, issue]))
   return <MockSalesSheet title="Cart" subtitle={`${cart.reduce((sum, line) => sum + line.quantity, 0)} items`} onClose={onClose}
-    className="mock-pos-cart-sheet" footer={<button type="button" className="mock-pos-primary" aria-busy={busy}
-      disabled={!cart.length || busy || (!locked && blocked)} onClick={onComplete}>
-      {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />Completing sale…</> : locked ? 'Try again' : 'Complete sale'}
-    </button>}>
+    className="mock-pos-cart-sheet" footer={<>
+      {cart.length > 0 && <dl className="mock-pos-totals">
+        {discount > 0 && totals.discountCents > 0 && <>
+          <div><dt>Subtotal</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
+          <div><dt>Discount ({discount}%)</dt><dd>−{money(totals.discountCents, currency)}</dd></div>
+        </>}
+        <div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div>
+      </dl>}
+      <button type="button" className="mock-pos-primary" aria-busy={busy}
+        disabled={!cart.length || busy || (!locked && blocked)} onClick={onComplete}>
+        {busy ? <><span className="mock-pos-spinner is-inline" aria-hidden="true" />Completing sale…</>
+          : locked ? 'Try again' : cart.length ? `Complete sale · ${money(totals.totalCents, currency)}` : 'Complete sale'}
+      </button>
+    </>}>
     {message && <p className={`mock-pos-checkout-message${locked ? ' is-pending' : ''}`} role="alert">{message}</p>}
     {locked && !busy && <div className="mock-pos-checkout-actions">
       <button type="button" onClick={onHistory}>Check sales history</button>
@@ -106,8 +116,6 @@ export function CartSheet({ cart, currency = 'USD', discount, canDiscount, onDis
     {canDiscount && <section className="mock-pos-choice-section"><h3>Discount</h3><div className="mock-pos-segmented">
       {discountOptions.map(value => <button key={value} type="button" aria-pressed={discount === value} disabled={frozen} onClick={() => onDiscount(value)}>{value ? `${value}%` : 'None'}</button>)}
     </div></section>}
-    <dl className="mock-pos-totals"><div><dt>Subtotal</dt><dd>{money(totals.subtotalCents, currency)}</dd></div>
-      <div><dt>Discount</dt><dd>−{money(totals.discountCents, currency)}</dd></div><div className="is-total"><dt>Total</dt><dd>{money(totals.totalCents, currency)}</dd></div></dl>
     {cart.length > 0 && !frozen && !confirmingClear && <button type="button" className="mock-pos-danger-link" onClick={() => setConfirmingClear(true)}>Clear cart</button>}
     {cart.length > 0 && !frozen && confirmingClear && <div className="mock-pos-delete-confirm" role="alert">
       <p>Remove all {cart.reduce((sum, line) => sum + line.quantity, 0)} items from the cart?</p>
