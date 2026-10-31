@@ -36,6 +36,10 @@ describe('design tokens', () => {
       const found = [...read(file).matchAll(HEX)].map((match) => match[0])
       assert.deepEqual(found, [])
     })
+
+    test(`${file}: no raw rgb()/rgba() colors (use tokens or color-mix)`, () => {
+      assert.deepEqual([...read(file).matchAll(/rgba?\(\s*\d/g)].map((match) => match[0]), [])
+    })
   }
 
   test('every var(--name) in a migrated stylesheet is defined somewhere', () => {

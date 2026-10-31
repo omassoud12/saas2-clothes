@@ -6,7 +6,7 @@
   Contrast (WCAG AA, normal text needs 4.5:1):
     text #232224 on background #faf5f3 14.6 · on surface #fffdfc 15.6
     muted #6f6461 on background 5.3 · on surface 5.6 · on soft #f3e3df 4.6
-    primary-contrast #fffdfc on primary #2c2c2e 13.7
+    primary-contrast #fffdfc on primary #2c2c2e 13.7 · on-primary-muted #cbbab6 on primary 7.5
     danger #9a3e35 on surface 6.7 · on danger-soft #f3e3df 5.4
     success #1f6b3a on surface 6.4 · warning #7a4b00 on warning-soft #fdecc8 6.4 · info #1f4e79 on info-soft #e3eef8 7.4
 */
@@ -25,6 +25,7 @@
   --color-primary-strong: #1a1a1c;
   --color-primary-soft: #f3e3df;
   --color-primary-contrast: #fffdfc;
+  --color-on-primary-muted: #cbbab6;
   --color-success: #1f6b3a;
   --color-success-soft: #e4f1e6;
   --color-warning: #7a4b00;

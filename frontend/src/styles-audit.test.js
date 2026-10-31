@@ -10,8 +10,13 @@ const MIN_TEXT_PX = 12
 const MIN_FIELD_PX = 16
 const MIN_TOUCH_PX = 44
 
+// Sizes written as var(--font-size-xs), var(--touch-target)... are read from styles/tokens.css.
+const tokenSizes = new Map([...readFileSync(fileURLToPath(new URL('./styles/tokens.css', import.meta.url)), 'utf8').matchAll(/(--[\w-]+):\s*(\d*\.?\d+px)\s*;/g)].map((match) => [match[1], match[2]]))
+
 function px(value) {
-  const match = /^(\d*\.?\d+)(px|rem)$/.exec(value.trim())
+  const token = /^var\((--[\w-]+)\)$/.exec(value.trim())
+  const text = token ? tokenSizes.get(token[1]) ?? '' : value
+  const match = /^(\d*\.?\d+)(px|rem)$/.exec(text.trim())
   if (!match) return null
   return Number(match[1]) * (match[2] === 'rem' ? 16 : 1)
 }
