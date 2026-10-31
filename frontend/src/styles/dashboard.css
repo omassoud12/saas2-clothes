@@ -1,5 +1,5 @@
 /* dashboard styles (split from the former index.css) */
-.dashboard-refresh { margin: 0; }
+.dashboard-refresh { min-height: var(--touch-target); margin: 0; }
 .dashboard-finance, .dashboard-actions, .dashboard-panel {
   min-width: 0;
   border: 1px solid var(--color-border);
@@ -122,7 +122,7 @@
   .dashboard-actions > div:last-child, .dashboard-page.is-warehouse .dashboard-actions > div:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .dashboard-refresh { width: 100%; min-height: var(--touch-target); }
+  .dashboard-refresh { width: 100%; }
   .dashboard-finance, .dashboard-actions, .dashboard-panel { border-radius: var(--radius-lg); }
   .dashboard-kpis { grid-template-columns: 1fr; }
   .dashboard-kpis > div.is-primary { order: -1; }
