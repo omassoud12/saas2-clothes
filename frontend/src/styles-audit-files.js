@@ -9,7 +9,7 @@ export const SIZE_AUDITED = Object.freeze([
   'features/products/product-workspace.css',
   'features/inventory/entry-polish.css',
   'features/inventory/receiving.css',
-  { file: 'index.css', only: /^\.category-/ },
+  'styles/categories.css',
 ])
 
 // tokens-audit.test.js (no hardcoded hex colors outside styles/tokens.css).
