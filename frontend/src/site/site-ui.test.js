@@ -59,6 +59,30 @@ describe('public site', () => {
     assert.ok(render('/contact').includes('Talk to us'))
   })
 
+  test('the hero has the silk canvas, the sewing scene with the receipt, and the stock card', () => {
+    const html = render('/')
+    const hero = html.slice(html.indexOf('<section class="hero3d">'), html.indexOf('</section>'))
+    assert.ok(hero.includes('<div class="hero3d__canvas" aria-hidden="true"></div>'), 'the WebGL canvas is added on the client')
+    assert.ok(hero.includes('<div class="hero3d__fade" aria-hidden="true"></div>'))
+    assert.ok(hero.includes('<div class="stitch" aria-hidden="true">'))
+    for (const text of ['SaaS2', '#1024', 'Linen shirt · M', '$25', 'Midi dress · S', '$42', 'Total', '$67', '≈ 5,996,500 LBP']) assert.ok(hero.includes(`>${text}</text>`), text)
+    assert.ok(hero.includes('<span class="glass__label">Stock updated</span><span class="glass__value">Linen shirt · M · 7 left</span>'))
+    assert.ok(hero.includes('<span class="is-on">M</span>'))
+    assert.ok(hero.indexOf('hero3d__canvas') < hero.indexOf('hero3d__fade') && hero.indexOf('stitch') < hero.indexOf('hero3d__content'), 'silk, fade, sewing scene, then the text on top')
+  })
+
+  test('the hero animations keep the reference behavior: capped pixel ratio, paused off screen, reduced motion', () => {
+    const silk = readFileSync(new URL('./components/HeroSilk.jsx', import.meta.url), 'utf8')
+    const stitch = readFileSync(new URL('./components/HeroStitch.jsx', import.meta.url), 'utf8')
+    assert.match(silk, /Math\.min\(window\.devicePixelRatio \|\| 1, 1\.75\)/u)
+    assert.match(silk, /IntersectionObserver/u)
+    assert.match(silk, /if \(reduceMotion\) \{\s+draw\(8\)/u, 'reduced motion draws a single frame')
+    assert.doesNotMatch(silk, /three/u)
+    assert.match(stitch, /if \(reduceMotion\) \{\s+render\(3\.9\)/u, 'reduced motion shows the finished scene')
+    assert.equal((stitch.match(/^ {2}'M /gmu) ?? []).length, 4, 'four seams')
+    assert.equal((stitch.match(/300 128',$/gmu) ?? []).length, 4, 'every seam ends at the receipt')
+  })
+
   test('every site style is scoped under .site so the app is untouched', () => {
     const rules = siteCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
     const selectors = [...rules.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((match) => match[1].replace(/@media[^{]+\{/g, '').split(','))

@@ -1,3 +1,5 @@
+import { HeroSilk } from '../components/HeroSilk.jsx'
+import { HeroStitch } from '../components/HeroStitch.jsx'
 import { SiteLink } from '../components/SiteLink.jsx'
 import { contact } from '../data.js'
 
@@ -5,6 +7,9 @@ export function Home() {
   return (
     <>
       <section className="hero3d">
+        <HeroSilk />
+        <div className="hero3d__fade" aria-hidden="true" />
+        <HeroStitch />
         <div className="container hero3d__content">
           <h1 className="hero__title">Your clothing shop, on your phone.</h1>
           <p className="lead" style={{ maxWidth: '40ch' }}>Sell in dollars or lira, and track every size.</p>
