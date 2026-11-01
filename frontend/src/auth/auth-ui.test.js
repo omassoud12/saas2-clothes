@@ -6,7 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
-import { FRIENDLY_RECOVERY_SENT, friendlyAuthMessage, isLikelyEmail, validateLogin } from './auth-messages.js'
+import { fieldErrorFor, FRIENDLY_RECOVERY_SENT, friendlyAuthMessage, isLikelyEmail, validateLogin } from './auth-messages.js'
+import { OWNER_SIGNUP_MESSAGE } from './owner-flow.js'
 import { RECOVERY_REQUEST_MESSAGE } from './auth-flow.js'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -14,6 +15,7 @@ const siteCss = readFileSync(new URL('../site/site.css', import.meta.url), 'utf8
 let vite
 let shell
 let LoginPage
+let SignupPage
 
 before(async () => {
   const authFixture = { name: 'auth-ui-fixture', enforce: 'pre',
@@ -24,6 +26,7 @@ before(async () => {
     server: { middlewareMode: true, hmr: false, watch: null } })
   shell = await vite.ssrLoadModule('/src/components/auth/AuthShell.jsx')
   LoginPage = (await vite.ssrLoadModule('/src/pages/LoginPage.jsx')).LoginPage
+  SignupPage = (await vite.ssrLoadModule('/src/pages/SignupPage.jsx')).SignupPage
 })
 after(async () => { await vite?.close() })
 
@@ -33,7 +36,7 @@ describe('words shop owners see', () => {
   test('a wrong password, no connection and missing setup read simply', () => {
     assert.equal(friendlyAuthMessage({ ok: false, code: 'LOGIN_REJECTED', message: 'Email or password was not accepted.' }), 'Wrong email or password. Check them and try again.')
     assert.equal(friendlyAuthMessage({ ok: false, code: 'AUTH_SERVICE_UNAVAILABLE' }), 'We could not connect. Check your internet and try again.')
-    assert.equal(friendlyAuthMessage({ ok: false, code: 'SUPABASE_NOT_CONFIGURED', message: 'Authentication is not configured for this application.' }), 'Logging in is not available right now. Please contact us.')
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'SUPABASE_NOT_CONFIGURED', message: 'Authentication is not configured for this application.' }), 'This is not available right now. Please contact us.')
     assert.equal(friendlyAuthMessage({ ok: true, message: RECOVERY_REQUEST_MESSAGE }), FRIENDLY_RECOVERY_SENT)
   })
 
@@ -47,7 +50,7 @@ describe('words shop owners see', () => {
   })
 
   test('no screen word mentions tenants, workspaces or authentication', () => {
-    const code = ['../components/auth/AuthShell.jsx', '../pages/LoginPage.jsx'].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n')
+    const code = ['../components/auth/AuthShell.jsx', '../pages/LoginPage.jsx', '../pages/SignupPage.jsx'].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n')
     // Only what reaches the screen: quoted text and the text between tags.
     const screens = [...code.matchAll(/="([^"]+)"|>([^<>{}]+)<|'([^'\n]+)'/gu)].map((match) => match[1] ?? match[2] ?? match[3]).join('\n')
     const messages = readFileSync(new URL('./auth-messages.js', import.meta.url), 'utf8').match(/^\s+[A-Z_]+: '[^']+'|^export const FRIENDLY_RECOVERY_SENT = '[^']+'|^const GENERIC = '[^']+'/gmu).join('\n')
@@ -110,6 +113,43 @@ describe('sign-in screens', () => {
       assert.ok(source.includes(kept), `the sign-in logic is unchanged: ${kept}`)
     }
     assert.ok(source.includes('autoComplete="current-password"') && source.includes('inputMode="email"') && source.includes('noValidate'))
+  })
+
+  test('the sign up page keeps the real fields (email, password, the password again) in the new frame', () => {
+    const page = html(SignupPage, {})
+    assert.ok(page.includes('<h1 class="auth-card__title">Create your shop account</h1>'))
+    assert.ok(page.includes('<p class="auth-card__subtitle">Set up in a few minutes. No card needed.</p>'))
+    for (const [id, name, autoComplete] of [['signup-email', 'email', 'email'], ['signup-password', 'password', 'new-password'], ['signup-confirm-password', 'confirmPassword', 'new-password']]) {
+      const input = page.match(new RegExp(`<input id="${id}"[^>]*>`, 'u'))?.[0] ?? ''
+      assert.ok(input.includes(`name="${name}"`) && input.includes(`autoComplete="${autoComplete}"`), id)
+    }
+    assert.ok(page.includes('inputMode="email"'))
+    assert.ok(page.includes('<p class="field__hint" id="signup-password-hint">At least 8 characters.</p>'))
+    assert.equal((page.match(/class="field__toggle"/gu) ?? []).length, 2, 'both passwords can be shown')
+    assert.ok(page.includes('<button type="submit" class="btn btn--primary btn--block" aria-busy="false">Create account</button>'))
+    assert.ok(page.includes('Already have an account? <a href="/login">Log in</a>'))
+    const source = readFileSync(new URL('../pages/SignupPage.jsx', import.meta.url), 'utf8')
+    assert.ok(source.includes('requestOwnerSignup({ supabase, ...form, origin: window.location.origin })') && source.includes('submissionGuard.run'), 'the sign up logic is unchanged')
+  })
+
+  test('sign up problems show under the field they belong to', () => {
+    const at = (code, values) => fieldErrorFor({ ok: false, code, message: 'x' }, values)
+    assert.deepEqual(at('INVALID_SIGNUP_EMAIL'), { field: 'email', text: 'Enter a valid email, like name@shop.com.' })
+    assert.deepEqual(at('SIGNUP_PASSWORD_REQUIRED', { password: '' }), { field: 'password', text: 'Choose a password.' })
+    assert.deepEqual(at('SIGNUP_PASSWORD_REQUIRED', { password: 'abcdefgh' }), { field: 'confirmPassword', text: 'Type your password again.' })
+    assert.deepEqual(at('SIGNUP_PASSWORD_MISMATCH'), { field: 'confirmPassword', text: 'The two passwords are not the same.' })
+    assert.deepEqual(at('SIGNUP_PASSWORD_TOO_SHORT'), { field: 'password', text: 'Use at least 8 characters.' })
+    assert.equal(at('OWNER_SIGNUP_FAILED'), null, 'a failure from the server shows above the button')
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'OWNER_SIGNUP_FAILED' }), 'We could not create your account. Try again, or log in if you already have one.')
+    assert.equal(friendlyAuthMessage({ ok: true, message: OWNER_SIGNUP_MESSAGE }), 'We sent you an email. Open the link in it to confirm your address, then set up your shop.')
+    assert.equal(fieldErrorFor({ ok: true }), null)
+  })
+
+  test('a finished step shows a green check, the message and the way back', () => {
+    const done = html(shell.AuthDone, { message: 'We sent you an email.' }, createElement(shell.AuthLinkButton, { href: '/login' }, 'Back to log in'))
+    assert.ok(done.startsWith('<div class="success auth-done"><span class="success__icon"><svg'))
+    assert.ok(done.includes('<p class="auth-notice auth-notice--success" role="status">We sent you an email.</p>'))
+    assert.ok(done.includes('<a class="btn btn--outline btn--block" href="/login">Back to log in</a>'))
   })
 
   test('inputs are 16px and every tap target is at least 44px', () => {

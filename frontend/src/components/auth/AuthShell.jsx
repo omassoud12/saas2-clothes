@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HeroSilk } from '../../site/components/HeroSilk.jsx'
+import { CheckIcon } from '../../site/components/Icons.jsx'
 import { loadSiteFonts } from '../../site/site-router.js'
 import { useSeo } from '../../site/useSeo.js'
 
@@ -111,6 +112,22 @@ export function AuthSubmit({ busy, busyLabel, children, disabled, type = 'submit
 export function AuthNotice({ kind = 'error', children }) {
   if (!children) return null
   return <p className={`auth-notice auth-notice--${kind}`} role={kind === 'error' ? 'alert' : 'status'}>{children}</p>
+}
+
+// A finished step (email sent, password saved): a green check, the message, then any actions.
+export function AuthDone({ message, children }) {
+  return (
+    <div className="success auth-done">
+      <span className="success__icon"><CheckIcon /></span>
+      <AuthNotice kind="success">{message}</AuthNotice>
+      {children}
+    </div>
+  )
+}
+
+// A full-width secondary action that leaves the page (Back to log in...).
+export function AuthLinkButton({ href, children }) {
+  return <a className="btn btn--outline btn--block" href={href}>{children}</a>
 }
 
 export function AuthWaiting({ label }) {
