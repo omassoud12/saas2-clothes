@@ -83,6 +83,34 @@ describe('public site', () => {
     assert.equal((stitch.match(/300 128',$/gmu) ?? []).length, 4, 'every seam ends at the receipt')
   })
 
+  test('the product section has three step cards with their app pictures under one zipper', () => {
+    const html = render('/')
+    const product = html.slice(html.indexOf('id="product"'), html.indexOf('id="business"'))
+    assert.equal((product.match(/<li class="step-card">/gu) ?? []).length, 3)
+    for (const [i, title] of ['Get your account', 'Add your products', 'Start selling'].entries()) {
+      assert.ok(product.includes(`<span class="step-card__num">Step ${i + 1}</span><span class="step-card__of">of 3</span></div><h3 class="step-card__title">${title}</h3>`), title)
+    }
+    for (const text of ['<strong>Owner</strong><span>Full access</span>', '<strong>Staff</strong><span>Sells, never sees costs</span>', '<strong>Linen shirt</strong><span>$25 a piece</span>',
+      '<span>S<em>4</em></span><span class="is-on">M<em>12</em></span><span>L<em>6</em></span><span>XL<em>2</em></span>', '<strong>Sale completed · $67</strong>', 'Linen shirt · M · 11 left']) {
+      assert.ok(product.includes(text), text)
+    }
+    const cover = product.slice(product.indexOf('<svg class="zip-panel__cover"'))
+    assert.ok(cover.includes('aria-hidden="true"'))
+    assert.ok(cover.includes('>Scroll to open</text>'))
+    for (const part of ['zp-shadow', 'zp-tape', 'zp-stitch', 'zp-lip', 'zp-teeth', 'zp-shine', 'zp-fold', 'zp-fold-light']) {
+      assert.equal((cover.match(new RegExp(`class="${part}"`, 'gu')) ?? []).length >= 2, true, `${part} on both edges`)
+    }
+    assert.ok(cover.includes('data-half="-1"') && cover.includes('data-weave="1"') && cover.includes('id="s2-weave"') && cover.includes('id="s2-zip-blur"'))
+  })
+
+  test('the zipper keeps the reference motion: pull at 85% of the screen, ripple every frame on screen, open with reduced motion', () => {
+    const zipper = readFileSync(new URL('./components/StepStack.jsx', import.meta.url), 'utf8')
+    assert.match(zipper, /window\.innerHeight \* 0\.85 - box\.top/u)
+    assert.match(zipper, /IntersectionObserver/u)
+    assert.match(zipper, /if \(!visible\) return/u)
+    assert.match(zipper, /if \(reduceMotion\) \{\s+draw\(wrap\.offsetHeight \* 4, 0\)/u, 'fully open, no ripple')
+  })
+
   test('every site style is scoped under .site so the app is untouched', () => {
     const rules = siteCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
     const selectors = [...rules.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((match) => match[1].replace(/@media[^{]+\{/g, '').split(','))

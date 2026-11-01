@@ -1,6 +1,7 @@
 import { HeroSilk } from '../components/HeroSilk.jsx'
 import { HeroStitch } from '../components/HeroStitch.jsx'
 import { SiteLink } from '../components/SiteLink.jsx'
+import { StepStack } from '../components/StepStack.jsx'
 import { contact } from '../data.js'
 
 export function Home() {
@@ -27,6 +28,7 @@ export function Home() {
             <p className="lead" style={{ fontSize: 16 }}>Rent an account, open it in your browser, and start selling.</p>
             <p className="product__price">From <strong>{contact.price}</strong> a month · every feature included</p>
           </div>
+          <StepStack />
         </div>
       </section>
 
