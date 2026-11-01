@@ -75,11 +75,14 @@ Resolve role + accountId
 
 Frontend foundation:
 
-- The public root route is a resilient product landing page. It requires no
-  session, Account profile, tenant data, or business API request and links to
-  the centralized Login and Create Account routes. Authentication callbacks,
-  Account-state routes, tenant routes, and SUPER_ADMIN separation retain their
-  existing boundaries.
+- The public marketing site is `/` (landing), `/about` and `/contact`
+  (`frontend/src/site/`). It requires no session, Account profile, tenant
+  data, or business API request; the only auth call is a local session check
+  on `/`, which sends a signed-in user straight to `/app`. Its styles are
+  scoped under a `.site` root (`site.css`) and its Google Fonts load only on
+  these pages. The contact form does not send anything yet (a TODO marks where
+  the real API goes). Authentication callbacks, Account-state routes, tenant
+  routes, and SUPER_ADMIN separation retain their existing boundaries.
 - Route constants live in one application routing module. The current client
   uses the History API directly and does not add a routing dependency merely
   for placeholder routes.

@@ -5,8 +5,14 @@ import { RackShowcase } from '../components/RackShowcase.jsx'
 import { SiteLink } from '../components/SiteLink.jsx'
 import { StepStack } from '../components/StepStack.jsx'
 import { allFeatures, contact, faqs, features } from '../data.js'
+import { useSeo } from '../useSeo.js'
 
 export function Home() {
+  useSeo(
+    'SaaS2 · POS for clothing shops in Lebanon',
+    'SaaS2 is a point of sale for clothing shops in Lebanon. Sell from your phone, track sizes and colors, take USD or LBP, record debt customers, and share receipts on WhatsApp.'
+  )
+
   return (
     <>
       <section className="hero3d">

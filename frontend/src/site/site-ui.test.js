@@ -141,6 +141,51 @@ describe('public site', () => {
     assert.ok(html.includes('From <strong>[YOUR PRICE]</strong> a month'))
   })
 
+  test('the about page has the reasons, the values, the company facts and a link to contact', () => {
+    const html = render('/about')
+    for (const title of ['Why we built it', 'What we care about', 'The company']) assert.ok(html.includes(`>${title}</h2>`), title)
+    assert.equal((html.match(/<article class="card"/gu) ?? []).length, 8)
+    for (const fact of ['<dt>Company</dt><dd>UltraScaling</dd>', '<dt>Product</dt><dd>SaaS2</dd>', '<dt>Based in</dt><dd>[YOUR CITY], Lebanon</dd>', '<dt>Founded</dt><dd>[YEAR]</dd>']) {
+      assert.ok(html.includes(fact), fact)
+    }
+    assert.ok(html.includes('<a href="/contact" class="btn btn--primary">Talk to us</a>'))
+  })
+
+  test('the contact page has the ways to reach us and the form; sending shows the thanks message', () => {
+    const html = render('/contact')
+    assert.ok(html.includes('class="way way--primary" href="https://wa.me/" target="_blank" rel="noopener noreferrer"'))
+    for (const value of ['[YOUR WHATSAPP NUMBER]', '[YOUR EMAIL]', '[YOUR CITY], Lebanon', '[YOUR WORKING HOURS]']) assert.ok(html.includes(`<span class="way__value">${value}</span>`), value)
+    assert.ok(html.includes('href="mailto:[YOUR EMAIL]"'))
+    for (const [id, name] of [['c-name', 'name'], ['c-shop', 'shop'], ['c-phone', 'phone']]) {
+      const input = html.match(new RegExp(`<input id="${id}"[^>]*>`, 'u'))?.[0] ?? ''
+      assert.ok(input.includes(`name="${name}"`) && input.includes('required=""'), name)
+    }
+    assert.equal((html.match(/<option[^>]*>/gu) ?? []).length, 11, 'six shop types and Other, four reasons')
+    assert.ok(html.includes('<button type="submit" class="btn btn--primary">Send message</button>'))
+    const contactPage = readFileSync(new URL('./pages/Contact.jsx', import.meta.url), 'utf8')
+    assert.match(contactPage, /TODO: send `data` to your backend/u, 'the real API is still to be connected')
+    assert.match(contactPage, /e\.preventDefault\(\)[\s\S]*setSent\(true\)/u)
+    assert.ok(contactPage.includes('Thanks, we got your message') && contactPage.includes('We will reply on WhatsApp within {contact.replyTime}.'))
+  })
+
+  test('every page sets its own title and description, and index.html has Open Graph and the SoftwareApplication data', () => {
+    const titles = {
+      Home: 'SaaS2 · POS for clothing shops in Lebanon',
+      About: 'About SaaS2 · UltraScaling',
+      Contact: 'Contact SaaS2 · Book a free demo',
+    }
+    for (const [page, title] of Object.entries(titles)) {
+      const source = readFileSync(new URL(`./pages/${page}.jsx`, import.meta.url), 'utf8')
+      assert.match(source, new RegExp(`useSeo\\(\\s+'${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',\\s+'[^']{80,}'`, 'u'), page)
+    }
+    const indexHtml = readFileSync(new URL('../../index.html', import.meta.url), 'utf8')
+    assert.ok(indexHtml.includes('<title>SaaS2 · POS for clothing shops in Lebanon</title>'))
+    for (const tag of ['property="og:type" content="website"', 'property="og:title"', 'property="og:description"', 'name="theme-color" content="#FCF7F5"']) assert.ok(indexHtml.includes(tag), tag)
+    const jsonLd = JSON.parse(indexHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u)[1])
+    assert.equal(jsonLd['@type'], 'SoftwareApplication'); assert.equal(jsonLd.publisher.name, 'UltraScaling')
+    assert.doesNotMatch(indexHtml, /fonts\.googleapis/u, 'the fonts load only on the public pages')
+  })
+
   test('every site style is scoped under .site so the app is untouched', () => {
     const rules = siteCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
     const selectors = [...rules.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((match) => match[1].replace(/@media[^{]+\{/g, '').split(','))
