@@ -1,3 +1,4 @@
+import { ROUTES } from '../../app/routes.js'
 import { HeroSilk } from '../components/HeroSilk.jsx'
 import { HeroStitch } from '../components/HeroStitch.jsx'
 import { LaptopIcon, PhoneIcon, TabletIcon } from '../components/Icons.jsx'
@@ -24,7 +25,7 @@ export function Home() {
           <p className="lead" style={{ maxWidth: '40ch' }}>Sell in dollars or lira, and track every size.</p>
           <div className="hero__actions">
             <SiteLink to="/contact" className="btn btn--primary">Book a free demo</SiteLink>
-            <a href="#features" className="text-link">See features</a>
+            <SiteLink to={ROUTES.login} className="text-link">Log in</SiteLink>
           </div>
         </div>
       </section>
