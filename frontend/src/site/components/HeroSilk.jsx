@@ -65,9 +65,11 @@ void main() {
 
   // Where the silk shows: rising from the bottom on phones, the right side on wide screens.
   float edge = h * 0.04;
-  float a = uWide < 0.5
-    ? smoothstep(0.7 + edge, 0.24 + edge, uv.y)
-    : smoothstep(0.36 + edge, 0.62 + edge, uv.x);
+  float a = uWide > 1.5
+    ? 1.0
+    : uWide < 0.5
+      ? smoothstep(0.7 + edge, 0.24 + edge, uv.y)
+      : smoothstep(0.36 + edge, 0.62 + edge, uv.x);
 
   gl_FragColor = vec4(col * a, a);
 }
@@ -85,7 +87,7 @@ function compile(gl, type, src) {
   return s
 }
 
-export function HeroSilk() {
+export function HeroSilk({ fill = false }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export function HeroSilk() {
       canvas.style.height = h + 'px'
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.uniform2f(uRes, canvas.width, canvas.height)
-      gl.uniform1f(uWide, w >= 900 ? 1 : 0)
+      gl.uniform1f(uWide, fill ? 2 : w >= 900 ? 1 : 0)
     }
 
     let pointer = 0
@@ -179,7 +181,7 @@ export function HeroSilk() {
       gl.deleteShader(fs)
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas)
     }
-  }, [])
+  }, [fill])
 
   return <div className="hero3d__canvas" ref={ref} aria-hidden="true" />
 }

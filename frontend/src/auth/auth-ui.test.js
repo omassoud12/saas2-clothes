@@ -1,0 +1,121 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { after, before, describe, test } from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { createServer } from 'vite'
+import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
+import { FRIENDLY_RECOVERY_SENT, friendlyAuthMessage, isLikelyEmail, validateLogin } from './auth-messages.js'
+import { RECOVERY_REQUEST_MESSAGE } from './auth-flow.js'
+
+const root = fileURLToPath(new URL('../../', import.meta.url))
+const siteCss = readFileSync(new URL('../site/site.css', import.meta.url), 'utf8')
+let vite
+let shell
+let LoginPage
+
+before(async () => {
+  const authFixture = { name: 'auth-ui-fixture', enforce: 'pre',
+    resolveId(id) { if (id.endsWith('/lib/supabase.js')) return '\0auth-ui-supabase' },
+    load(id) { if (id === '\0auth-ui-supabase') return 'export const supabase = null' },
+  }
+  vite = await createServer({ root, configFile: false, plugins: [authFixture, react()], logLevel: 'silent',
+    server: { middlewareMode: true, hmr: false, watch: null } })
+  shell = await vite.ssrLoadModule('/src/components/auth/AuthShell.jsx')
+  LoginPage = (await vite.ssrLoadModule('/src/pages/LoginPage.jsx')).LoginPage
+})
+after(async () => { await vite?.close() })
+
+const html = (component, props, ...children) => renderToStaticMarkup(createElement(component, props, ...children))
+
+describe('words shop owners see', () => {
+  test('a wrong password, no connection and missing setup read simply', () => {
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'LOGIN_REJECTED', message: 'Email or password was not accepted.' }), 'Wrong email or password. Check them and try again.')
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'AUTH_SERVICE_UNAVAILABLE' }), 'We could not connect. Check your internet and try again.')
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'SUPABASE_NOT_CONFIGURED', message: 'Authentication is not configured for this application.' }), 'Logging in is not available right now. Please contact us.')
+    assert.equal(friendlyAuthMessage({ ok: true, message: RECOVERY_REQUEST_MESSAGE }), FRIENDLY_RECOVERY_SENT)
+  })
+
+  test('technical messages without a known code become a plain sentence; plain ones pass through', () => {
+    for (const message of ['Your application profile is inconsistent.', 'Your account has an unsupported status.', 'The application service is not configured correctly.', 'Tenant workspace missing', '']) {
+      const text = friendlyAuthMessage({ ok: false, code: 'SOMETHING_NEW', message })
+      assert.equal(text, 'We could not open your shop right now. Try again in a moment.', message)
+    }
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'X', message: 'This confirmation link is invalid or has expired.' }), 'This confirmation link is invalid or has expired.')
+    assert.equal(friendlyAuthMessage(null), '')
+  })
+
+  test('no screen word mentions tenants, workspaces or authentication', () => {
+    const code = ['../components/auth/AuthShell.jsx', '../pages/LoginPage.jsx'].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n')
+    // Only what reaches the screen: quoted text and the text between tags.
+    const screens = [...code.matchAll(/="([^"]+)"|>([^<>{}]+)<|'([^'\n]+)'/gu)].map((match) => match[1] ?? match[2] ?? match[3]).join('\n')
+    const messages = readFileSync(new URL('./auth-messages.js', import.meta.url), 'utf8').match(/^\s+[A-Z_]+: '[^']+'|^export const FRIENDLY_RECOVERY_SENT = '[^']+'|^const GENERIC = '[^']+'/gmu).join('\n')
+    assert.doesNotMatch(screens + messages, /\b(tenant|workspace|authenticat\w*)\b/iu)
+  })
+
+  test('the login form checks the email and password before sending', () => {
+    assert.deepEqual(validateLogin({ email: '', password: '' }), { email: 'Enter the email you use for your shop.', password: 'Enter your password.' })
+    assert.deepEqual(validateLogin({ email: 'rana@shop', password: 'x' }), { email: 'Enter the email you use for your shop.' })
+    assert.deepEqual(validateLogin({ email: ' rana@shop.com ', password: 'x' }), {})
+    assert.equal(isLikelyEmail('a b@c.d'), false); assert.equal(isLikelyEmail(undefined), false)
+  })
+})
+
+describe('sign-in screens', () => {
+  test('the frame has the silk panel, the brand, the sales card and the stitched card, inside the .site scope', () => {
+    const page = html(shell.AuthShell, { title: 'Welcome back', subtitle: 'Log in to your shop.', footer: 'Footer text' }, createElement('p', null, 'Form'))
+    assert.ok(page.startsWith('<div class="site" dir="ltr" lang="en"><div class="auth"><aside class="auth__aside"><div class="hero3d__canvas" aria-hidden="true"></div>'))
+    assert.ok(page.includes('<a href="/" class="auth__brand" aria-label="SaaS2 home"><span class="brand__mark">S2</span><span class="brand__name">SaaS2</span></a>'))
+    assert.ok(page.includes('<p class="auth__quote">Your shop, ready when you are.</p>'))
+    assert.ok(page.includes('<span class="glass__label">Sales today</span><span class="glass__value">$184 · 9 receipts</span>'))
+    assert.ok(page.includes('<main class="auth__main" id="content"><div class="auth-card"><h1 class="auth-card__title">Welcome back</h1><p class="auth-card__subtitle">Log in to your shop.</p><p>Form</p><p class="auth-card__footer">Footer text</p>'))
+  })
+
+  test('a field with an error is marked invalid and points to the message under it', () => {
+    const field = html(shell.AuthTextField, { id: 'email', label: 'Email', type: 'email', inputMode: 'email', autoComplete: 'email', value: 'x', onChange: () => {}, error: 'Enter the email you use for your shop.' })
+    const input = field.match(/<input[^>]*>/u)[0]
+    for (const part of ['id="email"', 'name="email"', 'type="email"', 'inputMode="email"', 'autoComplete="email"', 'aria-invalid="true"', 'aria-describedby="email-error"']) assert.ok(input.includes(part), part)
+    assert.ok(field.includes('<p class="field__error" id="email-error">Enter the email you use for your shop.</p>'))
+    const fine = html(shell.AuthTextField, { id: 'email', label: 'Email', value: '', onChange: () => {} })
+    assert.doesNotMatch(fine, /aria-invalid|aria-describedby|field__error/u)
+  })
+
+  test('the password field has a Show button that says whether the password is visible', () => {
+    const field = html(shell.AuthPasswordField, { id: 'password', label: 'Password', autoComplete: 'current-password', value: '', onChange: () => {}, error: 'Enter your password.', extra: createElement('button', { type: 'button', className: 'field__link' }, 'Forgot password?') })
+    assert.ok(field.includes('type="password"') && field.includes('autoComplete="current-password"'))
+    assert.ok(field.includes('<button type="button" class="field__toggle" aria-controls="password" aria-pressed="false" aria-label="Show password">Show</button>'))
+    assert.ok(field.includes('aria-invalid="true" aria-describedby="password-error"'))
+    assert.ok(field.includes('<div class="field__top"><label for="password">Password</label><button type="button" class="field__link">Forgot password?</button></div>'))
+    const hinted = html(shell.AuthPasswordField, { id: 'new', label: 'Password', value: '', onChange: () => {}, hint: 'At least 8 characters.' })
+    assert.ok(hinted.includes('aria-describedby="new-hint"') && hinted.includes('<p class="field__hint" id="new-hint">At least 8 characters.</p>'))
+  })
+
+  test('while sending, the button shows a spinner, says what is happening and cannot be tapped again', () => {
+    const busy = html(shell.AuthSubmit, { busy: true, busyLabel: 'Logging in…' }, 'Log in')
+    assert.equal(busy, '<button type="submit" class="btn btn--primary btn--block" disabled="" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Logging in…</button>')
+    assert.equal(html(shell.AuthSubmit, { busy: false, busyLabel: 'Logging in…' }, 'Log in'), '<button type="submit" class="btn btn--primary btn--block" aria-busy="false">Log in</button>')
+    assert.ok(html(shell.AuthNotice, { kind: 'error' }, 'Wrong email or password.').includes('class="auth-notice auth-notice--error" role="alert"'))
+    assert.ok(html(shell.AuthNotice, { kind: 'success' }, 'Sent').includes('role="status"'))
+    assert.equal(html(shell.AuthNotice, { kind: 'error' }), '')
+  })
+
+  test('the login page opens in the new frame while it checks for an existing login', () => {
+    const page = html(LoginPage, {})
+    assert.ok(page.includes('<h1 class="auth-card__title">Welcome back</h1>'))
+    assert.ok(page.includes('Checking if you are already logged in…'))
+    assert.ok(page.includes('New to SaaS2? <a href="/signup">Create an account</a>'))
+    const source = readFileSync(new URL('../pages/LoginPage.jsx', import.meta.url), 'utf8')
+    for (const kept of ['resolveExistingSessionDestination({ supabase })', 'signInApplicationUser({ supabase, email, password })', 'requestPasswordRecovery({ supabase, email, origin: window.location.origin })', 'window.location.replace(result.redirectTo)', 'actionGuard.run']) {
+      assert.ok(source.includes(kept), `the sign-in logic is unchanged: ${kept}`)
+    }
+    assert.ok(source.includes('autoComplete="current-password"') && source.includes('inputMode="email"') && source.includes('noValidate'))
+  })
+
+  test('inputs are 16px and every tap target is at least 44px', () => {
+    assert.match(siteCss, /\.site \.field input, \.site \.field select, \.site \.field textarea \{\s+min-height: 50px;[^}]*font: 16px var\(--font-body\)/u)
+    assert.match(siteCss, /\.site \.field__toggle \{ min-height: 44px; \}/u)
+    assert.match(siteCss, /\.site \.field__link \{ min-height: 44px; \}/u)
+    assert.match(siteCss, /\.site \.btn \{[^}]*min-height: 52px/u)
+  })
+})

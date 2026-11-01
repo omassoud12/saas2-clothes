@@ -12,6 +12,7 @@ const sectionLinks = [
 const pageLinks = [
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
+  { to: '/login', label: 'Log in' },
 ]
 
 export function Navbar() {

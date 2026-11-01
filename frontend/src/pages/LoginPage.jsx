@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { requestPasswordRecovery } from '../auth/auth-flow.js'
+import { friendlyAuthMessage, validateLogin } from '../auth/auth-messages.js'
 import { createSubmissionGuard, resolveExistingSessionDestination, signInApplicationUser } from '../auth/owner-flow.js'
-import { AuthAction, AuthLayout, AuthLoading, FormMessage, Input, PasswordField } from '../components/auth/AuthLayout.jsx'
+import { AuthNotice, AuthPasswordField, AuthShell, AuthSubmit, AuthTextField, AuthWaiting } from '../components/auth/AuthShell.jsx'
 import { supabase } from '../lib/supabase.js'
 
 export function LoginPage() {
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [pageState, setPageState] = useState('initializing')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [messageKind, setMessageKind] = useState('error')
   const [busyAction, setBusyAction] = useState(null)
@@ -21,7 +23,7 @@ export function LoginPage() {
       if (!active) return
       if (result.ok && result.authenticated) window.location.replace(result.redirectTo)
       else {
-        if (!result.ok && result.code !== 'SESSION_REQUIRED') setMessage(result.message)
+        if (!result.ok && result.code !== 'SESSION_REQUIRED') setMessage(friendlyAuthMessage(result))
         setPageState('ready')
       }
     })
@@ -30,6 +32,12 @@ export function LoginPage() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    const fieldErrors = validateLogin({ email, password })
+    setErrors(fieldErrors)
+    if (Object.keys(fieldErrors).length) {
+      setMessage('')
+      return
+    }
     const guarded = await actionGuard.run(async () => {
       setBusyAction('login')
       setMessage('')
@@ -42,7 +50,7 @@ export function LoginPage() {
       window.location.replace(result.redirectTo)
       return
     }
-    setMessage(result.message)
+    setMessage(friendlyAuthMessage(result))
     setMessageKind('error')
     setBusyAction(null)
   }
@@ -55,25 +63,59 @@ export function LoginPage() {
     })
     if (guarded.skipped) return
     const result = guarded.value
-    setMessage(result.message)
-    setMessageKind(result.ok ? 'success' : 'error')
+    if (result.code === 'INVALID_RECOVERY_EMAIL') {
+      // The reset link goes to the email above, so the problem belongs under that field.
+      setErrors({ email: 'Enter your email above, then tap Forgot password.' })
+      setMessage('')
+    } else {
+      setErrors({})
+      setMessage(friendlyAuthMessage(result))
+      setMessageKind(result.ok ? 'success' : 'error')
+    }
     setBusyAction(null)
   }
 
+  const busy = Boolean(busyAction)
+
   return (
-    <AuthLayout eyebrow="Welcome back" title="Sign in to your workspace" description="Use your confirmed business email and password.">
-      {pageState === 'initializing' ? <AuthLoading label="Restoring your secure session" /> : (
-        <>
-          <form className="auth-form" onSubmit={handleSubmit} noValidate>
-            <Input id="email" label="Email address" type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={Boolean(busyAction)} required />
-            <PasswordField id="password" label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={Boolean(busyAction)} required />
-            <div className="auth-form-secondary-action"><button className="text-button" type="button" disabled={Boolean(busyAction)} onClick={handlePasswordRecovery}>{busyAction === 'recovery' ? 'Sending recovery email…' : 'Forgot password?'}</button></div>
-            <FormMessage kind={messageKind}>{message}</FormMessage>
-            <AuthAction type="submit" disabled={Boolean(busyAction)}>{busyAction === 'login' ? 'Signing in…' : 'Sign in'}</AuthAction>
-          </form>
-          <p className="auth-link-row">Opening a new store? <a href="/signup">Create an owner account</a></p>
-        </>
+    <AuthShell
+      title="Welcome back"
+      subtitle="Log in to your shop."
+      seoTitle="Log in · SaaS2"
+      seoDescription="Log in to your SaaS2 shop account."
+      footer={<>New to SaaS2? <a href="/signup">Create an account</a></>}
+    >
+      {pageState === 'initializing' ? <AuthWaiting label="Checking if you are already logged in…" /> : (
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
+          <AuthTextField
+            id="email"
+            label="Email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={busy}
+            error={errors.email}
+          />
+          <AuthPasswordField
+            id="password"
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={busy}
+            error={errors.password}
+            extra={(
+              <button type="button" className="field__link" disabled={busy} onClick={handlePasswordRecovery}>
+                {busyAction === 'recovery' ? 'Sending link…' : 'Forgot password?'}
+              </button>
+            )}
+          />
+          <AuthNotice kind={messageKind}>{message}</AuthNotice>
+          <AuthSubmit busy={busyAction === 'login'} busyLabel="Logging in…" disabled={busy}>Log in</AuthSubmit>
+        </form>
       )}
-    </AuthLayout>
+    </AuthShell>
   )
 }

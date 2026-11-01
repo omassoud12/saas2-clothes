@@ -39,7 +39,7 @@ describe('public site', () => {
 
   test('the navbar links scroll to the landing sections and open the about and contact pages', () => {
     const html = render('/')
-    for (const [href, label] of [['/#product', 'Product'], ['/#business', 'Business types'], ['/#features', 'Features'], ['/#hardware', 'Hardware'], ['/about', 'About'], ['/contact', 'Contact']]) {
+    for (const [href, label] of [['/#product', 'Product'], ['/#business', 'Business types'], ['/#features', 'Features'], ['/#hardware', 'Hardware'], ['/about', 'About'], ['/contact', 'Contact'], ['/login', 'Log in']]) {
       assert.ok(html.includes(`href="${href}">${label}</a>`), label)
     }
     for (const id of ['product', 'business', 'features', 'hardware']) assert.ok(html.includes(`id="${id}"`), id)
