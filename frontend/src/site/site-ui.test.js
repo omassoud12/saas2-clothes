@@ -111,6 +111,36 @@ describe('public site', () => {
     assert.match(zipper, /if \(reduceMotion\) \{\s+draw\(wrap\.offsetHeight \* 4, 0\)/u, 'fully open, no ripple')
   })
 
+  test('business types hang on the clothing rail: two rails of three, each garment with a label tag', () => {
+    const html = render('/')
+    const business = html.slice(html.indexOf('id="business"'), html.indexOf('id="features"'))
+    assert.equal((business.match(/<div class="rack__row">/gu) ?? []).length, 2)
+    assert.equal((business.match(/<div class="rack__rail" aria-hidden="true"><\/div>/gu) ?? []).length, 2)
+    const labels = [...business.matchAll(/<span class="hang__label">([^<]+)<\/span>/gu)].map((match) => match[1])
+    assert.deepEqual(labels, ['Boutiques', 'Kids&#x27; wear', 'Shoe stores', 'Sportswear', 'Modest fashion', 'Accessories &amp; bags'])
+    const delays = [...business.matchAll(/--d:(-?[\d.]+)s/gu)].map((match) => Number(match[1]))
+    assert.equal(delays.length, 6); assert.equal(new Set(delays).size, 6, 'staggered sway')
+    const css = siteCss
+    assert.match(css, /\.site \.hang \{[^}]*animation: hang-sway 4\.6s ease-in-out infinite/u)
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.site \.hang, \.site \.hang\.is-swinging \{ animation: none; \} \}/u)
+  })
+
+  test('features, hardware, questions and the final call to action are on the landing', () => {
+    const html = render('/')
+    for (const title of ['Quick selling', 'Dollars and lira', 'Every way to pay', 'Stock by size', 'WhatsApp receipts', 'Arabic and English']) {
+      assert.ok(html.includes(`>${title}</h3>`), title)
+    }
+    assert.equal((html.match(/<div class="tile">/gu) ?? []).length, 6)
+    assert.ok(html.includes('<summary>See the full feature list<span class="disclosure__plus" aria-hidden="true">+</span></summary>'))
+    assert.equal((html.match(/<ul class="disclosure__list">(.*?)<\/ul>/su)[1].match(/<li>/gu) ?? []).length, 11)
+    for (const device of ['Phone', 'Tablet', 'Laptop']) assert.ok(html.includes(`</svg>${device}</div>`), device)
+    assert.equal((html.match(/<details class="disclosure">/gu) ?? []).length, 4, 'the feature list and three questions, all closed')
+    assert.doesNotMatch(html, /<details[^>]* open/u)
+    assert.ok(html.includes('See it with products like yours'))
+    assert.equal((html.match(/href="\/contact" class="btn btn--primary">Book a free demo<\/a>/gu) ?? []).length, 2)
+    assert.ok(html.includes('From <strong>[YOUR PRICE]</strong> a month'))
+  })
+
   test('every site style is scoped under .site so the app is untouched', () => {
     const rules = siteCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
     const selectors = [...rules.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((match) => match[1].replace(/@media[^{]+\{/g, '').split(','))
