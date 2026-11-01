@@ -205,6 +205,7 @@ describe('sign-in screens', () => {
     assert.deepEqual(onboardingFieldErrors(invalid('Employee code may contain only letters, numbers, hyphens, or underscores.'), empty), { employeeCode: 'Use only letters, numbers, - and _.' })
     assert.deepEqual(onboardingFieldErrors({ ok: false, code: 'OWNER_BOOTSTRAP_UNEXPECTED_RESPONSE' }, empty), {})
     assert.equal(friendlyAuthMessage({ ok: false, code: 'OWNER_BOOTSTRAP_UNEXPECTED_RESPONSE', message: 'Store setup could not be completed.' }), 'We could not save your shop. Try again.')
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'INTERNAL_ERROR', status: 500, message: 'Store setup could not be completed. Please try again.' }), 'We could not save your shop. Try again in a moment.', 'a server error while saving the shop')
   })
 
   test('approval states read simply', () => {

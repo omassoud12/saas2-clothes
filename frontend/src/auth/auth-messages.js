@@ -81,6 +81,10 @@ export const ACCOUNT_STATUS_VIEW = Object.freeze({
 
 export const FRIENDLY_SIGNUP_SENT = 'We sent you an email. Open the link in it to confirm your address, then set up your shop.'
 
+const FRIENDLY_BY_MESSAGE = Object.freeze({
+  'Store setup could not be completed. Please try again.': 'We could not save your shop. Try again in a moment.',
+})
+
 const GENERIC = 'We could not open your shop right now. Try again in a moment.'
 // Words a shop owner should never have to read.
 const TECHNICAL = /tenant|workspace|authenticat|application|profile|session|provision|supabase|configured|unsupported|inconsistent/iu
@@ -95,6 +99,8 @@ export function friendlyAuthMessage(result) {
     return result.message ?? ''
   }
   if (FRIENDLY_BY_CODE[result.code]) return FRIENDLY_BY_CODE[result.code]
+  // Server errors come back with the flow's fallback message.
+  if (FRIENDLY_BY_MESSAGE[result.message]) return FRIENDLY_BY_MESSAGE[result.message]
   const message = typeof result.message === 'string' ? result.message : ''
   return !message || TECHNICAL.test(message) ? GENERIC : message
 }
