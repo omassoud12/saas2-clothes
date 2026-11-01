@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react'
 
 // A needle sews a long seam across the silk (with a loop flourish), pulling a live thread behind it.
 // At the end of the seam a receipt prints out, then a "Stock updated" card appears.
-// Every 5 seconds a new seam starts from a different place on the silk.
+// Every 6.25 seconds a new seam starts from a different place on the silk.
 // With reduced motion, the finished scene is shown without animation.
 
-const LOOP = 5
+const LOOP = 6.25 // the needle sews for 3.7 s (the reference: 2.45 s), the rest of the scene keeps its timing
 // Every seam ends at the top of the receipt (300, 128).
 const SEAMS = [
   // From the top left, waves to the right, a loop, back across, then up to the receipt.
@@ -56,7 +56,7 @@ export function HeroStitch() {
 
     function render(t, cycle = 0) {
       applySeam(cycle % SEAMS.length)
-      const sew = ease(span(t, 0.15, 2.6))
+      const sew = ease(span(t, 0.15, 3.85))
       mask.setAttribute('stroke-dashoffset', String(length * (1 - sew)))
 
       // Needle rides the seam, dipping in and out of the fabric.
@@ -65,9 +65,9 @@ export function HeroStitch() {
       const q = seam.getPointAtLength(Math.max(0, at - 1))
       const angle = (Math.atan2(p.y - q.y, p.x - q.x) * 180) / Math.PI
       const sewing = sew > 0 && sew < 1
-      const dip = sewing ? Math.sin(t * 30) * 1.6 : 0
-      const pull = easeOut(span(t, 2.6, 3.1)) * 34 // the needle flicks forward as it leaves
-      const fadeNeedle = Math.min(span(t, 0.05, 0.2), 1 - span(t, 2.8, 3.1))
+      const dip = sewing ? Math.sin(t * 20) * 1.6 : 0
+      const pull = easeOut(span(t, 3.85, 4.35)) * 34 // the needle flicks forward as it leaves
+      const fadeNeedle = Math.min(span(t, 0.05, 0.2), 1 - span(t, 4.05, 4.35))
       const needle = needleRef.current
       needle.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${angle}) translate(${pull} ${dip}) scale(1.3)`)
       needle.setAttribute('opacity', String(fadeNeedle))
@@ -80,18 +80,18 @@ export function HeroStitch() {
       tail.setAttribute('opacity', String(fadeNeedle))
 
       // Receipt prints downward from the end of the seam.
-      const print = easeOut(span(t, 2.6, 3.4))
+      const print = easeOut(span(t, 3.85, 4.65))
       clipRef.current.setAttribute('height', String(print > 0 ? RECEIPT_H * print + 2 : 0))
       receiptRef.current.setAttribute('transform', `rotate(${Math.sin(t * 1.4) * 1.2} 300 ${RECEIPT_TOP})`)
 
       // Stock card, then everything fades before the loop restarts.
-      stockRef.current.classList.toggle('is-on', t > 3.35 && t < 4.6)
-      sceneRef.current.setAttribute('opacity', String(1 - span(t, 4.55, 4.95)))
+      stockRef.current.classList.toggle('is-on', t > 4.6 && t < 5.85)
+      sceneRef.current.setAttribute('opacity', String(1 - span(t, 5.8, 6.2)))
     }
 
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduceMotion) {
-      render(3.9)
+      render(5.15)
       return undefined
     }
 

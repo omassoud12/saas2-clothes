@@ -79,7 +79,7 @@ describe('public site', () => {
     assert.match(silk, /IntersectionObserver/u)
     assert.match(silk, /if \(reduceMotion\) \{\s+draw\(8\)/u, 'reduced motion draws a single frame')
     assert.doesNotMatch(silk, /three/u)
-    assert.match(stitch, /if \(reduceMotion\) \{\s+render\(3\.9\)/u, 'reduced motion shows the finished scene')
+    assert.match(stitch, /if \(reduceMotion\) \{\s+render\(5\.15\)/u, 'reduced motion shows the finished scene')
     assert.equal((stitch.match(/^ {2}'M /gmu) ?? []).length, 4, 'four seams')
     assert.equal((stitch.match(/300 128',$/gmu) ?? []).length, 4, 'every seam ends at the receipt')
   })
