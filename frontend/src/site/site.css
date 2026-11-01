@@ -408,3 +408,15 @@ html:has(.site) { scroll-behavior: smooth; }
 .site .auth-notice--error { background: #fbecee; border: 1px solid #f0c9cf; color: #a3283a; }
 .site .auth-notice--success { background: var(--success-soft); border: 1px solid #bfe0ca; color: var(--success); }
 .site .auth-waiting { margin-top: 22px; min-height: 120px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 15px; }
+.site .btn--outline .spinner { border-color: rgba(42, 38, 38, 0.18); border-top-color: var(--ink); }
+.site .auth-stack { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.site .auth-logout { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.site .auth-summary { margin: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+.site .auth-summary div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; }
+.site .auth-summary div + div { border-top: 1px solid var(--line); }
+.site .auth-summary dt { color: var(--muted); font-size: 14px; }
+.site .auth-summary dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.site .auth-status { display: inline-flex; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; background: var(--pill); color: var(--ink); }
+.site .auth-status--rejected, .site .auth-status--suspended { background: #fbecee; color: #a3283a; }
+.site .auth-note { border-radius: 12px; border-left: 3px solid var(--accent-2); padding: 12px 14px; background: var(--soft); font-size: 14px; }
+.site .auth-note p { margin-top: 4px; overflow-wrap: anywhere; }

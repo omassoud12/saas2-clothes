@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
-import { fieldErrorFor, FRIENDLY_RECOVERY_SENT, friendlyAuthMessage, isLikelyEmail, validateLogin } from './auth-messages.js'
+import { ACCOUNT_STATUS_VIEW, fieldErrorFor, FRIENDLY_RECOVERY_SENT, friendlyAuthMessage, isLikelyEmail, onboardingFieldErrors, validateLogin } from './auth-messages.js'
 import { OWNER_SIGNUP_MESSAGE } from './owner-flow.js'
 import { RECOVERY_REQUEST_MESSAGE } from './auth-flow.js'
 
@@ -20,14 +20,23 @@ let SignupPage
 before(async () => {
   const authFixture = { name: 'auth-ui-fixture', enforce: 'pre',
     resolveId(id) { if (id.endsWith('/lib/supabase.js')) return '\0auth-ui-supabase' },
-    load(id) { if (id === '\0auth-ui-supabase') return 'export const supabase = null' },
+    load(id) {
+      if (id === '\0auth-ui-supabase') {
+        return 'export const supabase = null; export const authCallbackContext = {}; export const signupCallbackContext = {}; export const exchangeAuthCallbackCode = () => null'
+      }
+    },
   }
   vite = await createServer({ root, configFile: false, plugins: [authFixture, react()], logLevel: 'silent',
     server: { middlewareMode: true, hmr: false, watch: null } })
   shell = await vite.ssrLoadModule('/src/components/auth/AuthShell.jsx')
   LoginPage = (await vite.ssrLoadModule('/src/pages/LoginPage.jsx')).LoginPage
   SignupPage = (await vite.ssrLoadModule('/src/pages/SignupPage.jsx')).SignupPage
+  for (const name of OTHER_SCREENS) otherScreens[name] = (await vite.ssrLoadModule(`/src/pages/${name}.jsx`))[name]
 })
+
+const OTHER_SCREENS = ['AuthCallbackPage', 'SignupCallbackPage', 'SetPasswordPage', 'OwnerOnboardingPage', 'PendingApprovalPage', 'InactiveAccountPage']
+const otherScreens = {}
+const AUTH_SCREEN_FILES = ['LoginPage', 'SignupPage', 'AccountStatusPage', ...OTHER_SCREENS].map((name) => `../pages/${name}.jsx`)
 after(async () => { await vite?.close() })
 
 const html = (component, props, ...children) => renderToStaticMarkup(createElement(component, props, ...children))
@@ -50,7 +59,7 @@ describe('words shop owners see', () => {
   })
 
   test('no screen word mentions tenants, workspaces or authentication', () => {
-    const code = ['../components/auth/AuthShell.jsx', '../pages/LoginPage.jsx', '../pages/SignupPage.jsx'].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n')
+    const code = ['../components/auth/AuthShell.jsx', ...AUTH_SCREEN_FILES].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n')
     // Only what reaches the screen: quoted text and the text between tags.
     const screens = [...code.matchAll(/="([^"]+)"|>([^<>{}]+)<|'([^'\n]+)'/gu)].map((match) => match[1] ?? match[2] ?? match[3]).join('\n')
     const messages = readFileSync(new URL('./auth-messages.js', import.meta.url), 'utf8').match(/^\s+[A-Z_]+: '[^']+'|^export const FRIENDLY_RECOVERY_SENT = '[^']+'|^const GENERIC = '[^']+'/gmu).join('\n')
@@ -150,6 +159,61 @@ describe('sign-in screens', () => {
     assert.ok(done.startsWith('<div class="success auth-done"><span class="success__icon"><svg'))
     assert.ok(done.includes('<p class="auth-notice auth-notice--success" role="status">We sent you an email.</p>'))
     assert.ok(done.includes('<a class="btn btn--outline btn--block" href="/login">Back to log in</a>'))
+  })
+
+  test('every other sign-in screen opens in the same frame while it checks the link or the account', () => {
+    const waiting = {
+      AuthCallbackPage: ['Checking your link', 'Checking your link…'],
+      SignupCallbackPage: ['Confirming your email', 'Confirming your email…'],
+      SetPasswordPage: ['Choose your password', 'Checking your link…'],
+      OwnerOnboardingPage: ['Set up your shop', 'Checking your account…'],
+      PendingApprovalPage: ['We are checking your shop', 'Checking your account…'],
+      InactiveAccountPage: ['Your shop is not active', 'Checking your account…'],
+    }
+    for (const [name, [title, label]] of Object.entries(waiting)) {
+      const page = html(otherScreens[name], {})
+      assert.ok(page.startsWith('<div class="site" dir="ltr" lang="en"><div class="auth"><aside class="auth__aside">'), name)
+      assert.ok(page.includes(`<h1 class="auth-card__title">${title}</h1>`), `${name}: ${title}`)
+      assert.ok(page.includes(`<span class="spinner spinner--dark" aria-hidden="true"></span>${label}</p>`), `${name}: ${label}`)
+    }
+    assert.ok(html(otherScreens.OwnerOnboardingPage, {}).includes('Log out</button>'), 'the owner can still log out while setting up')
+  })
+
+  test('the other screens keep their logic', () => {
+    const kept = {
+      AuthCallbackPage: ['completeAuthCallback({', 'exchangeCode: exchangeAuthCallbackCode', "clearUrl: () => window.history.replaceState(null, '', '/auth/callback')"],
+      SignupCallbackPage: ['completeSignupCallback({', "clearUrl: () => window.history.replaceState(null, '', '/auth/signup-callback')"],
+      SetPasswordPage: ['verifyPasswordSetupSession({ supabase, storage: window.sessionStorage })', 'updateInvitedUserPassword({ supabase, storage: window.sessionStorage, newPassword, confirmPassword })', 'submissionLock.current', 'useDirtyState(', 'window.setTimeout(() => window.location.replace(result.redirectTo), 1200)'],
+      OwnerOnboardingPage: ['loadOwnerOnboarding({ supabase })', 'bootstrapOwnerAccount({ supabase, input: form })', "window.location.replace('/pending-approval')", "window.location.replace('/login')", 'useDirtyState('],
+      AccountStatusPage: ['fetchCurrentApplicationUser({ supabase })', "window.location.replace('/owner/onboarding')", 'getPendingAccountView(result.profile)', 'logoutBusinessApp({ supabase', "(mode === 'pending' && isInactive) || (mode === 'inactive' && !isInactive)"],
+    }
+    for (const [name, parts] of Object.entries(kept)) {
+      const source = readFileSync(new URL(`../pages/${name}.jsx`, import.meta.url), 'utf8')
+      for (const part of parts) assert.ok(source.includes(part), `${name}: ${part}`)
+    }
+    for (const path of AUTH_SCREEN_FILES) {
+      assert.doesNotMatch(readFileSync(new URL(path, import.meta.url), 'utf8'), /components\/auth\/AuthLayout|LogoutAction/u, `${path} uses the new frame`)
+    }
+  })
+
+  test('shop setup answers that need fixing show under their field', () => {
+    const invalid = (message) => ({ ok: false, code: 'OWNER_ONBOARDING_INVALID', message })
+    const empty = { firstName: 'Rana', lastName: ' ', accountName: '', baseCurrency: 'USD', employeeCode: '' }
+    assert.deepEqual(onboardingFieldErrors(invalid('Complete all required onboarding fields.'), empty), { lastName: 'Enter your last name.', accountName: 'Enter your shop name.' })
+    assert.deepEqual(onboardingFieldErrors(invalid('One or more onboarding fields are too long.'), { ...empty, accountName: 'x'.repeat(161) }), { accountName: 'This is too long. Make it shorter.' })
+    assert.deepEqual(onboardingFieldErrors(invalid('Choose a supported base currency.'), empty), { baseCurrency: 'Choose USD or LBP.' })
+    assert.deepEqual(onboardingFieldErrors(invalid('Employee code may contain only letters, numbers, hyphens, or underscores.'), empty), { employeeCode: 'Use only letters, numbers, - and _.' })
+    assert.deepEqual(onboardingFieldErrors({ ok: false, code: 'OWNER_BOOTSTRAP_UNEXPECTED_RESPONSE' }, empty), {})
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'OWNER_BOOTSTRAP_UNEXPECTED_RESPONSE', message: 'Store setup could not be completed.' }), 'We could not save your shop. Try again.')
+  })
+
+  test('approval states read simply', () => {
+    assert.deepEqual(Object.keys(ACCOUNT_STATUS_VIEW), ['PENDING', 'REJECTED', 'SUSPENDED'])
+    assert.equal(ACCOUNT_STATUS_VIEW.PENDING.label, 'Waiting for approval'); assert.equal(ACCOUNT_STATUS_VIEW.SUSPENDED.title, 'Your shop is paused')
+    for (const view of Object.values(ACCOUNT_STATUS_VIEW)) assert.doesNotMatch(Object.values(view).join(' '), /platform|tenant|workspace/iu)
+    assert.equal(friendlyAuthMessage({ ok: false, code: 'INVITATION_INVALID', message: 'This invitation link is invalid or has expired.' }), 'This link is not valid anymore. Ask for a new one.')
+    assert.deepEqual(fieldErrorFor({ ok: false, code: 'PASSWORD_REQUIRED' }, { newPassword: '' }), { field: 'password', text: 'Choose a password.' })
+    assert.deepEqual(fieldErrorFor({ ok: false, code: 'PASSWORD_MISMATCH' }, {}), { field: 'confirmPassword', text: 'The two passwords are not the same.' })
   })
 
   test('inputs are 16px and every tap target is at least 44px', () => {

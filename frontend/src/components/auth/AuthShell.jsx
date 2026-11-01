@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLogout } from '../../app/useLogout.js'
 import { HeroSilk } from '../../site/components/HeroSilk.jsx'
 import { CheckIcon } from '../../site/components/Icons.jsx'
 import { loadSiteFonts } from '../../site/site-router.js'
@@ -98,10 +99,40 @@ export function AuthPasswordField({ id, label, error, hint, extra, disabled, ...
   )
 }
 
-// The main button: a spinner and the busy label while the form is being sent.
-export function AuthSubmit({ busy, busyLabel, children, disabled, type = 'submit', ...props }) {
+export function AuthSelectField({ id, label, error, hint, children, ...props }) {
   return (
-    <button type={type} className="btn btn--primary btn--block" disabled={busy || disabled} aria-busy={busy} {...props}>
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        name={id}
+        {...props}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={describedBy(error && `${id}-error`, hint && !error && `${id}-hint`)}
+      >
+        {children}
+      </select>
+      {hint && !error && <p className="field__hint" id={`${id}-hint`}>{hint}</p>}
+      {error && <p className="field__error" id={`${id}-error`}>{error}</p>}
+    </div>
+  )
+}
+
+// Log out from a sign-in screen; the same logout as the app's LogoutAction.
+export function AuthLogout({ disabled = false }) {
+  const { loggingOut, logoutError, logout } = useLogout()
+  return (
+    <div className="auth-logout">
+      <AuthSubmit type="button" className="btn btn--outline btn--block" busy={loggingOut} busyLabel="Logging out…" disabled={disabled} onClick={logout}>Log out</AuthSubmit>
+      <AuthNotice>{logoutError ? 'We could not log you out. Try again.' : ''}</AuthNotice>
+    </div>
+  )
+}
+
+// The main button: a spinner and the busy label while the form is being sent.
+export function AuthSubmit({ busy, busyLabel, children, disabled, type = 'submit', className = 'btn btn--primary btn--block', ...props }) {
+  return (
+    <button type={type} className={className} disabled={busy || disabled} aria-busy={busy} {...props}>
       {busy ? <span className="spinner" aria-hidden="true" /> : null}
       {busy ? busyLabel : children}
     </button>

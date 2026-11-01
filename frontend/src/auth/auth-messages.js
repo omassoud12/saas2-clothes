@@ -26,6 +26,7 @@ const FRIENDLY_BY_CODE = Object.freeze({
   SIGNUP_CONFIRMATION_INVALID: 'This confirmation link is not valid anymore. Sign up again to get a new one.',
   SIGNUP_CONFIRMATION_SESSION_MISSING: 'This confirmation link is not valid anymore. Sign up again to get a new one.',
   OWNER_BOOTSTRAP_UNEXPECTED_RESPONSE: 'We could not save your shop. Try again.',
+  OWNER_ONBOARDING_INVALID: 'Check your answers and try again.',
   SIGN_OUT_FAILED: 'We could not log you out. Close this page, then open it again.',
 })
 
@@ -50,6 +51,33 @@ export function fieldErrorFor(result, values = {}) {
   const field = FIELD_BY_CODE[result.code]
   return field ? { field, text: FRIENDLY_BY_CODE[result.code] } : null
 }
+
+// The shop setup form: which answers need fixing, under each field.
+export function onboardingFieldErrors(result, form) {
+  if (!result || result.ok || result.code !== 'OWNER_ONBOARDING_INVALID') return {}
+  const message = result.message ?? ''
+  if (/required/iu.test(message)) {
+    const errors = {}
+    if (!form.firstName?.trim()) errors.firstName = 'Enter your first name.'
+    if (!form.lastName?.trim()) errors.lastName = 'Enter your last name.'
+    if (!form.accountName?.trim()) errors.accountName = 'Enter your shop name.'
+    return errors
+  }
+  if (/too long/iu.test(message)) {
+    const limits = { firstName: 100, lastName: 100, accountName: 160, employeeCode: 50 }
+    return Object.fromEntries(Object.entries(limits).filter(([key, max]) => (form[key]?.trim().length ?? 0) > max).map(([key]) => [key, 'This is too long. Make it shorter.']))
+  }
+  if (/currency/iu.test(message)) return { baseCurrency: 'Choose USD or LBP.' }
+  if (/employee code/iu.test(message)) return { employeeCode: 'Use only letters, numbers, - and _.' }
+  return {}
+}
+
+// What the account page says for each state of the shop.
+export const ACCOUNT_STATUS_VIEW = Object.freeze({
+  PENDING: Object.freeze({ label: 'Waiting for approval', title: 'We are checking your shop', text: 'We will turn your account on soon. You can check again here at any time.' }),
+  REJECTED: Object.freeze({ label: 'Not approved', title: 'Your shop was not approved', text: 'Contact us if you think this is a mistake.' }),
+  SUSPENDED: Object.freeze({ label: 'Paused', title: 'Your shop is paused', text: 'You and your staff cannot use SaaS2 right now. Contact us to turn it back on.' }),
+})
 
 export const FRIENDLY_SIGNUP_SENT = 'We sent you an email. Open the link in it to confirm your address, then set up your shop.'
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { completeAuthCallback } from '../auth/auth-flow.js'
-import { AuthLayout, AuthLoading, FormMessage } from '../components/auth/AuthLayout.jsx'
+import { friendlyAuthMessage } from '../auth/auth-messages.js'
+import { AuthLinkButton, AuthNotice, AuthShell, AuthWaiting } from '../components/auth/AuthShell.jsx'
 import { authCallbackContext, exchangeAuthCallbackCode, supabase } from '../lib/supabase.js'
 
 export function AuthCallbackPage() {
@@ -16,10 +17,17 @@ export function AuthCallbackPage() {
       navigate: (path) => window.location.replace(path),
     })
     let active = true
-    void callbackPromise.current.then((result) => { if (active && !result.ok) setError(result.message) })
+    void callbackPromise.current.then((result) => { if (active && !result.ok) setError(friendlyAuthMessage(result)) })
     return () => { active = false }
   }, [])
-  return <AuthLayout eyebrow="Secure invitation" title={error ? 'Invitation unavailable' : 'Checking your invitation'} description={error ? 'This link cannot be used to continue password setup.' : 'We are securely verifying your invitation before continuing.'}>
-    {error ? <div className="auth-status-stack"><FormMessage>{error}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/login">Return to sign in</a></div> : <AuthLoading label="Verifying your invitation session" />}
-  </AuthLayout>
+  return (
+    <AuthShell
+      title={error ? 'This link does not work' : 'Checking your link'}
+      subtitle={error ? 'You cannot use this link to choose a password.' : 'One moment, then you can choose your password.'}
+    >
+      {error
+        ? <div className="auth-stack"><AuthNotice>{error}</AuthNotice><AuthLinkButton href="/login">Back to log in</AuthLinkButton></div>
+        : <AuthWaiting label="Checking your link…" />}
+    </AuthShell>
+  )
 }
