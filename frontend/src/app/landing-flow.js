@@ -14,3 +14,18 @@ export const LANDING_CTA_ROUTES = Object.freeze({
 export function isLandingRoute(pathname) {
   return pathname === ROUTES.home
 }
+
+// A signed-in user who opens the landing page goes straight to the app.
+export function landingRedirectFor(session) {
+  return session?.user?.id && typeof session.access_token === 'string' && session.access_token ? ROUTES.app : null
+}
+
+export async function findLandingRedirect(supabase) {
+  if (!supabase) return null
+  try {
+    const result = await supabase.auth.getSession()
+    return result.error ? null : landingRedirectFor(result.data?.session)
+  } catch {
+    return null
+  }
+}

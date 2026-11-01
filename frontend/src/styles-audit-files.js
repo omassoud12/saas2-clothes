@@ -18,7 +18,6 @@ export const SIZE_AUDITED = Object.freeze([
   'styles/lifecycle.css',
   'styles/auth.css',
   'styles/admin.css',
-  'styles/landing.css',
   'features/voice-sales/text-matching-lab.css',
 ])
 
@@ -40,6 +39,5 @@ export const TOKEN_AUDITED = Object.freeze([
   'styles/lifecycle.css',
   'styles/auth.css',
   'styles/admin.css',
-  'styles/landing.css',
   'features/voice-sales/text-matching-lab.css',
 ])

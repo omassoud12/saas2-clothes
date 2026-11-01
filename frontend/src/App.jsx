@@ -1,10 +1,9 @@
 import { confirmDiscardChanges } from './app/dirty-state.js'
 import { useCallback, useEffect, useState } from 'react'
 import { AppRouteGuard } from './app/AppRouteGuard.jsx'
-import { isBusinessPath, normalizePathname, ROUTES } from './app/routes.js'
+import { isBusinessPath, isSitePath, normalizePathname, ROUTES } from './app/routes.js'
 import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
 import { AdminPage } from './pages/AdminPage.jsx'
-import { LandingPage } from './pages/LandingPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { NotFoundPage } from './pages/NotFoundPage.jsx'
 import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
@@ -13,6 +12,7 @@ import { InactiveAccountPage } from './pages/InactiveAccountPage.jsx'
 import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
 import { SignupCallbackPage } from './pages/SignupCallbackPage.jsx'
 import { SignupPage } from './pages/SignupPage.jsx'
+import { SiteRoot } from './site/SiteRoot.jsx'
 
 function readPathname() {
   return normalizePathname(window.location.pathname)
@@ -59,7 +59,7 @@ function App() {
     return <AppRouteGuard pathname={pathname} navigate={navigate} />
   }
 
-  return pathname === ROUTES.home ? <LandingPage navigate={navigate} /> : <NotFoundPage />
+  return isSitePath(pathname) ? <SiteRoot pathname={pathname} navigate={navigate} /> : <NotFoundPage />
 }
 
 export default App

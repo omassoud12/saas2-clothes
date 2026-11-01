@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { friendlyAuthMessage } from '../auth/auth-messages.js'
 import { completeSignupCallback } from '../auth/owner-flow.js'
-import { AuthLayout, AuthLoading, FormMessage } from '../components/auth/AuthLayout.jsx'
+import { AuthLinkButton, AuthNotice, AuthShell, AuthWaiting } from '../components/auth/AuthShell.jsx'
 import { signupCallbackContext, supabase } from '../lib/supabase.js'
 import { useI18n } from '../i18n/I18nContext.js'
 
@@ -16,10 +17,17 @@ export function SignupCallbackPage() {
       navigate: (path) => window.location.replace(path),
     })
     let active = true
-    void callbackPromise.current.then((result) => { if (active && !result.ok) setError(result.message) })
+    void callbackPromise.current.then((result) => { if (active && !result.ok) setError(friendlyAuthMessage(result)) })
     return () => { active = false }
   }, [])
-  return <AuthLayout eyebrow={t('Email confirmation')} title={error ? t('Confirmation unavailable') : t('Confirming your email')} description={error ? t('The link could not establish a valid confirmation session.') : t('We are securely verifying your account before continuing.')}>
-    {error ? <div className="auth-status-stack"><FormMessage>{error}</FormMessage><a className="ui-button ui-button--secondary auth-link-button" href="/signup">{t('Return to signup')}</a></div> : <AuthLoading label={t('Verifying your confirmation session')} />}
-  </AuthLayout>
+  return (
+    <AuthShell
+      title={error ? t('This link does not work') : t('Confirming your email')}
+      subtitle={error ? t('We could not confirm your email with this link.') : t('One moment, then you can set up your shop.')}
+    >
+      {error
+        ? <div className="auth-stack"><AuthNotice>{error}</AuthNotice><AuthLinkButton href="/signup">{t('Sign up again')}</AuthLinkButton></div>
+        : <AuthWaiting label={t('Confirming your email…')} />}
+    </AuthShell>
+  )
 }

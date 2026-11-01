@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ACCOUNT_STATUS_VIEW, friendlyAuthMessage } from '../auth/auth-messages.js'
 import { fetchCurrentApplicationUser, getApplicationDestination, getPendingAccountView } from '../auth/owner-flow.js'
 import { logoutBusinessApp } from '../app/app-flow.js'
-import { AuthAction, AuthLayout, AuthLoading, FormMessage } from '../components/auth/AuthLayout.jsx'
-import { Button } from '../components/ui/index.jsx'
+import { AuthLogout, AuthNotice, AuthShell, AuthSubmit, AuthWaiting } from '../components/auth/AuthShell.jsx'
 import { supabase } from '../lib/supabase.js'
-import { LogoutAction } from '../components/auth/LogoutAction.jsx'
 import { useI18n } from '../i18n/I18nContext.js'
 
 export function AccountStatusPage({ mode }) {
@@ -19,12 +18,12 @@ export function AccountStatusPage({ mode }) {
     if (!result.ok) {
       if (result.code === 'APPLICATION_USER_NOT_FOUND') window.location.replace('/owner/onboarding')
       else if (result.code === 'SESSION_REQUIRED' || result.status === 401) window.location.replace('/login')
-      else setState({ kind: 'error', message: result.message })
+      else setState({ kind: 'error', message: friendlyAuthMessage(result) })
       return
     }
 
     const view = getPendingAccountView(result.profile)
-    if (!view.ok) setState({ kind: 'error', message: view.message })
+    if (!view.ok) setState({ kind: 'error', message: friendlyAuthMessage(view) })
     else if (view.redirectTo) window.location.replace(view.redirectTo)
     else {
       const destination = getApplicationDestination(result.profile)
@@ -50,25 +49,32 @@ export function AccountStatusPage({ mode }) {
     if (loggingOut) return
     setLoggingOut(true)
     const result = await logoutBusinessApp({ supabase, redirect: (path) => window.location.replace(path) })
-    if (!result.ok) { setState({ kind: 'error', message: result.message }); setLoggingOut(false) }
+    if (!result.ok) { setState({ kind: 'error', message: friendlyAuthMessage(result) }); setLoggingOut(false) }
   }
 
   const inactive = mode === 'inactive'
+  const shown = state.kind === 'ready' ? ACCOUNT_STATUS_VIEW[state.view.status] : null
+  const title = shown ? t(shown.title) : inactive ? t('Your shop is not active') : t('We are checking your shop')
+  const subtitle = shown ? t(shown.text) : inactive ? t('You and your staff cannot use SaaS2 right now.') : t('We will turn your account on soon.')
+
   return (
-    <AuthLayout eyebrow={t('Account access')} title={inactive ? t('Store access is inactive') : t('Approval is in progress')} description={inactive ? t('This store is not currently available to its team.') : t('Your request exists and is waiting for platform approval.')}>
-      {state.kind === 'loading' && <><AuthLoading label={t('Checking your account status')} /><LogoutAction /></>}
-      {state.kind === 'error' && <div className="auth-status-stack"><FormMessage>{t(state.message)}</FormMessage><AuthAction onClick={checkStatus} disabled={checking}>{checking ? t('Checking…') : t('Try again')}</AuthAction><Button tone="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? t('Signing out…') : t('Sign out')}</Button></div>}
-      {state.kind === 'ready' && <div className="auth-status-stack">
-        <span className={`status-chip status-${state.view.status.toLowerCase()}`}>{state.view.status}</span>
-        <div className="auth-status-copy"><h2>{state.view.heading}</h2><p>{inactive ? t(state.view.message) : t('Business features remain locked until the account is approved.')}</p></div>
-        <dl className="account-summary">
-          <div><dt>{t('Owner')}</dt><dd>{state.profile.user.firstName} {state.profile.user.lastName}</dd></div>
-          <div><dt>{t('Store')}</dt><dd>{state.profile.account.name}</dd></div>
-          <div><dt>{t('Status')}</dt><dd>{state.view.status}</dd></div>
-        </dl>
-        {state.view.status === 'REJECTED' && state.view.rejectionReason && <div className="auth-review-note"><strong>{t('Review note')}</strong><p>{state.view.rejectionReason}</p></div>}
-        <div className="auth-status-actions"><AuthAction onClick={checkStatus} disabled={checking || loggingOut}>{checking ? t('Checking status…') : t('Check status')}</AuthAction><Button tone="secondary" onClick={logout} disabled={checking || loggingOut}>{loggingOut ? t('Signing out…') : t('Sign out')}</Button></div>
+    <AuthShell title={title} subtitle={subtitle}>
+      {state.kind === 'loading' && <><AuthWaiting label={t('Checking your account…')} /><AuthLogout /></>}
+      {state.kind === 'error' && <div className="auth-stack">
+        <AuthNotice>{state.message}</AuthNotice>
+        <AuthSubmit type="button" busy={checking} busyLabel={t('Checking…')} onClick={checkStatus}>{t('Try again')}</AuthSubmit>
+        <AuthSubmit type="button" className="btn btn--outline btn--block" busy={loggingOut} busyLabel={t('Logging out…')} onClick={logout}>{t('Log out')}</AuthSubmit>
       </div>}
-    </AuthLayout>
+      {state.kind === 'ready' && <div className="auth-stack">
+        <dl className="auth-summary">
+          <div><dt>{t('Owner')}</dt><dd>{state.profile.user.firstName} {state.profile.user.lastName}</dd></div>
+          <div><dt>{t('Shop')}</dt><dd>{state.profile.account.name}</dd></div>
+          <div><dt>{t('Status')}</dt><dd><span className={`auth-status auth-status--${state.view.status.toLowerCase()}`}>{shown ? t(shown.label) : state.view.status}</span></dd></div>
+        </dl>
+        {state.view.status === 'REJECTED' && state.view.rejectionReason && <div className="auth-note"><strong>{t('Note from our team')}</strong><p>{state.view.rejectionReason}</p></div>}
+        <AuthSubmit type="button" busy={checking} busyLabel={t('Checking…')} disabled={loggingOut} onClick={checkStatus}>{t('Check again')}</AuthSubmit>
+        <AuthSubmit type="button" className="btn btn--outline btn--block" busy={loggingOut} busyLabel={t('Logging out…')} disabled={checking} onClick={logout}>{t('Log out')}</AuthSubmit>
+      </div>}
+    </AuthShell>
   )
 }

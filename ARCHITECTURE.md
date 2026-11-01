@@ -75,11 +75,14 @@ Resolve role + accountId
 
 Frontend foundation:
 
-- The public root route is a resilient product landing page. It requires no
-  session, Account profile, tenant data, or business API request and links to
-  the centralized Login and Create Account routes. Authentication callbacks,
-  Account-state routes, tenant routes, and SUPER_ADMIN separation retain their
-  existing boundaries.
+- The public marketing site is `/` (landing), `/about` and `/contact`
+  (`frontend/src/site/`). It requires no session, Account profile, tenant
+  data, or business API request; the only auth call is a local session check
+  on `/`, which sends a signed-in user straight to `/app`. Its styles are
+  scoped under a `.site` root (`site.css`) and its Google Fonts load only on
+  these pages. The contact form does not send anything yet (a TODO marks where
+  the real API goes). Authentication callbacks, Account-state routes, tenant
+  routes, and SUPER_ADMIN separation retain their existing boundaries.
 - Route constants live in one application routing module. The current client
   uses the History API directly and does not add a routing dependency merely
   for placeholder routes.
@@ -107,8 +110,10 @@ Frontend foundation:
   responsive table containment. Business pages are lazy-loaded at route level
   to keep catalog and inventory code out of the initial bundle.
 - Languages: the interface is Arabic (default, right-to-left) or English, chosen
-  under More (and in the sidebar, sign-in and landing pages) and remembered in
-  the browser. Screen text is written in English in the code and wrapped in
+  under More (and in the sidebar and on the sign-in screens) and remembered in
+  the browser. The sign-in screens (`AuthShell`, in the public site's design)
+  follow the chosen language and direction; the public marketing site (`/`,
+  `/about`, `/contact`) is English only for now. Screen text is written in English in the code and wrapped in
   `t('...')`; `frontend/src/i18n/ar.js` holds the Arabic, `{name}` marks a
   value that is filled in, and a text without an entry shows in English.
   `i18n.test.js` fails when a text has no Arabic entry or an entry loses a

@@ -1,5 +1,7 @@
 export const ROUTES = Object.freeze({
   home: '/',
+  about: '/about',
+  contact: '/contact',
   login: '/login',
   signup: '/signup',
   authCallback: '/auth/callback',
@@ -27,6 +29,13 @@ export const ROUTES = Object.freeze({
 export function normalizePathname(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/')) return ROUTES.home
   return pathname.replace(/\/+$/u, '') || ROUTES.home
+}
+
+// The public marketing site (landing, about, contact): no sign-in needed.
+export const SITE_PATHS = Object.freeze([ROUTES.home, ROUTES.about, ROUTES.contact])
+
+export function isSitePath(pathname) {
+  return SITE_PATHS.includes(normalizePathname(pathname))
 }
 
 export function isBusinessPath(pathname) {
