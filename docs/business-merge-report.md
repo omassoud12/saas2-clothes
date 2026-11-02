@@ -20,3 +20,12 @@ Branch: `business-reports` (from `main`). Spec: `business-reference/saas2-busine
   the CASH/WHISH split.
 - **Decision — money type.** New money columns use `Decimal(18,2)`, not `Decimal(12,2)`: they hold sums of
   our existing `Decimal(18,2)` columns, and an LBP account could overflow 12 digits.
+
+## Phase 2 — Prisma
+
+- Schema + migration `20261102120000_business_reports` (details in the gap report, "Phase 2 — what changed").
+- Applied to the local database only; backend typecheck clean; backend tests 13,698 / 13,698 pass.
+- **Decision — no cost backfill.** The cost snapshot already exists and Sale/SaleItem are immutable;
+  `costComplete: false` covers lines without cost.
+- **Decision — migrate diff instead of migrate dev** (shadow database cannot replay the Supabase
+  hardening migration).

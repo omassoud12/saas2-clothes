@@ -139,3 +139,33 @@ Search by receipt number uses the existing unique `(accountId, receiptNumber)`.
 5. Load hardening: indexes checked with EXPLAIN on a seeded local database, caching, rate limit, timeouts.
 6. Frontend: port the UI to `frontend/src/features/business`, route `/app/business`, owner nav item.
 7. Consistency script, role matrix, tenant isolation tests, docs.
+
+## Phase 2 — what changed
+
+Migration `backend/prisma/migrations/20261102120000_business_reports/migration.sql` (one transaction,
+additive only — checked: no `DROP`, no `RENAME`, no type change, Sale/SaleItem and their triggers untouched):
+
+- `Account.timezone TEXT NOT NULL DEFAULT 'Asia/Beirut'` with a CHECK that Postgres knows the zone.
+- `Expense.category "ExpenseCategory" NOT NULL DEFAULT 'OTHER'` (RENT, SALARIES, ELECTRICITY, GENERATOR, OTHER).
+- `Store` (+ partial unique index: one `isDefault` store per account). The migration inserts the default
+  store of every existing Account (named after the Account).
+- `SalesTarget` (WEEK/MONTH, `periodStart` must be a Monday / the 1st; unique per account+store+period+start
+  with `NULLS NOT DISTINCT`).
+- `ClosedDay` (unique per account+store+date, `NULLS NOT DISTINCT`).
+- `DailySalesRollup`, `DailyProductRollup`, `DailyStaffRollup` (primary keys `(accountId, storeId, date[, variantId|userId])`,
+  plus `(accountId, date)` indexes and non-negative CHECKs).
+- `Sale (accountId, createdAt DESC, id DESC)` for the invoice list.
+- RLS enabled and privileges revoked from `anon` / `authenticated` on the new tables, like every other table.
+- The two `NULLS NOT DISTINCT` indexes and the partial index are raw SQL (Prisma cannot express them), so
+  `prisma migrate diff` lists them as drift; that is expected.
+
+Applied to the local dev database only (`node scripts/with-dev-db.mjs npx prisma migrate deploy`).
+`prisma migrate dev` cannot be used in this repository: its shadow database replays
+`20260924210000_harden_supabase_database_boundary`, which revokes on `_prisma_migrations` before that
+table exists in the shadow. The migration was generated with
+`prisma migrate diff --from-config-datasource --to-schema` against the up-to-date local database.
+
+**Cost snapshot backfill — not needed.** `SaleItem.unitCostAtSale` already exists and is set inside the
+create-sale transaction. Old rows cannot be updated anyway (SaleItem is immutable by trigger); a day with
+a line without cost is reported with `costComplete: false`. No `costEstimated` column and no backfill
+script were added (see the merge report).

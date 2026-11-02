@@ -32,6 +32,20 @@ enum InventoryMovementType {
   ADJUSTMENT
 }
 
+// Business reports: what an expense was for (rent and salaries are shown on their own).
+enum ExpenseCategory {
+  RENT
+  SALARIES
+  ELECTRICITY
+  GENERATOR
+  OTHER
+}
+
+enum SalesTargetPeriod {
+  WEEK
+  MONTH
+}
+
 enum SaleStatus {
   COMPLETED
   VOIDED
@@ -53,6 +67,8 @@ model Account {
   lbpPerUsd         Decimal?      @db.Decimal(18, 2)
   // Last per-account sequential receipt number handed out (incremented inside the Sale transaction).
   lastReceiptNumber Int           @default(0)
+  // IANA timezone of the shop. Business reports count a day as [00:00, 24:00) in this zone.
+  timezone          String        @default("Asia/Beirut")
   reviewedAt        DateTime?     @db.Timestamptz(3)
   reviewedById      String?       @db.Uuid
   rejectionReason   String?
@@ -61,18 +77,24 @@ model Account {
 
   reviewedBy User? @relation("AccountReviewedBy", fields: [reviewedById], references: [id], onDelete: Restrict)
 
-  users              User[]
-  categories         Category[]
-  products           Product[]
-  variants           ProductVariant[]
-  inventoryMovements InventoryMovement[]
-  expenses           Expense[]
-  sales              Sale[]
-  saleItems          SaleItem[]
-  saleReturns        SaleReturn[]
-  saleReturnItems    SaleReturnItem[]
-  exchanges          Exchange[]
-  reports            DailyReport[]
+  users               User[]
+  categories          Category[]
+  products            Product[]
+  variants            ProductVariant[]
+  inventoryMovements  InventoryMovement[]
+  expenses            Expense[]
+  sales               Sale[]
+  saleItems           SaleItem[]
+  saleReturns         SaleReturn[]
+  saleReturnItems     SaleReturnItem[]
+  exchanges           Exchange[]
+  reports             DailyReport[]
+  stores              Store[]
+  salesTargets        SalesTarget[]
+  closedDays          ClosedDay[]
+  dailySalesRollups   DailySalesRollup[]
+  dailyProductRollups DailyProductRollup[]
+  dailyStaffRollups   DailyStaffRollup[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -105,6 +127,7 @@ model User {
   voidedSales        Sale[]              @relation("SaleVoidedBy")
   paidSales          Sale[]              @relation("SalePaidBy")
   processedReturns   SaleReturn[]        @relation("SaleReturnProcessedBy")
+  dailyStaffRollups  DailyStaffRollup[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -189,6 +212,7 @@ model ProductVariant {
   movements    InventoryMovement[]
   saleItems    SaleItem[]
   returnItems  SaleReturnItem[]
+  dailyRollups DailyProductRollup[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -237,13 +261,14 @@ model InventoryMovement {
 }
 
 model Expense {
-  id          String   @id @default(uuid()) @db.Uuid
-  accountId   String   @db.Uuid
+  id          String          @id @default(uuid()) @db.Uuid
+  accountId   String          @db.Uuid
   description String
-  amount      Decimal  @db.Decimal(18, 2)
-  currency    String   @db.Char(3)
-  expenseDate DateTime @db.Date
-  createdById String   @db.Uuid
+  amount      Decimal         @db.Decimal(18, 2)
+  currency    String          @db.Char(3)
+  expenseDate DateTime        @db.Date
+  category    ExpenseCategory @default(OTHER)
+  createdById String          @db.Uuid
 
   account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
   createdBy User    @relation("ExpenseCreatedBy", fields: [createdById, accountId], references: [id, accountId], onDelete: Restrict)
@@ -312,6 +337,8 @@ model Sale {
   @@index([accountId, voidedAt])
   @@index([accountId, soldById, createdAt])
   @@index([accountId, status, createdAt])
+  // Business invoices list: newest first, keyset pagination on (createdAt, id).
+  @@index([accountId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([soldById, accountId])
   @@index([voidedById, accountId])
 }
@@ -503,4 +530,130 @@ model StockReceiptItem {
   @@unique([movementId, variantId, accountId])
   @@unique([receiptId, variantId])
   @@index([accountId, variantId])
+}
+
+// ---------------------------------------------------------------- Business reports
+
+// A shop of an Account. Today every Account has exactly one (isDefault); every Sale belongs to it.
+model Store {
+  id        String  @id @default(uuid()) @db.Uuid
+  accountId String  @db.Uuid
+  name      String
+  isDefault Boolean @default(false)
+
+  account             Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  salesTargets        SalesTarget[]
+  closedDays          ClosedDay[]
+  dailySalesRollups   DailySalesRollup[]
+  dailyProductRollups DailyProductRollup[]
+  dailyStaffRollups   DailyStaffRollup[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([id, accountId])
+  @@index([accountId])
+}
+
+// Weekly or monthly sales target set by the OWNER. storeId null = the whole account.
+model SalesTarget {
+  id          String            @id @default(uuid()) @db.Uuid
+  accountId   String            @db.Uuid
+  storeId     String?           @db.Uuid
+  period      SalesTargetPeriod
+  // Monday of the week, or the 1st of the month (shop-local date).
+  periodStart DateTime          @db.Date
+  amount      Decimal           @db.Decimal(18, 2)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  store   Store?  @relation(fields: [storeId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([accountId, period, periodStart])
+  @@index([storeId, accountId])
+}
+
+// A day the shop was closed (holiday). storeId null = every store of the account.
+model ClosedDay {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId String   @db.Uuid
+  storeId   String?  @db.Uuid
+  date      DateTime @db.Date
+  reason    String?
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  store   Store?  @relation(fields: [storeId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([accountId, date])
+  @@index([storeId, accountId])
+}
+
+// Finished shop-local days, precomputed from raw sales by the one day function (business/day-totals.ts).
+// Today is never read from here. Money is net of returns made that day; voided sales are excluded.
+model DailySalesRollup {
+  accountId      String   @db.Uuid
+  storeId        String   @db.Uuid
+  date           DateTime @db.Date
+  salesTotal     Decimal  @db.Decimal(18, 2)
+  costTotal      Decimal  @db.Decimal(18, 2)
+  invoiceCount   Int
+  piecesSold     Int
+  discountsTotal Decimal  @db.Decimal(18, 2)
+  returnsCount   Int
+  returnsTotal   Decimal  @db.Decimal(18, 2)
+  cashTotal      Decimal  @db.Decimal(18, 2)
+  cashCount      Int
+  whishTotal     Decimal  @db.Decimal(18, 2)
+  whishCount     Int
+  costMissing    Boolean
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  store   Store   @relation(fields: [storeId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  @@id([accountId, storeId, date])
+  @@index([accountId, date])
+  @@index([storeId, accountId])
+}
+
+model DailyProductRollup {
+  accountId  String   @db.Uuid
+  storeId    String   @db.Uuid
+  date       DateTime @db.Date
+  variantId  String   @db.Uuid
+  quantity   Int
+  salesTotal Decimal  @db.Decimal(18, 2)
+  costTotal  Decimal  @db.Decimal(18, 2)
+
+  account Account        @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  store   Store          @relation(fields: [storeId, accountId], references: [id, accountId], onDelete: Restrict)
+  variant ProductVariant @relation(fields: [variantId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  @@id([accountId, storeId, date, variantId])
+  @@index([accountId, date])
+  @@index([storeId, accountId])
+  @@index([variantId, accountId])
+}
+
+model DailyStaffRollup {
+  accountId    String   @db.Uuid
+  storeId      String   @db.Uuid
+  date         DateTime @db.Date
+  userId       String   @db.Uuid
+  salesTotal   Decimal  @db.Decimal(18, 2)
+  costTotal    Decimal  @db.Decimal(18, 2)
+  invoiceCount Int
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  store   Store   @relation(fields: [storeId, accountId], references: [id, accountId], onDelete: Restrict)
+  user    User    @relation(fields: [userId, accountId], references: [id, accountId], onDelete: Restrict)
+
+  @@id([accountId, storeId, date, userId])
+  @@index([accountId, date])
+  @@index([storeId, accountId])
+  @@index([userId, accountId])
 }
