@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { activeNecklines, necklineSourceResource as seed, normalizeText } from '../.test-dist/voice-sales/index.js'
 import { parseVoiceSaleText } from '../.test-dist/voice-sales/parser.js'
 
-const repository = new URL('../../', import.meta.url)
+const repository = new URL('../../voice-dictionaries/08-necklines-collars/', import.meta.url)
 const folders = readdirSync(repository, { withFileTypes: true }).filter(d => d.isDirectory()
   && d.name.startsWith('SAAS2_Necklines_Collars_Dictionary_Integration_Kit')
   && existsSync(new URL(`${d.name}/data/necklines.seed.json`, repository)))

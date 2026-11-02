@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {activePatterns,normalizeText} from '../.test-dist/voice-sales/index.js'
 import {patternSource as seed} from '../.test-dist/voice-sales/pattern-source.js'
 import {parseVoiceSaleText} from '../.test-dist/voice-sales/parser.js'
-const kit=new URL('../../SAAS2_Patterns_Prints_Dictionary_Integration_Kit/',import.meta.url)
+const kit=new URL('../../voice-dictionaries/06-patterns-prints/SAAS2_Patterns_Prints_Dictionary_Integration_Kit/',import.meta.url)
 const manifest=JSON.parse(fs.readFileSync(new URL('manifest.json',kit)))
 const integrity=Object.entries(manifest.kit_sha256_files).map(([name,expected])=>{const actual=createHash('sha256').update(fs.readFileSync(new URL(name,kit))).digest('hex');if(actual!==expected)throw Error(`Integrity mismatch ${name}`);return {name,expected,actual,verified:true}})
 // RFC4180 fields, including quoted commas/newlines and doubled quotes.

@@ -16,3 +16,4 @@ node-v*-win-x64.zip
 # Local dictionary packages and archives (kept on disk, not committed)
 *.zip
 /SAAS2_*/
+/voice-dictionaries/*/

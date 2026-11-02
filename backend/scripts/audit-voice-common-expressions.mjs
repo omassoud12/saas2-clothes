@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { activeCommonExpressions, commonExpressionSource as seed } from '../.test-dist/voice-sales/index.js'
 import { parseVoiceSaleText } from '../.test-dist/voice-sales/parser.js'
 
-const repository = new URL('../../', import.meta.url)
+const repository = new URL('../../voice-dictionaries/09-common-expressions/', import.meta.url)
 const folders = readdirSync(repository, { withFileTypes: true }).filter(entry => entry.isDirectory()
   && /^SAAS2_Common_Expressions_Dictionary_Integration_Kit(?: \(\d+\))?$/.test(entry.name)
   && existsSync(new URL(`${entry.name}/data/common-expressions.seed.json`, repository)))

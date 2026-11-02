@@ -6,7 +6,7 @@ import { parseVoiceSaleText } from '../.test-dist/voice-sales/parser.js'
 import { createVoiceMatchingService } from '../.test-dist/voice-sales/matching.service.js'
 
 // Actual extracted kit, including Windows suffixes; no environment or database reads.
-const repository = new URL('../../', import.meta.url)
+const repository = new URL('../../voice-dictionaries/05-materials-fabrics/', import.meta.url)
 const folder = readdirSync(repository, { withFileTypes: true }).filter(d => d.isDirectory()
   && d.name.startsWith('SAAS2_Materials_Fabrics_Dictionary_Integration_Kit')
   && existsSync(new URL(`${d.name}/data/materials.seed.json`, repository)))

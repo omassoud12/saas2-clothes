@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {activeFitCuts,fitCutSource as seed,normalizeText} from '../.test-dist/voice-sales/index.js'
 import {parseVoiceSaleText} from '../.test-dist/voice-sales/parser.js'
 import {scanFitCuts} from '../.test-dist/voice-sales/fit-cut-parser.js'
-const kit=new URL('../../SAAS2_Fits_Cuts_Dictionary_Integration_Kit/',import.meta.url)
+const kit=new URL('../../voice-dictionaries/07-fits-cuts/SAAS2_Fits_Cuts_Dictionary_Integration_Kit/',import.meta.url)
 const manifest=JSON.parse(fs.readFileSync(new URL('manifest.json',kit)))
 const integrity=Object.entries(manifest.kit_sha256_files).map(([name,expected])=>{
   const actual=createHash('sha256').update(fs.readFileSync(new URL(name,kit))).digest('hex')

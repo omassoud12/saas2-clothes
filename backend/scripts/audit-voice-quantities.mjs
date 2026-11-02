@@ -6,7 +6,7 @@ import { parseVoiceSaleText } from '../.test-dist/voice-sales/parser.js'
 import { createVoiceMatchingService } from '../.test-dist/voice-sales/matching.service.js'
 
 // Read-only vocabulary/fixture audit. No .env, Supabase connection or business writes.
-const kit = new URL('../../SAAS2_Quantities_Dictionary_Integration_Kit/', import.meta.url)
+const kit = new URL('../../voice-dictionaries/04-quantities/SAAS2_Quantities_Dictionary_Integration_Kit/', import.meta.url)
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', kit), 'utf8'))
 const hashes = manifest.files.map(row => {
   const bytes = readFileSync(new URL(row.path, kit))
