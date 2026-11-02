@@ -330,7 +330,7 @@ export async function rangeTotals(
   scope: BusinessScope,
   from: string,
   to: string,
-  options: { today: string; cutLastDayAt?: number | null },
+  options: { today: string; cutLastDayAt?: number | null; breakdowns?: boolean },
 ): Promise<RangeTotals> {
   const { today } = options
   const cut = options.cutLastDayAt ?? null
@@ -363,20 +363,22 @@ export async function rangeTotals(
         cashCount: Number(row.cash_n), whishTotal: money(row.whish), whishCount: Number(row.whish_n), costMissing: Boolean(row.miss),
       })
     }
-    const staffRows = await prisma.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
-      SELECT "userId"::text AS u, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS n
-      FROM "DailyStaffRollup"
-      WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-        AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
-      GROUP BY "userId"`)
-    for (const row of staffRows) addStaff(staff, row.u, { salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.n) })
-    const variantRows = await prisma.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
-      SELECT "variantId"::text AS v, SUM("quantity")::int AS qty, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost
-      FROM "DailyProductRollup"
-      WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-        AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
-      GROUP BY "variantId"`)
-    for (const row of variantRows) addVariant(variants, row.v, { quantity: Number(row.qty), salesTotal: money(row.sales), costTotal: money(row.cost) })
+    if (options.breakdowns !== false) {
+      const staffRows = await prisma.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
+        SELECT "userId"::text AS u, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS n
+        FROM "DailyStaffRollup"
+        WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
+          AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
+        GROUP BY "userId"`)
+      for (const row of staffRows) addStaff(staff, row.u, { salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.n) })
+      const variantRows = await prisma.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
+        SELECT "variantId"::text AS v, SUM("quantity")::int AS qty, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost
+        FROM "DailyProductRollup"
+        WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
+          AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
+        GROUP BY "variantId"`)
+      for (const row of variantRows) addVariant(variants, row.v, { quantity: Number(row.qty), salesTotal: money(row.sales), costTotal: money(row.cost) })
+    }
   }
 
   if (liveDate) {
@@ -408,6 +410,16 @@ async function ensureRollups(prisma: PrismaClient, scope: BusinessScope, from: s
     if (!missing.length) continue
     await rollupDays(prisma, { accountId: scope.accountId, timezone: scope.timezone, storeId }, missing[0]!, missing[missing.length - 1]!, today)
   }
+}
+
+/** Sales by shop-local hour for one day (raw sales, net of returns made in that hour), cut when given. */
+export async function dayHours(prisma: PrismaClient, scope: BusinessScope, date: string, untilMinute: number | null): Promise<Map<number, Money>> {
+  const rows = await prisma.$queryRaw<RawHour[]>(Prisma.sql`${baseCtes(scope.accountId, scope.timezone, date, date, untilMinute)},
+  hs AS (SELECT h, SUM("totalAmount") AS sales FROM s GROUP BY h),
+  hr AS (SELECT h, SUM("refundAmount") AS amount FROM r GROUP BY h)
+  SELECT COALESCE(hs.h, hr.h) AS h, (COALESCE(hs.sales, 0) - COALESCE(hr.amount, 0))::text AS sales
+  FROM hs FULL JOIN hr ON hr.h = hs.h ORDER BY 1`)
+  return new Map(rows.map((row) => [Number(row.h), round2(money(row.sales))]))
 }
 
 export interface LiveDay {

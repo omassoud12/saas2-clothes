@@ -59,3 +59,33 @@ Branch: `business-reports` (from `main`). Spec: `business-reference/saas2-busine
   (29 Mar 2026), cut "by this time", week from rollups = sum of live days, idempotent rollups, staff and
   products agree, refresh after void, nightly job, 03:30 scheduling. **10 / 10 pass**; full backend suite
   13,708 / 13,708.
+
+## Phase 4 — endpoints
+
+- `backend/src/business/business.routes.ts` (one route file, mounted in `app.ts` at `/api/stores` and
+  `/api/business`, wired in `index.ts` with the void hook and the nightly job) and one service per report:
+  `daily.service.ts` (daily + invoices), `weekly.service.ts`, `monthly.service.ts`, `yearly.service.ts`,
+  shared pieces in `report-common.ts`, owner settings in `business-settings.service.ts`.
+- Every total comes from `rangeTotals` / `liveDay` / `dayHours` (no report has its own sales SQL). The
+  invoice list is the only other Sale query (keyset on `(createdAt, id)`, no cost, voided included and marked).
+- Rules: auth + tenant middleware first; `accountId`, user, role and timezone from the session; foreign or
+  unknown `storeId` → 403 `STORE_FORBIDDEN`; hand-written validation (our convention, no zod) with
+  422 `VALIDATION_ERROR`; dates not in the future; week = its Monday; `limit` 1..50; cost, profit,
+  expenses and stock values `null` for non-owners; Yearly 403 `OWNER_ONLY` for non-owners.
+- Live periods: `asOf` = shop time now; Daily compares yesterday and the same weekday last week cut at
+  `asOf`; Weekly compares the same days of last week (today's counterpart cut); days to come get
+  `forecastSalesTotal` = average of the last 4 finished same weekdays; Monthly compares the same weekdays
+  (28 or 35 days back, 364 for last year) while live and whole months when finished; expenses are spread
+  over the days of the current month; inventory / slow movers only for the current period.
+- Added (not in the reference): `closed` and `costComplete` on Weekly/Monthly too; owner endpoints
+  `PUT /api/business/targets`, `GET|POST /api/business/closed-days`, `DELETE /api/business/closed-days/:date`
+  so targets and holidays can be set.
+- **Decisions.** `byHour` covers 10:00–21:00 widened to the hours that had sales, up to the current hour
+  while live. `itemCount` on invoices = pieces. `exchangeRate` is `Account.lbpPerUsd` without trailing
+  `.00` (`"89500"`), `null` until set. Variant label `"Black · Size 56"`, `"One size"` without size,
+  `"Standard"` without colour. Staff `storeNames` = the account's store name.
+- Tests (`business.test.ts`, real local Postgres, fixed clock Mon 19 Oct 2026 17:00 Beirut): owner vs
+  staff fields, live "by this time", Weekly days = Daily, week = sum of days, Monthly days = Daily, month
+  = sum, Yearly October = Monthly October, return on its day, Yearly 403 for staff, foreign store 403
+  (same store name in both accounts), tenant isolation, invoice pages / filters / no cost, validation,
+  targets and closed days. **14 / 14 pass**; backend suite 13,722 / 13,722; typecheck clean.

@@ -35,6 +35,8 @@ import {
   type StartupStage,
 } from './runtime/startup-diagnostics.js'
 import { createSaleDependencies } from './sales/sale.service.js'
+import { createBusinessDependencies } from './business/business.routes.js'
+import { createVoidRefresher, scheduleNightlyRollups } from './business/rollup-jobs.js'
 import { createSupabaseVerifier } from './supabase.js'
 import { createVoiceMatchingDependencies } from './voice-sales/matching.service.js'
 import { createVoiceTranscriptionDependencies } from './voice-sales/transcription.service.js'
@@ -70,7 +72,8 @@ async function start(): Promise<void> {
       return imageStore
     })
     const inventory = createInventoryAuditDependencies(prisma)
-    const sales = createSaleDependencies(prisma)
+    // A void rewrites the day the sale was made: refresh that day of the business rollups after commit.
+    const sales = createSaleDependencies(prisma, { afterVoid: createVoidRefresher(prisma, logger) })
     const returns = createReturnDependencies(prisma)
     const exchanges = createExchangeDependencies(prisma)
     const exchangeHistory = createExchangeHistoryDependencies(prisma)
@@ -116,6 +119,7 @@ async function start(): Promise<void> {
         reports,
         settings,
         countChecks,
+        business: createBusinessDependencies(prisma),
       },
       environment,
       {
@@ -131,6 +135,9 @@ async function start(): Promise<void> {
     const server = app.listen(environment.port)
     configureHttpServer(server)
     await once(server, 'listening')
+
+    // Nightly business rollups (03:30 Asia/Beirut) for the last 3 days of active accounts.
+    scheduleNightlyRollups(prisma, logger)
 
     startupStage = 'runtime_handlers'
     const shutdown = createShutdownCoordinator({
