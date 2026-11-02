@@ -37,6 +37,7 @@ import {
 import { createSaleDependencies } from './sales/sale.service.js'
 import { createBusinessDependencies } from './business/business.routes.js'
 import { createVoidRefresher, scheduleNightlyRollups } from './business/rollup-jobs.js'
+import { ReportCache } from './business/business-cache.js'
 import { createSupabaseVerifier } from './supabase.js'
 import { createVoiceMatchingDependencies } from './voice-sales/matching.service.js'
 import { createVoiceTranscriptionDependencies } from './voice-sales/transcription.service.js'
@@ -73,7 +74,9 @@ async function start(): Promise<void> {
     })
     const inventory = createInventoryAuditDependencies(prisma)
     // A void rewrites the day the sale was made: refresh that day of the business rollups after commit.
-    const sales = createSaleDependencies(prisma, { afterVoid: createVoidRefresher(prisma, logger) })
+    const businessCache = new ReportCache()
+    const forgetBusinessReports = (accountId: string) => businessCache.invalidateAccount(accountId)
+    const sales = createSaleDependencies(prisma, { afterVoid: createVoidRefresher(prisma, logger, forgetBusinessReports) })
     const returns = createReturnDependencies(prisma)
     const exchanges = createExchangeDependencies(prisma)
     const exchangeHistory = createExchangeHistoryDependencies(prisma)
@@ -119,7 +122,7 @@ async function start(): Promise<void> {
         reports,
         settings,
         countChecks,
-        business: createBusinessDependencies(prisma),
+        business: createBusinessDependencies(prisma, { cache: businessCache, logger }),
       },
       environment,
       {
@@ -137,7 +140,7 @@ async function start(): Promise<void> {
     await once(server, 'listening')
 
     // Nightly business rollups (03:30 Asia/Beirut) for the last 3 days of active accounts.
-    scheduleNightlyRollups(prisma, logger)
+    scheduleNightlyRollups(prisma, logger, { invalidate: forgetBusinessReports })
 
     startupStage = 'runtime_handlers'
     const shutdown = createShutdownCoordinator({

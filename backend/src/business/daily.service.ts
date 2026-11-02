@@ -2,7 +2,7 @@
 import { Prisma } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import { shiftDate } from './business-dates.js'
-import { dayHours, rangeTotals } from './day-totals.js'
+import { dayHours, rangeTotals, readOnly } from './day-totals.js'
 import { fmt, ownerMoney, parseDateParam, paymentSplit, productRows, staffRows, validationError, type ReportContext } from './report-common.js'
 
 export async function dailyReport(ctx: ReportContext, query: Record<string, unknown>) {
@@ -88,7 +88,7 @@ export async function dailyInvoices(ctx: ReportContext, query: Record<string, un
   if (!store) throw new HttpError(403, 'STORE_FORBIDDEN', 'You do not have access to this store')
 
   const tz = ctx.scope.timezone
-  const rows = await ctx.prisma.$queryRaw<InvoiceRow[]>(Prisma.sql`
+  const rows = await readOnly(ctx.prisma, (tx) => tx.$queryRaw<InvoiceRow[]>(Prisma.sql`
     SELECT s."id"::text AS id, s."receiptNumber" AS number, s."createdAt" AS created_at,
            (SELECT COALESCE(SUM(si."quantity"), 0)::int FROM "SaleItem" si WHERE si."saleId" = s."id" AND si."accountId" = s."accountId") AS items,
            s."totalAmount"::text AS total, s."paymentMethod"::text AS method, s."status"::text AS status,
@@ -101,7 +101,7 @@ export async function dailyInvoices(ctx: ReportContext, query: Record<string, un
       ${q ? Prisma.sql`AND (s."receiptNumber"::text LIKE ${`%${q.replace(/[%_\\]/g, '\\$&')}%`} OR s."customerName" ILIKE ${`%${q.replace(/[%_\\]/g, '\\$&')}%`})` : Prisma.empty}
       ${cursor ? Prisma.sql`AND (s."createdAt", s."id") < (${new Date(cursor.c)}::timestamptz, ${cursor.i}::uuid)` : Prisma.empty}
     ORDER BY s."createdAt" DESC, s."id" DESC
-    LIMIT ${rawLimit + 1}`)
+    LIMIT ${rawLimit + 1}`))
   const page = rows.slice(0, rawLimit)
   return {
     items: page.map((row) => ({

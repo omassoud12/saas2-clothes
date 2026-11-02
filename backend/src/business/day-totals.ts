@@ -347,7 +347,8 @@ export async function rangeTotals(
 
   if (from <= rollupTo) {
     await ensureRollups(prisma, scope, from, rollupTo, today)
-    const rows = await prisma.$queryRaw<RollupDayRow[]>(Prisma.sql`
+    await readOnly(prisma, async (tx) => {
+    const rows = await tx.$queryRaw<RollupDayRow[]>(Prisma.sql`
       SELECT "date"::text AS d, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS invoices,
              SUM("piecesSold")::int AS pieces, SUM("discountsTotal")::text AS discounts, SUM("returnsCount")::int AS returns_n,
              SUM("returnsTotal")::text AS returns, SUM("cashTotal")::text AS cash, SUM("cashCount")::int AS cash_n,
@@ -364,14 +365,14 @@ export async function rangeTotals(
       })
     }
     if (options.breakdowns !== false) {
-      const staffRows = await prisma.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
+      const staffRows = await tx.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
         SELECT "userId"::text AS u, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS n
         FROM "DailyStaffRollup"
         WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
           AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
         GROUP BY "userId"`)
       for (const row of staffRows) addStaff(staff, row.u, { salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.n) })
-      const variantRows = await prisma.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
+      const variantRows = await tx.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
         SELECT "variantId"::text AS v, SUM("quantity")::int AS qty, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost
         FROM "DailyProductRollup"
         WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
@@ -379,6 +380,7 @@ export async function rangeTotals(
         GROUP BY "variantId"`)
       for (const row of variantRows) addVariant(variants, row.v, { quantity: Number(row.qty), salesTotal: money(row.sales), costTotal: money(row.cost) })
     }
+    })
   }
 
   if (liveDate) {
@@ -414,11 +416,11 @@ async function ensureRollups(prisma: PrismaClient, scope: BusinessScope, from: s
 
 /** Sales by shop-local hour for one day (raw sales, net of returns made in that hour), cut when given. */
 export async function dayHours(prisma: PrismaClient, scope: BusinessScope, date: string, untilMinute: number | null): Promise<Map<number, Money>> {
-  const rows = await prisma.$queryRaw<RawHour[]>(Prisma.sql`${baseCtes(scope.accountId, scope.timezone, date, date, untilMinute)},
+  const rows = await readOnly(prisma, (tx) => tx.$queryRaw<RawHour[]>(Prisma.sql`${baseCtes(scope.accountId, scope.timezone, date, date, untilMinute)},
   hs AS (SELECT h, SUM("totalAmount") AS sales FROM s GROUP BY h),
   hr AS (SELECT h, SUM("refundAmount") AS amount FROM r GROUP BY h)
   SELECT COALESCE(hs.h, hr.h) AS h, (COALESCE(hs.sales, 0) - COALESCE(hr.amount, 0))::text AS sales
-  FROM hs FULL JOIN hr ON hr.h = hs.h ORDER BY 1`)
+  FROM hs FULL JOIN hr ON hr.h = hs.h ORDER BY 1`))
   return new Map(rows.map((row) => [Number(row.h), round2(money(row.sales))]))
 }
 
@@ -441,4 +443,12 @@ export async function liveDay(prisma: PrismaClient, scope: BusinessScope, date: 
     variants: result.variants.get(date) ?? new Map(),
     hours: result.hours ?? new Map(),
   }
+}
+
+/** Read-only work for a report: one consistent snapshot, and no single query may run longer than 5 s. */
+export async function readOnly<T>(prisma: PrismaClient, run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SET LOCAL statement_timeout = '5s'`
+    return run(tx)
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
 }

@@ -9,6 +9,7 @@ import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { errorHandler } from '../middleware/error-handler.js'
 import { addReturn, addSale, createTestDatabase, seedAccount, voidSale, type FixtureAccount } from './business-test-db.js'
 import { createBusinessDependencies, createBusinessRouter, createStoreRouter } from './business.routes.js'
+import { AccountRateLimiter } from './business-cache.js'
 
 const db = await createTestDatabase()
 const skip = !db
@@ -53,7 +54,8 @@ before(async () => {
   // Shop B sells too, so leaks would show.
   await addSale(db.sql, shopB, { at: '2026-10-12T12:00:00+03:00', lines: [{ variant: shopB.variants[0]!, quantity: 9, price: '99.00', cost: '1.0000' }] })
 
-  const business = createBusinessDependencies(db.prisma, { clock })
+  // A high limit here: the dedicated test below checks the real per-account limit.
+  const business = createBusinessDependencies(db.prisma, { clock, rateLimiter: new AccountRateLimiter(100_000) })
   const app = express(); app.use(express.json())
   app.use('/api/stores', createStoreRouter(auth, business))
   app.use('/api/business', createBusinessRouter(auth, business))
@@ -234,5 +236,41 @@ describe('business endpoints', () => {
     as(shopA, UserRole.WAREHOUSE)
     const denied = await fetch(`${base}/api/business/targets`, { method: 'PUT', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' }, body: JSON.stringify({ period: 'WEEK', periodStart: '2026-10-19', amount: '1.00' }) })
     assert.equal(denied.status, 403)
+  })
+})
+
+describe('load protection', () => {
+  test('Cache-Control and ETag: a repeated request with If-None-Match gets 304', { skip }, async () => {
+    as(shopA, UserRole.OWNER)
+    const past = await fetch(`${base}/api/business/daily?date=2026-10-12`, { headers: { Authorization: 'Bearer test' } })
+    assert.equal(past.headers.get('cache-control'), 'private, max-age=300')
+    const etag = past.headers.get('etag')!
+    assert.ok(etag)
+    const again = await fetch(`${base}/api/business/daily?date=2026-10-12`, { headers: { Authorization: 'Bearer test', 'If-None-Match': etag } })
+    assert.equal(again.status, 304)
+    const live = await fetch(`${base}/api/business/daily?date=2026-10-19`, { headers: { Authorization: 'Bearer test' } })
+    assert.equal(live.headers.get('cache-control'), 'private, max-age=30')
+  })
+
+  test('a per-account rate limit answers 429 with Retry-After', { skip }, async () => {
+    const { AccountRateLimiter } = await import('./business-cache.js')
+    const limited = createBusinessDependencies(db!.prisma, { clock, rateLimiter: new AccountRateLimiter(2, 60_000) })
+    const app = express()
+    app.use('/api/business', createBusinessRouter(auth, limited))
+    app.use(errorHandler)
+    const small = app.listen(0)
+    try {
+      const url = `http://127.0.0.1:${(small.address() as AddressInfo).port}/api/business/daily?date=2026-10-12`
+      as(shopA, UserRole.OWNER)
+      assert.equal((await fetch(url, { headers: { Authorization: 'Bearer test' } })).status, 200)
+      assert.equal((await fetch(url, { headers: { Authorization: 'Bearer test' } })).status, 200)
+      const third = await fetch(url, { headers: { Authorization: 'Bearer test' } })
+      assert.equal(third.status, 429); assert.ok(Number(third.headers.get('retry-after')) > 0)
+      assert.equal(((await third.json()) as any).error.code, 'RATE_LIMITED')
+      as(shopB, UserRole.OWNER)
+      assert.equal((await fetch(url, { headers: { Authorization: 'Bearer test' } })).status, 200, 'another account is not limited')
+    } finally {
+      await new Promise<void>((resolve) => small.close(() => resolve()))
+    }
   })
 })
