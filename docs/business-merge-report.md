@@ -89,3 +89,32 @@ Branch: `business-reports` (from `main`). Spec: `business-reference/saas2-busine
   = sum, Yearly October = Monthly October, return on its day, Yearly 403 for staff, foreign store 403
   (same store name in both accounts), tenant isolation, invoice pages / filters / no cost, validation,
   targets and closed days. **14 / 14 pass**; backend suite 13,722 / 13,722; typecheck clean.
+
+## Phase 6 — frontend
+
+- Ported `business-reference/saas2-business/src` to `frontend/src/features/business/` (api, domain, lib,
+  hooks, components/business/{nav,shared,daily,weekly,monthly,yearly}, pages, styles). Semicolons removed
+  to match our style; the mock moved behind `import.meta.env.DEV && VITE_USE_MOCK === 'true'` (dynamic
+  import, not in the production bundle — checked in `dist/`).
+- `api/client.js` now uses our transport (`authenticatedApiRequest` → `src/lib/api-client.js`, Supabase
+  session token, abort); same function names (`apiGet`, `apiSend`, `ApiError`).
+- `business.css` scoped under `.biz` (every selector, no `!important`), the reference's colour names
+  mapped to `src/styles/tokens.css`, plus a reset that keeps the app's global element styles out; 44 px
+  tap targets and 16 px inputs (app rules).
+- Route `/app/business` (`pages/app/BusinessPage.jsx`, lazy-loaded with recharts in its own chunk) and a
+  "Business" nav item for OWNER only (there is no MANAGER role). URL filters kept
+  (`?view=&date=&week=&month=&year=&store=&method=&q=`).
+- `recharts ^2.15.4` added to the frontend.
+- Removed the unused `mapStores` ("Sales by store"); there is no "Order before you run out" section in the
+  reference (the "reorder" lists are the "Not selling" dead-stock lists, which stay).
+- Fixes needed by our lint rules: `useAsync` and `InvoiceList` no longer set state synchronously in
+  effects or write refs during render (results are keyed by their request); unused imports removed; the
+  store picker now receives the stores (the reference loaded them but never passed them).
+- Old invoices without a receipt number show `#` + the first 8 characters of the id.
+- **Not done: the 320 px visual check.** No browser is available in this environment; the CSS is the
+  reference's mobile-first file (checked at 320 px by its author), unchanged apart from scoping and tokens.
+- **Language.** The module is English and left to right inside the app (`dir="ltr"`); its texts are not
+  translated yet. The nav label "Business" is translated.
+- Tests: `business-ui.test.js` (mappers on the real backend shape for owner and staff, payments, invoice
+  without number, no mock / no `mapStores`, CSS scoped). Frontend 731 tests, 730 pass — the one failure
+  is the old `text-matching-ui.test.js:246`, unrelated. ESLint clean, build OK.
