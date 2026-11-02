@@ -1,7 +1,12 @@
+export type ExpenseCategory = 'RENT' | 'SALARIES' | 'ELECTRICITY' | 'GENERATOR' | 'OTHER'
+export const expenseCategories: readonly ExpenseCategory[] = ['RENT', 'SALARIES', 'ELECTRICITY', 'GENERATOR', 'OTHER']
+
 export interface ExpenseInput {
   readonly amount: string
   readonly description: string
   readonly expenseDate: Date
+  /** Defaults to OTHER. */
+  readonly category?: ExpenseCategory
 }
 
 export interface ExpenseHistoryQuery {

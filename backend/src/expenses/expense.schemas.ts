@@ -1,6 +1,6 @@
 import { Prisma } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
-import type { ExpenseHistoryQuery, ExpenseInput } from './expense.types.js'
+import { expenseCategories, type ExpenseCategory, type ExpenseHistoryQuery, type ExpenseInput } from './expense.types.js'
 
 const amountPattern = /^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
@@ -36,10 +36,15 @@ export function parseExpenseInput(body: unknown): ExpenseInput {
   }
   const input = body as Record<string, unknown>
   const allowed = ['amount', 'description', 'expenseDate']
-  if (Object.keys(input).some((key) => !allowed.includes(key)) ||
+  if (Object.keys(input).some((key) => !allowed.includes(key) && key !== 'category') ||
       allowed.some((key) => !Object.hasOwn(input, key))) {
-    invalidInput('INVALID_EXPENSE_INPUT', 'Only amount, description, and expenseDate are allowed')
+    invalidInput('INVALID_EXPENSE_INPUT', 'Only amount, description, expenseDate and category are allowed')
   }
+  // Optional; the business reports show rent and salaries on their own. Missing = OTHER.
+  if (input.category !== undefined && !expenseCategories.includes(input.category as ExpenseCategory)) {
+    invalidInput('INVALID_EXPENSE_CATEGORY', 'category must be RENT, SALARIES, ELECTRICITY, GENERATOR or OTHER')
+  }
+  const category = (input.category as ExpenseCategory | undefined) ?? 'OTHER'
   if (typeof input.amount !== 'string' || !amountPattern.test(input.amount)) {
     invalidInput('INVALID_EXPENSE_AMOUNT', 'amount must be a positive decimal string with at most two places')
   }
@@ -65,7 +70,7 @@ export function parseExpenseInput(body: unknown): ExpenseInput {
     'expenseDate',
     (message) => invalidInput('INVALID_EXPENSE_DATE', message),
   )
-  return { amount: amount.toFixed(2), description, expenseDate }
+  return { amount: amount.toFixed(2), description, expenseDate, category }
 }
 
 export function encodeExpenseCursor(expenseDate: Date, id: string): string {

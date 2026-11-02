@@ -151,3 +151,21 @@ describe('keeping the rollups fresh', () => {
     assert.equal(msUntilNext('Asia/Beirut', 3, 30, new Date('2026-11-02T02:00:00Z')), 23.5 * 3_600_000, '04:00 Beirut → tomorrow')
   })
 })
+
+describe('concurrent reports', () => {
+  test('two reports rolling up the same missing days at once do not collide', { skip: skip() }, async () => {
+    const shop2 = await seedAccount(db!.sql, { name: 'Busy shop' })
+    for (const day of ['2026-09-01', '2026-09-02', '2026-09-03']) {
+      await addSale(db!.sql, shop2, { at: `${day}T10:00:00+03:00`, lines: [{ variant: shop2.variants[0]!, quantity: 1, price: '10.00', cost: '5.0000' }] })
+    }
+    const busy = { accountId: shop2.accountId, timezone: 'Asia/Beirut', storeIds: [shop2.storeId] }
+    const results = await Promise.all([
+      rangeTotals(db!.prisma, busy, '2026-09-01', '2026-09-30', { today: '2026-11-02' }),
+      rangeTotals(db!.prisma, busy, '2026-08-20', '2026-09-10', { today: '2026-11-02' }),
+      rangeTotals(db!.prisma, busy, '2026-09-02', '2026-09-03', { today: '2026-11-02', breakdowns: false }),
+    ])
+    assert.equal(money(results[0].totals.salesTotal), '30.00')
+    assert.equal(money(results[1].totals.salesTotal), '30.00')
+    assert.equal(money(results[2].totals.salesTotal), '20.00')
+  })
+})

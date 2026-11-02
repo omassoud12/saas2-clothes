@@ -240,10 +240,14 @@ export async function rollupDays(
   if (from > end) return 0
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SET LOCAL statement_timeout = '60s'`
+    // One rollup per account at a time: two reports (or a report and the nightly job) rolling up the same
+    // days would otherwise both insert the same rows. The nightly job skips a busy account instead of waiting.
+    const lockKey = `business-rollup:${scope.accountId}`
     if (options.lockAccount) {
-      // Another API instance is rolling up this account right now: skip (the work is idempotent anyway).
-      const [lock] = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock(hashtextextended(${`business-rollup:${scope.accountId}`}, 0)) AS ok`
+      const [lock] = await tx.$queryRaw<{ ok: boolean }[]>`SELECT pg_try_advisory_xact_lock(hashtextextended(${lockKey}, 0)) AS ok`
       if (!lock?.ok) return -1
+    } else {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))::text AS locked`
     }
     const result = await computeDays(tx, scope.accountId, scope.timezone, from, end)
     const where = { accountId: scope.accountId, storeId: scope.storeId, date: { gte: new Date(`${from}T00:00:00Z`), lte: new Date(`${end}T00:00:00Z`) } }

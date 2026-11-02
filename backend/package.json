@@ -14,7 +14,10 @@
     "prisma:validate": "prisma validate",
     "prisma:format": "prisma format",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:migrate:status": "prisma migrate status"
+    "prisma:migrate:status": "prisma migrate status",
+    "db:dev": "node scripts/dev-db.mjs start",
+    "check:business": "tsx scripts/check-business-consistency.ts",
+    "business:backfill": "tsx scripts/rollup-backfill.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1133.0",
