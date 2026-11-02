@@ -8,6 +8,9 @@
 -- No existing row is updated: every new column is nullable or has a default, so the immutability triggers on
 -- Sale and SaleItem are never fired by this migration.
 
+-- One transaction: either the whole migration applies or nothing changes.
+BEGIN;
+
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'CARD', 'WHISH_OMT', 'DEBT');
 
@@ -227,3 +230,5 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+COMMIT;
