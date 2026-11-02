@@ -17,3 +17,6 @@ node-v*-win-x64.zip
 *.zip
 /SAAS2_*/
 /voice-dictionaries/*/
+
+# Local dev/test Postgres (backend/scripts/dev-db.mjs)
+/backend/.dev-db/
