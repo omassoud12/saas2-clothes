@@ -93,6 +93,7 @@ export function createBusinessDependencies(prisma: PrismaClient, options: Busine
   const timeoutMs = options.timeoutMs ?? 10_000
   const account = async (auth: AuthContext | undefined) => loadAccountContext(prisma, tenantOf(auth).accountId)
   const changed = <T>(auth: AuthContext | undefined, result: T): T => { cache.invalidateAccount(tenantOf(auth).accountId); return result }
+  const inFlight = new Map<string, Promise<ReportResult>>()
 
   return {
     async getStores(auth) {
@@ -101,15 +102,28 @@ export function createBusinessDependencies(prisma: PrismaClient, options: Busine
     },
     async getReport(kind, auth, query) {
       const started = Date.now()
-      const ctx = await reportContext(prisma, auth, query.storeId, options)
-      const key = `${ctx.scope.accountId}:${ctx.storeKey}:${kind}:${periodKey(kind, query)}:${ctx.isOwner ? 'owner' : 'staff'}`
+      // The cache is checked before any database work: the key only needs the session and the query.
+      const { accountId, role } = tenantOf(auth)
+      const store = typeof query.storeId === 'string' && query.storeId !== '' ? query.storeId : 'all'
+      const key = `${accountId}:${store}:${kind}:${periodKey(kind, query)}:${role === UserRole.OWNER ? 'owner' : 'staff'}`
       const cached = cache.get(key)
       if (cached) return cached
-      const body = await withTimeout(builders[kind](ctx, query), timeoutMs)
-      const entry = cache.set(key, ctx.scope.accountId, body, isLive(kind, body, ctx, query))
-      const durationMs = Date.now() - started
-      if (durationMs > slowMs) options.logger?.warn('business_report_slow', { accountId: ctx.scope.accountId, endpoint: kind, durationMs })
-      return entry
+      // Many requests for the same report at once (a stampede after a cache expiry) build it only once.
+      const running = inFlight.get(key)
+      if (running) return running
+      const build = (async () => {
+        const ctx = await reportContext(prisma, auth, query.storeId, options)
+        const body = await withTimeout(builders[kind](ctx, query), timeoutMs)
+        return cache.set(key, accountId, body, isLive(kind, body, ctx, query))
+      })()
+      inFlight.set(key, build)
+      try {
+        return await build
+      } finally {
+        inFlight.delete(key)
+        const durationMs = Date.now() - started
+        if (durationMs > slowMs) options.logger?.warn('business_report_slow', { accountId, endpoint: kind, durationMs })
+      }
     },
     async setTarget(auth, body) { return changed(auth, await setTarget(prisma, await account(auth), body)) },
     async listClosedDays(auth, query) { return listClosedDays(prisma, await account(auth), query) },

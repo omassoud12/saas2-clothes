@@ -53,10 +53,11 @@ async function start(): Promise<void> {
   try {
     const environment = loadEnvironment()
     startupStage = 'database_client'
+    const poolMax = Number(process.env.DATABASE_POOL_MAX)
     prisma = createPrismaClient(environment.databaseUrl, {
       caPath: environment.databaseCaPath,
       nodeEnvironment: environment.nodeEnvironment,
-    })
+    }, { poolMax: Number.isInteger(poolMax) && poolMax > 0 && poolMax <= 100 ? poolMax : undefined })
     startupStage = 'supabase_client'
     const supabaseVerifier = createSupabaseVerifier(environment)
     startupStage = 'dependencies'

@@ -34,6 +34,27 @@ export async function monthExpenses(ctx: ReportContext, month: string): Promise<
   return out
 }
 
+/** monthExpenses() for every month of a year in one query: month → category → amount (current month spread). */
+export async function yearExpenses(ctx: ReportContext, year: string): Promise<Map<string, Map<string, Prisma.Decimal>>> {
+  const rows = await ctx.prisma.$queryRaw<{ m: string; category: string; amount: string }[]>(Prisma.sql`
+    SELECT to_char("expenseDate", 'YYYY-MM') AS m, "category"::text AS category, SUM("amount")::text AS amount FROM "Expense"
+    WHERE "accountId" = ${ctx.scope.accountId}::uuid AND "expenseDate" >= ${`${year}-01-01`}::date AND "expenseDate" < ${`${Number(year) + 1}-01-01`}::date
+    GROUP BY 1, 2`)
+  const current = ctx.now.date.slice(0, 7)
+  const out = new Map<string, Map<string, Prisma.Decimal>>()
+  for (let month = 1; month <= 12; month += 1) {
+    const key = `${year}-${String(month).padStart(2, '0')}`
+    const share = key === current ? new Prisma.Decimal(Number(ctx.now.date.slice(8, 10))).div(monthDates(key).length) : new Prisma.Decimal(1)
+    const byCategory = new Map<string, Prisma.Decimal>()
+    for (const { category } of EXPENSE_CATEGORIES) {
+      const row = rows.find((item) => item.m === key && item.category === category)
+      byCategory.set(category, new Prisma.Decimal(row?.amount ?? 0).mul(share).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP))
+    }
+    out.set(key, byCategory)
+  }
+  return out
+}
+
 export async function monthlyReport(ctx: ReportContext, query: Record<string, unknown>) {
   if (!isCalendarMonth(query.month)) throw validationError('month must be YYYY-MM')
   const month = query.month

@@ -2,8 +2,8 @@
 import { Prisma } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import { isCalendarYear, monthDates, shiftDate } from './business-dates.js'
-import { rangeTotals } from './day-totals.js'
-import { monthExpenses } from './monthly.service.js'
+import { monthTotals } from './day-totals.js'
+import { yearExpenses } from './monthly.service.js'
 import { fmt, validationError, type ReportContext } from './report-common.js'
 
 export async function yearlyReport(ctx: ReportContext, query: Record<string, unknown>) {
@@ -18,9 +18,9 @@ export async function yearlyReport(ctx: ReportContext, query: Record<string, unk
   // Same months last year, up to the same day.
   const lastYearEnd = `${Number(yearEnd.slice(0, 4)) - 1}${yearEnd.slice(4)}`
 
-  const [thisYear, previousYear, purchases] = await Promise.all([
-    rangeTotals(ctx.prisma, ctx.scope, `${year}-01-01`, yearEnd, { today, breakdowns: false }),
-    rangeTotals(ctx.prisma, ctx.scope, `${Number(year) - 1}-01-01`, lastYearEnd.endsWith('-02-29') ? shiftDate(lastYearEnd, -1) : lastYearEnd, { today, breakdowns: false }),
+  const [thisYear, previousYear, purchases, expensesByMonth] = await Promise.all([
+    monthTotals(ctx.prisma, ctx.scope, `${year}-01-01`, yearEnd, { today }),
+    monthTotals(ctx.prisma, ctx.scope, `${Number(year) - 1}-01-01`, lastYearEnd.endsWith('-02-29') ? shiftDate(lastYearEnd, -1) : lastYearEnd, { today }),
     // Stock bought: stock receipts (quantity × unit cost) by shop-local month.
     ctx.prisma.$queryRaw<{ m: string; amount: string }[]>(Prisma.sql`
       SELECT to_char(r."createdAt" AT TIME ZONE ${ctx.scope.timezone}, 'YYYY-MM') AS m, SUM(i."quantity" * i."unitCost")::text AS amount
@@ -29,21 +29,17 @@ export async function yearlyReport(ctx: ReportContext, query: Record<string, unk
         AND r."createdAt" >= ((${`${year}-01-01`}::date)::timestamp AT TIME ZONE ${ctx.scope.timezone})
         AND r."createdAt" < ((${`${Number(year) + 1}-01-01`}::date)::timestamp AT TIME ZONE ${ctx.scope.timezone})
       GROUP BY 1`),
+    yearExpenses(ctx, year),
   ])
   const purchasesBy = new Map(purchases.map((row) => [row.m, new Prisma.Decimal(row.amount).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)]))
 
   const rows = []
   for (const month of months) {
-    let sales = new Prisma.Decimal(0)
-    let cost = new Prisma.Decimal(0)
-    let invoices = 0
-    for (const [date, day] of thisYear.days) {
-      if (!date.startsWith(month)) continue
-      sales = sales.add(day.salesTotal)
-      cost = cost.add(day.costTotal)
-      invoices += day.invoiceCount
-    }
-    const expenses = await monthExpenses(ctx, month)
+    const totals = thisYear.get(month)
+    const sales = totals?.salesTotal ?? new Prisma.Decimal(0)
+    const cost = totals?.costTotal ?? new Prisma.Decimal(0)
+    const invoices = totals?.invoiceCount ?? 0
+    const expenses = expensesByMonth.get(month)!
     const rent = expenses.get('RENT')!
     const other = [...expenses.entries()].filter(([category]) => category !== 'RENT').reduce((sum, [, amount]) => sum.add(amount), new Prisma.Decimal(0))
     rows.push({
@@ -61,6 +57,6 @@ export async function yearlyReport(ctx: ReportContext, query: Record<string, unk
     timezone: ctx.account.timezone,
     exchangeRate: ctx.account.exchangeRate,
     months: rows,
-    previousYear: { salesTotal: fmt(previousYear.totals.salesTotal), monthsCompared: rows.length },
+    previousYear: { salesTotal: fmt([...previousYear.values()].reduce((sum, month) => sum.add(month.salesTotal), new Prisma.Decimal(0))), monthsCompared: rows.length },
   }
 }

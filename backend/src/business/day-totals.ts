@@ -233,7 +233,7 @@ export async function rollupDays(
   from: string,
   to: string,
   today: string,
-  options: { lockAccount?: boolean } = {},
+  options: { lockAccount?: boolean; onlyIfMissing?: boolean } = {},
 ): Promise<number> {
   const lastFinished = shiftDate(today, -1)
   const end = to > lastFinished ? lastFinished : to
@@ -249,28 +249,48 @@ export async function rollupDays(
     } else {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))::text AS locked`
     }
+    if (options.onlyIfMissing) {
+      // Another request may have rolled these days up while this one waited for the lock.
+      const [row] = await tx.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM "DailySalesRollup"
+        WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ${scope.storeId}::uuid AND "date" BETWEEN ${from}::date AND ${end}::date`
+      if (row && row.n === dateRange(from, end).length) return 0
+    }
     const result = await computeDays(tx, scope.accountId, scope.timezone, from, end)
-    const where = { accountId: scope.accountId, storeId: scope.storeId, date: { gte: new Date(`${from}T00:00:00Z`), lte: new Date(`${end}T00:00:00Z`) } }
-    await tx.dailyProductRollup.deleteMany({ where })
-    await tx.dailyStaffRollup.deleteMany({ where })
-    await tx.dailySalesRollup.deleteMany({ where })
-    const keys = (date: string) => ({ accountId: scope.accountId, storeId: scope.storeId, date: new Date(`${date}T00:00:00Z`) })
-    await tx.dailySalesRollup.createMany({
-      data: [...result.days.values()].map((day) => ({
-        ...keys(day.date),
-        salesTotal: day.salesTotal, costTotal: day.costTotal, invoiceCount: day.invoiceCount, piecesSold: day.piecesSold,
-        discountsTotal: day.discountsTotal, returnsCount: day.returnsCount, returnsTotal: day.returnsTotal,
-        cashTotal: day.cashTotal, cashCount: day.cashCount, whishTotal: day.whishTotal, whishCount: day.whishCount, costMissing: day.costMissing,
-      })),
-    })
-    const productRows = [...result.variants.entries()].flatMap(([date, perDay]) => [...perDay.entries()].map(([variantId, value]) => ({
-      ...keys(date), variantId, quantity: value.quantity, salesTotal: value.salesTotal, costTotal: value.costTotal,
-    })))
-    if (productRows.length) await tx.dailyProductRollup.createMany({ data: productRows })
-    const staffRows = [...result.staff.entries()].flatMap(([date, perDay]) => [...perDay.entries()].map(([userId, value]) => ({
-      ...keys(date), userId, salesTotal: value.salesTotal, costTotal: value.costTotal, invoiceCount: value.invoiceCount,
-    })))
-    if (staffRows.length) await tx.dailyStaffRollup.createMany({ data: staffRows })
+    const account = Prisma.sql`${scope.accountId}::uuid`
+    const store = Prisma.sql`${scope.storeId}::uuid`
+    for (const table of ['DailyProductRollup', 'DailyStaffRollup', 'DailySalesRollup']) {
+      await tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE "accountId" = ${account} AND "storeId" = ${store} AND "date" BETWEEN ${from}::date AND ${end}::date`)
+    }
+    // One INSERT per table from arrays (unnest): the same numbers computeDays() produced, in one round trip.
+    const days = [...result.days.values()]
+    const column = <T>(rows: readonly T[], read: (row: T) => string | number | boolean) => rows.map(read)
+    await tx.$executeRaw(Prisma.sql`
+      INSERT INTO "DailySalesRollup" ("accountId", "storeId", "date", "salesTotal", "costTotal", "invoiceCount", "piecesSold", "discountsTotal",
+        "returnsCount", "returnsTotal", "cashTotal", "cashCount", "whishTotal", "whishCount", "costMissing", "updatedAt")
+      SELECT ${account}, ${store}, d::date, s::numeric, c::numeric, n, p, disc::numeric, rn, rt::numeric, ca::numeric, can, wh::numeric, whn, miss, now()
+      FROM unnest(${column(days, (day) => day.date)}::text[], ${column(days, (day) => day.salesTotal.toFixed(2))}::text[], ${column(days, (day) => day.costTotal.toFixed(2))}::text[],
+                  ${column(days, (day) => day.invoiceCount)}::int[], ${column(days, (day) => day.piecesSold)}::int[], ${column(days, (day) => day.discountsTotal.toFixed(2))}::text[],
+                  ${column(days, (day) => day.returnsCount)}::int[], ${column(days, (day) => day.returnsTotal.toFixed(2))}::text[], ${column(days, (day) => day.cashTotal.toFixed(2))}::text[],
+                  ${column(days, (day) => day.cashCount)}::int[], ${column(days, (day) => day.whishTotal.toFixed(2))}::text[], ${column(days, (day) => day.whishCount)}::int[],
+                  ${column(days, (day) => day.costMissing)}::boolean[])
+        AS t(d, s, c, n, p, disc, rn, rt, ca, can, wh, whn, miss)`)
+    const products = [...result.variants.entries()].flatMap(([date, perDay]) => [...perDay.entries()].map(([variantId, value]) => ({ date, variantId, ...value })))
+    if (products.length) {
+      await tx.$executeRaw(Prisma.sql`
+        INSERT INTO "DailyProductRollup" ("accountId", "storeId", "date", "variantId", "quantity", "salesTotal", "costTotal")
+        SELECT ${account}, ${store}, d::date, v::uuid, q, s::numeric, c::numeric
+        FROM unnest(${column(products, (row) => row.date)}::text[], ${column(products, (row) => row.variantId)}::text[], ${column(products, (row) => row.quantity)}::int[],
+                    ${column(products, (row) => row.salesTotal.toFixed(2))}::text[], ${column(products, (row) => row.costTotal.toFixed(2))}::text[]) AS t(d, v, q, s, c)`)
+    }
+    const staff = [...result.staff.entries()].flatMap(([date, perDay]) => [...perDay.entries()].map(([userId, value]) => ({ date, userId, ...value })))
+    if (staff.length) {
+      await tx.$executeRaw(Prisma.sql`
+        INSERT INTO "DailyStaffRollup" ("accountId", "storeId", "date", "userId", "salesTotal", "costTotal", "invoiceCount")
+        SELECT ${account}, ${store}, d::date, u::uuid, s::numeric, c::numeric, n
+        FROM unnest(${column(staff, (row) => row.date)}::text[], ${column(staff, (row) => row.userId)}::text[], ${column(staff, (row) => row.salesTotal.toFixed(2))}::text[],
+                    ${column(staff, (row) => row.costTotal.toFixed(2))}::text[], ${column(staff, (row) => row.invoiceCount)}::int[]) AS t(d, u, s, c, n)`)
+    }
     return result.days.size
   }, { timeout: 120_000, maxWait: 10_000 })
 }
@@ -349,18 +369,34 @@ export async function rangeTotals(
   const liveDate = last === today || cut !== null ? last : null
   const rollupTo = liveDate ? shiftDate(liveDate, -1) : last
 
+  // Closed days are read alongside the numbers.
+  const closedPromise = closedDates(prisma, scope, from, to)
+  closedPromise.catch(() => {}) // awaited below; this only stops an early throw from leaving it unhandled
+
   if (from <= rollupTo) {
-    await ensureRollups(prisma, scope, from, rollupTo, today)
-    await readOnly(prisma, async (tx) => {
-    const rows = await tx.$queryRaw<RollupDayRow[]>(Prisma.sql`
-      SELECT "date"::text AS d, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS invoices,
-             SUM("piecesSold")::int AS pieces, SUM("discountsTotal")::text AS discounts, SUM("returnsCount")::int AS returns_n,
-             SUM("returnsTotal")::text AS returns, SUM("cashTotal")::text AS cash, SUM("cashCount")::int AS cash_n,
-             SUM("whishTotal")::text AS whish, SUM("whishCount")::int AS whish_n, BOOL_OR("costMissing") AS miss, COUNT(*)::int AS stores
-      FROM "DailySalesRollup"
-      WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-        AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
-      GROUP BY "date" ORDER BY "date"`)
+    // Finished days from the rollups: three small indexed reads, in parallel (they cannot run away, so
+    // they run outside a transaction; queries over raw sales keep their 5 s statement_timeout).
+    const where = Prisma.sql`"accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[]) AND "date" BETWEEN ${from}::date AND ${rollupTo}::date`
+    const read = () => Promise.all([
+      prisma.$queryRaw<RollupDayRow[]>(Prisma.sql`
+        SELECT "date"::text AS d, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS invoices,
+               SUM("piecesSold")::int AS pieces, SUM("discountsTotal")::text AS discounts, SUM("returnsCount")::int AS returns_n,
+               SUM("returnsTotal")::text AS returns, SUM("cashTotal")::text AS cash, SUM("cashCount")::int AS cash_n,
+               SUM("whishTotal")::text AS whish, SUM("whishCount")::int AS whish_n, BOOL_OR("costMissing") AS miss, COUNT(*)::int AS stores
+        FROM "DailySalesRollup" WHERE ${where} GROUP BY "date" ORDER BY "date"`),
+      options.breakdowns === false ? Promise.resolve([]) : prisma.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
+        SELECT "userId"::text AS u, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS n
+        FROM "DailyStaffRollup" WHERE ${where} GROUP BY "userId"`),
+      options.breakdowns === false ? Promise.resolve([]) : prisma.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
+        SELECT "variantId"::text AS v, SUM("quantity")::int AS qty, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost
+        FROM "DailyProductRollup" WHERE ${where} GROUP BY "variantId"`),
+    ] as const)
+    let [rows, staffRows, variantRows] = await read()
+    // A finished day without a row in every store was never computed: roll it up first, then read again.
+    if (rows.length !== dateRange(from, rollupTo).length || rows.some((row) => Number(row.stores) !== scope.storeIds.length)) {
+      await ensureRollups(prisma, scope, from, rollupTo, today)
+      ;[rows, staffRows, variantRows] = await read()
+    }
     for (const row of rows) {
       days.set(row.d, {
         date: row.d, salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.invoices), piecesSold: Number(row.pieces),
@@ -368,23 +404,8 @@ export async function rangeTotals(
         cashCount: Number(row.cash_n), whishTotal: money(row.whish), whishCount: Number(row.whish_n), costMissing: Boolean(row.miss),
       })
     }
-    if (options.breakdowns !== false) {
-      const staffRows = await tx.$queryRaw<{ u: string; sales: string; cost: string; n: number }[]>(Prisma.sql`
-        SELECT "userId"::text AS u, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS n
-        FROM "DailyStaffRollup"
-        WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-          AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
-        GROUP BY "userId"`)
-      for (const row of staffRows) addStaff(staff, row.u, { salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.n) })
-      const variantRows = await tx.$queryRaw<{ v: string; qty: number; sales: string; cost: string }[]>(Prisma.sql`
-        SELECT "variantId"::text AS v, SUM("quantity")::int AS qty, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost
-        FROM "DailyProductRollup"
-        WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-          AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
-        GROUP BY "variantId"`)
-      for (const row of variantRows) addVariant(variants, row.v, { quantity: Number(row.qty), salesTotal: money(row.sales), costTotal: money(row.cost) })
-    }
-    })
+    for (const row of staffRows) addStaff(staff, row.u, { salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.n) })
+    for (const row of variantRows) addVariant(variants, row.v, { quantity: Number(row.qty), salesTotal: money(row.sales), costTotal: money(row.cost) })
   }
 
   if (liveDate) {
@@ -400,22 +421,71 @@ export async function rangeTotals(
     addDay(totals, day)
   }
   const ordered = new Map([...days.entries()].sort(([a], [b]) => (a < b ? -1 : 1)))
-  return { days: ordered, totals, staff, variants, closed: await closedDates(prisma, scope, from, to) }
+  return { days: ordered, totals, staff, variants, closed: await closedPromise }
 }
 
-/** Rolls up the finished days from..to that have no rollup row yet (for every store of the scope). */
+/**
+ * Rolls up the finished days from..to that have no rollup row yet (for every store of the scope). Under the
+ * account's rollup lock it checks again, so when many requests find the same days missing only the first
+ * one computes them.
+ */
 async function ensureRollups(prisma: PrismaClient, scope: BusinessScope, from: string, to: string, today: string) {
-  const present = await prisma.$queryRaw<{ s: string; d: string }[]>(Prisma.sql`
-    SELECT "storeId"::text AS s, "date"::text AS d FROM "DailySalesRollup"
-    WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
-      AND "date" BETWEEN ${from}::date AND ${to}::date`)
-  const have = new Set(present.map((row) => `${row.s}|${row.d}`))
-  const dates = dateRange(from, to)
-  for (const storeId of scope.storeIds) {
-    const missing = dates.filter((date) => !have.has(`${storeId}|${date}`))
-    if (!missing.length) continue
-    await rollupDays(prisma, { accountId: scope.accountId, timezone: scope.timezone, storeId }, missing[0]!, missing[missing.length - 1]!, today)
+  const end = to >= today ? shiftDate(today, -1) : to
+  if (from > end) return
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`business-rollup:${scope.accountId}`}, 0))::text AS locked`
+    const present = await tx.$queryRaw<{ s: string; d: string }[]>(Prisma.sql`
+      SELECT "storeId"::text AS s, "date"::text AS d FROM "DailySalesRollup"
+      WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[])
+        AND "date" BETWEEN ${from}::date AND ${end}::date`)
+    const have = new Set(present.map((row) => `${row.s}|${row.d}`))
+    const dates = dateRange(from, end)
+    return scope.storeIds.map((storeId) => dates.filter((date) => !have.has(`${storeId}|${date}`))).map((missing, index) => ({ storeId: scope.storeIds[index]!, missing }))
+  }).then(async (work) => {
+    for (const { storeId, missing } of work) {
+      if (!missing.length) continue
+      await rollupDays(prisma, { accountId: scope.accountId, timezone: scope.timezone, storeId }, missing[0]!, missing[missing.length - 1]!, today, { onlyIfMissing: true })
+    }
+  })
+}
+
+/**
+ * Month sums from..to (yearly report): finished days from the rollups summed by month in SQL, today added
+ * from liveDay(). The same day function, read as 12 rows instead of 365.
+ */
+export async function monthTotals(prisma: PrismaClient, scope: BusinessScope, from: string, to: string, options: { today: string }): Promise<Map<string, DayNumbers>> {
+  const { today } = options
+  const last = to > today ? today : to
+  const rollupTo = last === today ? shiftDate(today, -1) : last
+  const out = new Map<string, DayNumbers>()
+  if (from <= rollupTo) {
+    const read = () => prisma.$queryRaw<(RollupDayRow & { rows: number })[]>(Prisma.sql`
+      SELECT to_char("date", 'YYYY-MM') AS d, SUM("salesTotal")::text AS sales, SUM("costTotal")::text AS cost, SUM("invoiceCount")::int AS invoices,
+             SUM("piecesSold")::int AS pieces, SUM("discountsTotal")::text AS discounts, SUM("returnsCount")::int AS returns_n,
+             SUM("returnsTotal")::text AS returns, SUM("cashTotal")::text AS cash, SUM("cashCount")::int AS cash_n,
+             SUM("whishTotal")::text AS whish, SUM("whishCount")::int AS whish_n, BOOL_OR("costMissing") AS miss, 1 AS stores, COUNT(*)::int AS rows
+      FROM "DailySalesRollup"
+      WHERE "accountId" = ${scope.accountId}::uuid AND "storeId" = ANY(${[...scope.storeIds]}::uuid[]) AND "date" BETWEEN ${from}::date AND ${rollupTo}::date
+      GROUP BY 1`)
+    let rows = await read()
+    if (rows.reduce((sum, row) => sum + Number(row.rows), 0) !== dateRange(from, rollupTo).length * scope.storeIds.length) {
+      await ensureRollups(prisma, scope, from, rollupTo, today)
+      rows = await read()
+    }
+    for (const row of rows) {
+      out.set(row.d, {
+        date: row.d, salesTotal: money(row.sales), costTotal: money(row.cost), invoiceCount: Number(row.invoices), piecesSold: Number(row.pieces),
+        discountsTotal: money(row.discounts), returnsCount: Number(row.returns_n), returnsTotal: money(row.returns), cashTotal: money(row.cash),
+        cashCount: Number(row.cash_n), whishTotal: money(row.whish), whishCount: Number(row.whish_n), costMissing: Boolean(row.miss),
+      })
+    }
   }
+  if (last === today && from <= today) {
+    const live = await liveDay(prisma, scope, today, null)
+    const month = today.slice(0, 7)
+    out.set(month, addDay(out.get(month) ?? emptyDay(month), live.day))
+  }
+  return out
 }
 
 /** Sales by shop-local hour for one day (raw sales, net of returns made in that hour), cut when given. */

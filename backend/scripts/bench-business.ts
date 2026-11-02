@@ -38,7 +38,8 @@ pg.Client.prototype.query = function patched(this: pg.Client, ...callArgs: any[]
   return (originalQuery as any).apply(this, callArgs)
 } as any
 
-const prisma = createPrismaClient(url, { caPath: '', nodeEnvironment: 'development' })
+const poolMax = flag('--pool', 10)
+const prisma = createPrismaClient(url, { caPath: '', nodeEnvironment: 'development' }, { poolMax })
 const owners = await prisma.user.findMany({ where: { role: UserRole.OWNER }, select: { id: true, accountId: true } })
 if (!owners.length) throw new Error('No accounts: run scripts/seed-load.ts first')
 
@@ -59,7 +60,10 @@ const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/bus
 
 const today = shopNow('Asia/Beirut').date
 const pick = <T>(items: readonly T[]) => items[Math.floor(Math.random() * items.length)]!
-const pastDate = () => shiftDate(today, -Math.floor(Math.random() * 365))
+// --hot: what owners mostly open — today, this week, this month, this year — for 20 shops (cache hits).
+const hot = args.includes('--hot')
+const pastDate = () => (hot ? today : shiftDate(today, -Math.floor(Math.random() * 365)))
+const callers = hot ? owners.slice(0, 20) : owners
 const endpoints: Record<string, () => string> = {
   daily: () => `/daily?date=${Math.random() < 0.2 ? today : pastDate()}`,
   weekly: () => `/weekly?week=${mondayOf(pastDate())}`,
@@ -68,7 +72,7 @@ const endpoints: Record<string, () => string> = {
   invoices: () => `/daily/invoices?date=${pastDate()}&limit=10`,
 }
 
-async function call(path: string, owner = pick(owners)) {
+async function call(path: string, owner = pick(callers)) {
   const started = performance.now()
   const response = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${owner.accountId}:${owner.id}` } })
   await response.arrayBuffer()
