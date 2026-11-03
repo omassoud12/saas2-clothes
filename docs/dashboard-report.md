@@ -76,3 +76,31 @@ Decision: the top-level month key is `currentMonth` (the spec's `month` object h
 
 Results: dashboard tests 7 / 7 (numbers equal Business Daily / Weekly / Monthly, permissions, tenant
 isolation); backend 13,731 / 13,731; typecheck and build OK.
+
+## Phase 4 — Product cost
+
+- `POST /api/products/:productId/cost-entries` (EDIT_PRODUCT_COST; `addToStock` also needs INVENTORY):
+  `{ variantIds?, quantity, totalCost, supplierName?, note?, addToStock?: { storeId, perVariant? } }`.
+  The server computes `unitCost = totalCost / quantity` (half up, 2 decimals, at least 0.01), and in ONE
+  transaction locks the product, sets `lastPurchaseCost` + `costUpdatedAt` of the chosen variants (all
+  active variants when `variantIds` is absent), adds the pieces to stock through the existing
+  stock-receipt flow (`receipts.receiveWithin`: StockReceipt + RESTOCK InventoryMovements, split evenly
+  unless `perVariant` is given), writes the `CostEntry` and the `product.cost.set` audit row.
+  Response `{ unitCost, variantsUpdated, entry, stockReceipt }`.
+- `GET /api/products/:productId/cost-history?cursor&limit` (EDIT_PRODUCT_COST or VIEW_COST_PROFIT):
+  the product's variants with their current cost, and the entries newest first (keyset cursor).
+- `GET /api/products/missing-cost?storeId`: active variants without a cost grouped by product, sorted
+  by what they sold without a cost in the last 30 days (then stock).
+- Old sales keep their snapshot (`SaleItem.unitCostAtSale` is immutable); a test proves it.
+- A store of another account is 403; a product or variant of another account is 404.
+
+Decisions:
+- These routes are a separate router mounted on `/api/products` before the product router (only these
+  three paths), so the product routes are untouched.
+- No idempotency key on cost entries: the UI disables double submits; adding stock goes through the
+  receipt flow with a fresh operation id each time.
+- `appliesTo` is VARIANT or VARIANTS, and `allVariants` tells whether the entry covered every active
+  variant of the product.
+
+Results: cost tests 7 / 7 (unit-cost rounding, even split, validation, transaction + audit, stock via
+receipts, permissions, tenant isolation, history paging, missing cost); backend 13,738 / 13,738.

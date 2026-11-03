@@ -25,6 +25,8 @@ import { createCountCheckRouter, type CountCheckDependencies } from './inventory
 import { createReportRouter } from './reports/report.routes.js'
 import { createBusinessRouter, createStoreRouter, type BusinessDependencies } from './business/business.routes.js'
 import { createDashboardRouter } from './dashboard/dashboard.routes.js'
+import { createCostRouter } from './costs/cost.routes.js'
+import type { CostDependencies } from './costs/cost.service.js'
 import type { DashboardDependencies } from './dashboard/dashboard.service.js'
 import type { ReportDependencies } from './reports/report.types.js'
 import type {
@@ -181,6 +183,7 @@ export interface AppDependencies {
   readonly countChecks?: CountCheckDependencies
   readonly business?: BusinessDependencies
   readonly dashboard?: DashboardDependencies
+  readonly costs?: CostDependencies
 }
 
 export function createApp(
@@ -241,6 +244,7 @@ export function createApp(
     '/api/categories',
     createCategoryRouter(dependencies.auth, dependencies.categories),
   )
+  if (dependencies.costs) app.use('/api/products', createCostRouter(dependencies.auth, dependencies.costs))
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
   if (dependencies.voiceMatching || dependencies.voiceTranscription) {
     app.use('/api/voice-sales', createVoiceMatchingRouter(dependencies.auth, dependencies.voiceMatching, dependencies.voiceTranscription))

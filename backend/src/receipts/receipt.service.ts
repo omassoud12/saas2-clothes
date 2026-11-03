@@ -110,6 +110,13 @@ export function createReceiptDependencies(prisma: PrismaClient) {
     if(product && product.createdById===userId) return {productId:product.id,receipt:null,idempotentReplay:true}
     throw new HttpError(404,'RECEIPT_NOT_FOUND','Operation is not confirmed')
   }
-  return {receiveExisting,createSetup,history,recover}
+  /** The same receiving, inside a transaction the caller already opened (product cost entry + stock). */
+  async function receiveWithin(tx:Tx,accountId:string,userId:string,productId:string,key:string,input:ReceiptInput) {
+    await lockOperation(tx,accountId,key)
+    const fingerprint=receiptFingerprint(accountId,userId,'existing',{productId,...input})
+    const row=await receive(tx,accountId,userId,productId,key,fingerprint,input)
+    return view(row,true)
+  }
+  return {receiveExisting,createSetup,history,recover,receiveWithin}
 }
 export type ReceiptDependencies = ReturnType<typeof createReceiptDependencies>
