@@ -6,6 +6,9 @@ import { loadSiteFonts } from '../../site/site-router.js'
 import { useSeo } from '../../site/useSeo.js'
 import { useI18n } from '../../i18n/I18nContext.js'
 import { LanguageSwitch } from '../../i18n/LanguageSwitch.jsx'
+// The sign-in screens use the public site's styles (.site scope). Imported here, not only by SiteRoot,
+// because each screen is downloaded on its own: /login opened directly never loads SiteRoot.
+import '../../site/site.css'
 
 // The frame of every sign-in screen, from design-reference/saas2-site (AuthLayout): a silk panel
 // (top band on phones, left half on wide screens) and a stitched card holding the form.

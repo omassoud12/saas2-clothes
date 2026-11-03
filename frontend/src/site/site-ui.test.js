@@ -196,3 +196,12 @@ describe('public site', () => {
     assert.deepEqual(unscoped, [])
   })
 })
+
+// Every screen is its own file (App.jsx lazy loading): /login opened directly never loads SiteRoot, so the
+// sign-in frame must bring the site styles itself. Without them the silk canvas grows without end.
+describe('sign-in screens bring their own styles', () => {
+  test('AuthShell imports site.css', () => {
+    const source = readFileSync(new URL('../components/auth/AuthShell.jsx', import.meta.url), 'utf8')
+    assert.match(source, /import '\.\.\/\.\.\/site\/site\.css'/)
+  })
+})
