@@ -106,7 +106,6 @@ export default Object.freeze({
   'A unique code is filled in for you. You can change it.': 'تم تعبئة رمز فريد لإلك. فيك تغيّره.',
   'A variant in the cart is no longer active.': 'في خيار بالسلة ما عاد فعّال.',
   'A voided sale cannot be marked as paid.': 'البيعة الملغاة ما بيصير تتسجل كمدفوعة.',
-  'Access is scoped to your authenticated store.': 'الوصول محصور بمتجرك المسجّل.',
   'Access to this store is currently suspended.': 'الوصول لهالمحل موقوف حالياً.',
   'Access unavailable': 'الوصول غير متاح',
   'Access with purpose': 'وصول حسب الصلاحية',

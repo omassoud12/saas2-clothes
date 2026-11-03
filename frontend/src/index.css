@@ -317,7 +317,6 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 .sidebar-logout-button:hover { background: color-mix(in srgb, var(--color-surface-soft) 9%, transparent); }
 .sidebar-logout-button:focus-visible { outline: 3px solid var(--color-surface-active); outline-offset: 2px; }
-.sidebar-security-note { margin: .75rem .5rem 0; color: var(--color-on-primary-muted); font-size: var(--font-size-xs); line-height: 1.55; }
 .sidebar-backdrop { display: none; }
 .business-workspace { min-width: 0; }
 .business-header {
@@ -409,7 +408,6 @@ button:disabled { cursor: wait; opacity: .65; }
   }
   .business-navigation a { min-height: 48px; padding: .68rem .75rem; }
   .sidebar-footer { flex: 0 0 auto; padding-top: .72rem; background: var(--color-primary); }
-  .sidebar-security-note { display: none; }
   .sidebar-backdrop {
     position: fixed;
     inset: 0;
@@ -483,8 +481,9 @@ button:disabled { cursor: wait; opacity: .65; }
 .language-switch { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); }
 .language-switch button { min-height: var(--touch-target); min-width: var(--touch-target); margin: 0; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-text); font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }
 .language-switch button[aria-pressed='true'] { background: var(--color-primary); color: var(--color-primary-contrast); }
-.sidebar-language { margin: 0 var(--space-2) var(--space-3); border-color: var(--color-on-primary-muted); background: transparent; }
-.sidebar-language button { color: var(--color-primary-contrast); }
+/* Same width and shape as the Logout button above it: two equal halves. */
+.sidebar-language { display: flex; width: 100%; margin: 0; margin-block-start: .6rem; border-color: color-mix(in srgb, var(--color-surface-active) 16%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-surface-soft) 4%, transparent); }
+.sidebar-language button { flex: 1 1 0; border-radius: calc(var(--radius-md) - 4px); color: var(--color-primary-contrast); }
 .sidebar-language button[aria-pressed='true'] { background: var(--color-surface-active); color: var(--color-text); }
 .more-sheet-language { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
 .more-sheet-language h3 { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }

@@ -112,7 +112,6 @@ export function AppSidebar({
           <span>{loggingOut ? t('Signing out...') : t('Logout')}</span>
         </button>
         <LanguageSwitch className="sidebar-language" />
-        <p className="sidebar-security-note">{t('Access is scoped to your authenticated store.')}</p>
       </div>
     </aside>
   )
