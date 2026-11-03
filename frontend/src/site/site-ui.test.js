@@ -184,7 +184,9 @@ describe('public site', () => {
     for (const tag of ['property="og:type" content="website"', 'property="og:title"', 'property="og:description"', 'name="theme-color" content="#FCF7F5"']) assert.ok(indexHtml.includes(tag), tag)
     const jsonLd = JSON.parse(indexHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u)[1])
     assert.equal(jsonLd['@type'], 'SoftwareApplication'); assert.equal(jsonLd.publisher.name, 'UltraScaling')
-    assert.doesNotMatch(indexHtml, /fonts\.googleapis/u, 'the fonts load only on the public pages')
+    // The site's own fonts load only on the public pages; the app's Arabic font is in index.html (non-blocking).
+    assert.doesNotMatch(indexHtml, /Bricolage|Instrument\+Sans/u, 'the site fonts load only on the public pages')
+    assert.match(indexHtml, /IBM\+Plex\+Sans\+Arabic[^>]*media="print"/u, 'the Arabic font does not block the first paint')
   })
 
   test('every site style is scoped under .site so the app is untouched', () => {
