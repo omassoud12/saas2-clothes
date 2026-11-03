@@ -11,7 +11,7 @@ import { errorHandler } from '../middleware/error-handler.js'
 import { addReturn, addSale, createTestDatabase, seedAccount, voidSale, type FixtureAccount } from '../business/business-test-db.js'
 import { createBusinessDependencies, createBusinessRouter } from '../business/business.routes.js'
 import { AccountRateLimiter, ReportCache } from '../business/business-cache.js'
-import { createDashboardDependencies, percentChange, periodRange } from './dashboard.service.js'
+import { createDashboardDependencies, percentChange, periodRange, suggestTarget } from './dashboard.service.js'
 import { createDashboardRouter } from './dashboard.routes.js'
 import { Prisma } from '../generated/prisma/client.js'
 
@@ -106,6 +106,11 @@ describe('dashboard helpers', () => {
     assert.deepEqual(periodRange('today', '2026-10-19'), { from: '2026-10-19', to: '2026-10-19' })
     assert.deepEqual(periodRange('week', '2026-10-21'), { from: '2026-10-19', to: '2026-10-21' })
     assert.deepEqual(periodRange('month', '2026-10-19'), { from: '2026-10-01', to: '2026-10-19' })
+    // Suggested target: average of the last 3 full months + 5%, rounded to $500.
+    assert.equal(suggestTarget(new Prisma.Decimal(9000)), '3000.00')
+    assert.equal(suggestTarget(new Prisma.Decimal(13000)), '4500.00')
+    assert.equal(suggestTarget(new Prisma.Decimal(100)), '500.00')
+    assert.equal(suggestTarget(new Prisma.Decimal(0)), null)
   })
 })
 

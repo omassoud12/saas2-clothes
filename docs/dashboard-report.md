@@ -117,3 +117,37 @@ Nothing was applied to production; the new migrations exist on this branch only.
 - Owner decision (after the stop): the Owner Dashboard is for the account owner only. `DASHBOARD` is
   owner-only (`OWNER_ONLY` in `src/access/permissions.ts`): it is in no employee preset, it cannot be
   given to an employee (422), and a stored one is ignored. Every employee gets 403 on `/api/dashboard/*`.
+
+## Phase 7 (owner part) — Frontend, phone first
+
+Resumed on request ("do its frontend, phone UI/UX first"). Owner only (the API refuses every employee).
+- `/app/dashboard` for the OWNER is the Owner Dashboard (`features/dashboard/OwnerDashboard.jsx`);
+  employees keep the store overview.
+  1. "Hi {name}" + store picker (only shown with more than one store).
+  2. Today (dark card, taps to Business): sales, ≈ LBP, change vs yesterday by this time, invoices,
+     pieces, gross profit, "profit is not exact" when a sale had no cost.
+  3. Monthly target: bar with the pace tick, ahead/behind pace, "on pace for ~$X", set/edit in a
+     bottom sheet (PUT /api/business/targets) with the suggested amount (last 3 months + 5%, to $500;
+     new `month.suggestedTarget` in the summary).
+  4. Alerts only when needed: products without a cost → Product cost page; pending invites.
+  5. Best sellers: Today / This week / This month + Revenue / Pieces / Profit, grouped by product, tap
+     for variants, top 10 + "See all".
+  6. This month's money: sales − cost = gross profit − expenses = net profit (same numbers as Monthly),
+     expenses entered by category, Add expense.
+  7. Quick actions, 2 columns on a phone: Set product cost, Add expense, Set target, Business reports.
+- `/app/dashboard/costs` (`CostsPage.jsx`): search by name/barcode, "Missing cost" list on top, current
+  cost per variant, form "How many did you buy?" (chips 1 / 6 / 12 (dozen) / 24 / other), "Total you
+  paid" in USD or LBP (account rate), live "= $8.00 each" (same half-up rounding as the server), all or
+  chosen variants, optional "also add to stock", sticky save button, "Old sales keep their old cost",
+  price history with "Show older".
+- Phone first: one column at 320px, 4 quick actions from 600px, two columns from 900px; text ≥ 12px,
+  fields 16px with `inputmode` numeric/decimal, tap targets ≥ 44px, bottom sheet on phones (dialog from
+  600px), no physical left/right (Arabic mirrors), skeletons, errors with retry, toasts, no double submit.
+- Arabic: every text is translated (98 entries in `ar.js`).
+- The stylesheet is in the size, token and RTL audits.
+
+Not done: employees screens, expenses month view and recurring expenses (phases 5–6 backend not built),
+a visual check at 320 / 375 / 430px in a real browser (no browser in this environment).
+
+Results: frontend 747 / 748 (the one failure is the old `text-matching-ui.test.js:246`), ESLint clean,
+build OK; backend 13,738 / 13,738.

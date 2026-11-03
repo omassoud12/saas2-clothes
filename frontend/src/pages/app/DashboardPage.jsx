@@ -6,6 +6,7 @@ import { Badge, ErrorState, LoadingSpinner, PageHeader } from '../../components/
 import { formatSignedMoney } from '../../lib/money.js'
 import { supabase } from '../../lib/supabase.js'
 import { useI18n } from '../../i18n/I18nContext.js'
+import { OwnerDashboard } from '../../features/dashboard/OwnerDashboard.jsx'
 
 function redirectIfNeeded(result) {
   if (result.requiresLogin) window.location.replace('/login')
@@ -80,7 +81,13 @@ function StockOverview({ navigate, state, onRetry }) {
   </section>
 }
 
+// The account owner gets the Owner Dashboard; employees keep the store overview.
 export function DashboardPage({ profile, navigate }) {
+  if (profile.user.role === 'OWNER') return <OwnerDashboard profile={profile} navigate={navigate} />
+  return <StoreOverview profile={profile} navigate={navigate} />
+}
+
+function StoreOverview({ profile, navigate }) {
   const { t } = useI18n()
   const role = profile.user.role
   const date = localBusinessDate()

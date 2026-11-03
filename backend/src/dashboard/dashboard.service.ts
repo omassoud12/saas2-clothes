@@ -7,7 +7,7 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import type { AuthContext } from '../auth/auth.types.js'
 import { hasPermission } from '../access/permissions.js'
-import { mondayOf, monthDates, shiftDate } from '../business/business-dates.js'
+import { mondayOf, monthDates, shiftDate, shiftMonth } from '../business/business-dates.js'
 import { ReportCache, AccountRateLimiter } from '../business/business-cache.js'
 import { rangeTotals, readOnly } from '../business/day-totals.js'
 import { EXPENSE_CATEGORIES, monthExpenses } from '../business/monthly.service.js'
@@ -69,13 +69,22 @@ export async function recordedExpenses(ctx: ReportContext, month: string): Promi
   return { total: fmt(total), byCategory }
 }
 
+/** Average of the last 3 full months + 5%, rounded to $500 (null when nothing was sold). */
+export function suggestTarget(lastThreeMonthsSales: Money): string | null {
+  const average = lastThreeMonthsSales.div(3).mul('1.05')
+  if (!average.gt(0)) return null
+  return fmt(Prisma.Decimal.max(500, average.div(500).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP).mul(500)))
+}
+
 export async function dashboardSummary(ctx: ReportContext, auth: AuthContext | undefined, hooks: DashboardHooks) {
   const today = ctx.now.date
   const month = today.slice(0, 7)
   const dates = monthDates(month)
   const yesterday = shiftDate(today, -1)
   if (ctx.isOwner) await hooks.beforeMonthExpenses?.(ctx.scope.accountId, month)
-  const [todayTotals, yesterdayByNow, monthTotals, history, target, missingCost, employees, spreadExpenses, recorded] = await Promise.all([
+  const threeMonthsFrom = `${shiftMonth(month, -3)}-01`
+  const threeMonthsTo = shiftDate(`${month}-01`, -1)
+  const [todayTotals, yesterdayByNow, monthTotals, history, target, missingCost, employees, spreadExpenses, recorded, lastThree] = await Promise.all([
     rangeTotals(ctx.prisma, ctx.scope, today, today, { today, breakdowns: false }),
     rangeTotals(ctx.prisma, ctx.scope, yesterday, yesterday, { today, cutLastDayAt: ctx.now.minute, breakdowns: false }),
     rangeTotals(ctx.prisma, ctx.scope, dates[0]!, today, { today, breakdowns: false }),
@@ -86,6 +95,7 @@ export async function dashboardSummary(ctx: ReportContext, auth: AuthContext | u
     // The same spread expenses as Business Monthly, so the month's net profit is the same number.
     ctx.isOwner ? monthExpenses(ctx, month) : null,
     ctx.isOwner ? recordedExpenses(ctx, month) : null,
+    rangeTotals(ctx.prisma, ctx.scope, threeMonthsFrom, threeMonthsTo, { today, breakdowns: false }),
   ])
 
   const todayDay = todayTotals.totals
@@ -139,6 +149,7 @@ export async function dashboardSummary(ctx: ReportContext, auth: AuthContext | u
       netProfit: expensesTotal ? fmt(monthProfit.sub(expensesTotal)) : null,
       costComplete: !monthDay.costMissing,
       target: targetBody,
+      suggestedTarget: suggestTarget(lastThree.totals.salesTotal),
       projection: fmt(projection),
       daysInMonth: dates.length,
       dayOfMonth,
