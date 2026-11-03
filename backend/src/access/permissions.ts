@@ -21,22 +21,24 @@ export type EmployeeRoleName = 'MANAGER' | 'CASHIER' | 'WAREHOUSE'
 export type MemberRoleName = 'OWNER' | EmployeeRoleName
 
 export const ALL_PERMISSIONS: readonly Permission[] = [...PAGES, ...CAPABILITIES]
+// Only the account owner (the main account) ever has these; they cannot be given to an employee.
+export const OWNER_ONLY: ReadonlySet<Permission> = new Set<Permission>(['DASHBOARD'])
 const KNOWN = new Set<string>(ALL_PERMISSIONS)
 
 export const ROLE_PRESETS: Readonly<Record<MemberRoleName, readonly Permission[]>> = Object.freeze({
   OWNER: ALL_PERMISSIONS,
   // Every page except Employees and Settings; never sees cost or profit.
-  MANAGER: ['DASHBOARD', 'POS', 'SALES_HISTORY', 'PRODUCTS', 'INVENTORY', 'BUSINESS_REPORTS', 'EXPENSES', 'TARGETS', 'GIVE_DISCOUNT', 'VOID_SALE'],
+  MANAGER: ['POS', 'SALES_HISTORY', 'PRODUCTS', 'INVENTORY', 'BUSINESS_REPORTS', 'EXPENSES', 'TARGETS', 'GIVE_DISCOUNT', 'VOID_SALE'],
   CASHIER: ['POS', 'SALES_HISTORY'],
   // What every employee could do before roles existed (kept for existing WAREHOUSE users).
-  WAREHOUSE: ['DASHBOARD', 'POS', 'SALES_HISTORY', 'PRODUCTS', 'INVENTORY', 'BUSINESS_REPORTS', 'GIVE_DISCOUNT'],
+  WAREHOUSE: ['POS', 'SALES_HISTORY', 'PRODUCTS', 'INVENTORY', 'BUSINESS_REPORTS', 'GIVE_DISCOUNT'],
 })
 
 /** For the employee form: pages grouped as the owner sees them. */
 export const PERMISSION_GROUPS = Object.freeze([
   { group: 'Selling', permissions: ['POS', 'SALES_HISTORY', 'GIVE_DISCOUNT', 'VOID_SALE'] },
   { group: 'Products & stock', permissions: ['PRODUCTS', 'INVENTORY', 'EDIT_PRODUCT_COST'] },
-  { group: 'Reports', permissions: ['DASHBOARD', 'BUSINESS_REPORTS', 'VIEW_COST_PROFIT'] },
+  { group: 'Reports', permissions: ['BUSINESS_REPORTS', 'VIEW_COST_PROFIT'] },
   { group: 'Management', permissions: ['EMPLOYEES', 'EXPENSES', 'TARGETS', 'SETTINGS'] },
 ] as const)
 
@@ -58,6 +60,7 @@ export function parsePermissionList(value: unknown, field = 'permissions'): Perm
   }
   for (const item of value) {
     if (!isPermission(item)) throw new HttpError(422, 'VALIDATION_ERROR', `${field} contains an unknown permission`)
+    if (OWNER_ONLY.has(item)) throw new HttpError(422, 'VALIDATION_ERROR', `${item} is for the owner only`)
   }
   const chosen = new Set(value as Permission[])
   return ALL_PERMISSIONS.filter((permission) => chosen.has(permission))
@@ -80,7 +83,7 @@ export function effectivePermissions(member: MemberAccessFields): ReadonlySet<Pe
   const role = memberRoleOf(member)
   if (!role) return new Set()
   if (role === 'OWNER') return new Set(ALL_PERMISSIONS)
-  if (member.permissionsCustom) return new Set((member.permissions ?? []).filter(isPermission))
+  if (member.permissionsCustom) return new Set((member.permissions ?? []).filter((item): item is Permission => isPermission(item) && !OWNER_ONLY.has(item)))
   return new Set(ROLE_PRESETS[role])
 }
 

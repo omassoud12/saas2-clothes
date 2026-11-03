@@ -113,3 +113,7 @@ summary + best sellers, product cost). Phase 5 was only started: `backend/src/em
 the branch but not wired or tested. Not done: phases 5 (employees, invites, `requirePermission` on every
 existing route), 6 (expenses edit / recurring / `/api/targets`), 7 (frontend) and 8 (load test, docs).
 Nothing was applied to production; the new migrations exist on this branch only.
+
+- Owner decision (after the stop): the Owner Dashboard is for the account owner only. `DASHBOARD` is
+  owner-only (`OWNER_ONLY` in `src/access/permissions.ts`): it is in no employee preset, it cannot be
+  given to an employee (422), and a stored one is ignored. Every employee gets 403 on `/api/dashboard/*`.

@@ -148,28 +148,18 @@ describe('GET /api/dashboard/summary', { skip }, () => {
     assert.deepEqual(body.employees, { active: 1, invited: 0, deactivated: 0 })
   })
 
-  test('without VIEW_COST_PROFIT every profit and expense field is null', async () => {
-    asEmployee(shopA, 'MANAGER')
-    const { status, body } = await get('/api/dashboard/summary')
-    assert.equal(status, 200)
-    assert.equal(body.today.profitTotal, null)
-    assert.equal(body.month.profitTotal, null)
-    assert.equal(body.month.expensesTotal, null)
-    assert.equal(body.month.netProfit, null)
-    assert.equal(body.expensesThisMonth, null)
-    assert.equal(body.employees, null)
-    assert.equal(body.today.salesTotal, '131.00')
-    // A manager the owner allowed to see cost sees profit (but still no employee counts).
+  test('the dashboard is for the owner only: every employee preset gets 403, even with custom permissions', async () => {
+    for (const preset of ['MANAGER', 'CASHIER', 'WAREHOUSE']) {
+      asEmployee(shopA, preset)
+      assert.equal((await get('/api/dashboard/summary')).status, 403)
+      assert.equal((await get('/api/dashboard/best-sellers')).status, 403)
+    }
+    // A stored DASHBOARD permission on an employee is ignored.
     asEmployee(shopA, 'MANAGER', ['DASHBOARD', 'VIEW_COST_PROFIT'])
-    const allowed = (await get('/api/dashboard/summary')).body
-    assert.notEqual(allowed.today.profitTotal, null)
-    assert.equal(allowed.employees, null)
+    assert.equal((await get('/api/dashboard/summary')).status, 403)
   })
 
-  test('no DASHBOARD page: 403; another account never sees these numbers', async () => {
-    asEmployee(shopA, 'CASHIER')
-    assert.equal((await get('/api/dashboard/summary')).status, 403)
-    assert.equal((await get('/api/dashboard/best-sellers')).status, 403)
+  test('another account never sees these numbers', async () => {
     asOwner(shopB)
     const b = (await get('/api/dashboard/summary')).body
     assert.equal(b.today.salesTotal, '891.00')
@@ -198,9 +188,6 @@ describe('GET /api/dashboard/best-sellers', { skip }, () => {
     const byProfit = (await get('/api/dashboard/best-sellers?period=month&sort=profit')).body.items
     for (let index = 1; index < byProfit.length; index += 1) assert.ok(Number(byProfit[index - 1].profitTotal) >= Number(byProfit[index].profitTotal))
     assert.equal((await get('/api/dashboard/best-sellers?period=month&limit=1')).body.items.length, 1)
-    asEmployee(shopA, 'MANAGER')
-    assert.equal((await get('/api/dashboard/best-sellers?sort=profit')).status, 403)
-    assert.equal((await get('/api/dashboard/best-sellers')).body.items[0].profitTotal, null)
     assert.equal((await get('/api/dashboard/best-sellers?period=year')).status, 422)
     assert.equal((await get('/api/dashboard/best-sellers?limit=0')).status, 422)
   })
