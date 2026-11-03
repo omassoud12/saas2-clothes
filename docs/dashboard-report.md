@@ -104,3 +104,12 @@ Decisions:
 
 Results: cost tests 7 / 7 (unit-cost rounding, even split, validation, transaction + audit, stock via
 receipts, permissions, tenant isolation, history paging, missing cost); backend 13,738 / 13,738.
+
+## Stopped here (on request)
+
+Work stopped by the owner after Phase 4. Done and committed: phases 1–4 (audit, database, dashboard
+summary + best sellers, product cost). Phase 5 was only started: `backend/src/employees/auth-admin.ts`
+(Supabase admin interface + its own optional loader for `SUPABASE_SERVICE_ROLE_KEY` / `APP_URL`) is in
+the branch but not wired or tested. Not done: phases 5 (employees, invites, `requirePermission` on every
+existing route), 6 (expenses edit / recurring / `/api/targets`), 7 (frontend) and 8 (load test, docs).
+Nothing was applied to production; the new migrations exist on this branch only.
