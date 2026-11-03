@@ -1,0 +1,3 @@
+# The voice-sales dictionary CSVs are verified byte for byte against the supplied source files
+# (SHA-256 in the tests), so git must store them exactly as supplied, with their CRLF line ends.
+backend/resources/voice-sales/*.csv -text
