@@ -162,10 +162,19 @@ describe('Expense input and history validation', () => {
 
   test('rejects missing, unknown, and privileged create fields', () => {
     const base = { amount: '1.00', description: 'Rent', expenseDate: '2026-09-24' }
-    for (const field of ['id', 'accountId', 'createdById', 'currency', 'category', 'note', 'occurredAt', 'createdAt', 'updatedAt', 'unknown']) {
+    for (const field of ['id', 'accountId', 'createdById', 'currency', 'note', 'occurredAt', 'createdAt', 'updatedAt', 'unknown']) {
       assert.throws(() => parseExpenseInput({ ...base, [field]: 'forbidden' }), (error) => expectHttp(error, 422, 'INVALID_EXPENSE_INPUT'))
     }
     assert.throws(() => parseExpenseInput({ amount: '1.00', description: 'Rent' }), (error) => expectHttp(error, 422, 'INVALID_EXPENSE_INPUT'))
+  })
+
+  test('an optional category for the business reports, OTHER by default', () => {
+    const base = { amount: '750.00', description: 'Shop rent', expenseDate: '2026-11-01' }
+    assert.equal(parseExpenseInput(base).category, 'OTHER')
+    assert.equal(parseExpenseInput({ ...base, category: 'RENT' }).category, 'RENT')
+    for (const category of ['Rent', 'rent', 'FOOD', 1, null]) {
+      assert.throws(() => parseExpenseInput({ ...base, category }), (error) => expectHttp(error, 422, 'INVALID_EXPENSE_CATEGORY'))
+    }
   })
 
   test('validates bounded date/id cursors and inclusive date filters', () => {

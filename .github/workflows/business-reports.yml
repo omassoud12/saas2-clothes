@@ -1,0 +1,35 @@
+# Backend tests (including the business reports on a real Postgres) and the business consistency check.
+# The Postgres is the embedded local one (backend/scripts/dev-db.mjs): no secrets, no real database.
+name: business-reports
+
+on:
+  push:
+    branches: [main, business-reports]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate the Prisma client
+        run: npm run prisma:generate --workspace server
+      - name: Start the local Postgres
+        working-directory: backend
+        run: |
+          node scripts/dev-db.mjs start > dev-db.log 2>&1 &
+          for i in $(seq 1 60); do grep -q "running" dev-db.log && break; sleep 2; done
+          cat dev-db.log
+      - name: Typecheck
+        run: npm run typecheck --workspace server
+      - name: Backend tests (business tests use the local Postgres)
+        run: npm test --workspace server
+      - name: All reports agree
+        working-directory: backend
+        run: npm run check:business

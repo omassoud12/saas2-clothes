@@ -23,6 +23,7 @@ import type { ExpenseDependencies } from './expenses/expense.types.js'
 import { createSettingsRouter, type SettingsDependencies } from './settings/settings.js'
 import { createCountCheckRouter, type CountCheckDependencies } from './inventory/count-check.js'
 import { createReportRouter } from './reports/report.routes.js'
+import { createBusinessRouter, createStoreRouter, type BusinessDependencies } from './business/business.routes.js'
 import type { ReportDependencies } from './reports/report.types.js'
 import type {
   HttpRuntimeConfiguration,
@@ -176,6 +177,7 @@ export interface AppDependencies {
   readonly reports?: ReportDependencies
   readonly settings?: SettingsDependencies
   readonly countChecks?: CountCheckDependencies
+  readonly business?: BusinessDependencies
 }
 
 export function createApp(
@@ -260,6 +262,10 @@ export function createApp(
   }
   if (dependencies.settings) {
     app.use('/api/settings', createSettingsRouter(dependencies.auth, dependencies.settings))
+  }
+  if (dependencies.business) {
+    app.use('/api/stores', createStoreRouter(dependencies.auth, dependencies.business))
+    app.use('/api/business', createBusinessRouter(dependencies.auth, dependencies.business))
   }
   app.use(
     '/api/admin/accounts',

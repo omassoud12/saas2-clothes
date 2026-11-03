@@ -9,8 +9,11 @@ import { PrismaClient } from '../generated/prisma/client.js'
 export function createPrismaClient(
   databaseUrl: string,
   tlsContext: DatabaseTlsContext,
+  options: { readonly poolMax?: number } = {},
 ): PrismaClient {
-  const pool = new Pool(createVerifiedPgPoolConfig(databaseUrl, tlsContext))
+  // One pool per process. Its size defaults to pg's (10); set DATABASE_POOL_MAX to change it (keep it
+  // under the Supabase pooler's limit for this service).
+  const pool = new Pool({ ...createVerifiedPgPoolConfig(databaseUrl, tlsContext), ...(options.poolMax ? { max: options.poolMax } : {}) })
   const adapter = new PrismaPg(pool, { disposeExternalPool: true })
   return new PrismaClient({ adapter })
 }

@@ -63,6 +63,7 @@ export function createExpenseDependencies(prisma: PrismaClient): ExpenseDependen
             currency: account.baseCurrency,
             description: input.description,
             expenseDate: input.expenseDate,
+            category: input.category ?? 'OTHER',
           },
           select: expenseSelect,
         })

@@ -14,6 +14,14 @@ export interface RuntimeLogFields {
   readonly upstreamStatus?: number
   readonly mimeType?: string
   readonly byteCount?: number
+  // Business reports: tenant id and job counts only, never personal data.
+  readonly accountId?: string
+  readonly endpoint?: string
+  readonly accounts?: number
+  readonly ok?: number
+  readonly skipped?: number
+  readonly failed?: number
+  readonly ms?: number
 }
 
 export interface RuntimeLogger {

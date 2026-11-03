@@ -1477,4 +1477,5 @@ export default Object.freeze({
   'Your shop was not approved': 'محلك ما انقبل',
   'Your shop, ready when you are.': 'محلك جاهز، وقت ما بدّك.',
   'and': 'و',
+  'Business': 'تقارير المحل',
 })

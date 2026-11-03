@@ -158,6 +158,7 @@ describe('business app navigation', () => {
         'exchanges',
         'expenses',
         'reports',
+        'business',
         'settings',
       ],
     )
@@ -288,7 +289,7 @@ describe('phone bottom navigation', () => {
     const { bar, more } = getMobileNavigation('OWNER')
     assert.deepEqual(bar.map(({ key }) => key), ['dashboard', 'products', 'sales', 'history'])
     assert.deepEqual(bar.map((item) => item.mobileLabel || item.label), ['Home', 'Products', 'Sell', 'History'])
-    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges', 'expenses', 'reports', 'settings'])
+    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges', 'expenses', 'reports', 'business', 'settings'])
     assert.equal(bar.length + 1, 5, 'four items plus More fill five slots with Sell in the middle')
     assert.equal(bar[2].key, 'sales')
   })

@@ -77,6 +77,14 @@ export const APP_NAVIGATION = Object.freeze([
     roles: ownerRoles,
   }),
   Object.freeze({
+    // Daily / Weekly / Monthly / Yearly business reports (src/features/business).
+    key: 'business',
+    label: 'Business',
+    path: ROUTES.business,
+    icon: 'business',
+    roles: ownerRoles,
+  }),
+  Object.freeze({
     key: 'settings',
     label: 'Settings',
     path: ROUTES.settings,

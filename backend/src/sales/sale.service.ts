@@ -621,7 +621,12 @@ export async function createSaleInTransaction(
   return { ...persisted, status: SaleStatus.COMPLETED }
 }
 
-export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
+export interface SaleHooks {
+  /** Called after a void has committed (also for an idempotent replay). Must not throw. */
+  afterVoid?(event: { readonly accountId: string; readonly saleId: string }): void
+}
+
+export function createSaleDependencies(prisma: PrismaClient, hooks: SaleHooks = {}): SaleDependencies {
   async function findSale(db: SaleReader, accountId: string, idempotencyKey: string): Promise<PersistedSale | null> {
     return db.sale.findUnique({
       where: { accountId_idempotencyKey: { accountId, idempotencyKey } },
@@ -900,12 +905,16 @@ export function createSaleDependencies(prisma: PrismaClient): SaleDependencies {
     saleId: string,
     input: SaleVoidInput,
   ): Promise<SaleVoidView> {
+    let view: SaleVoidView
     try {
-      return await performVoid(accountId, voidedById, saleId, input)
+      view = await performVoid(accountId, voidedById, saleId, input)
     } catch (error) {
       if (error instanceof HttpError) throw error
       throw new HttpError(503, 'SALE_VOID_UNAVAILABLE', 'Sale could not be Void-ed')
     }
+    // A void removes the sale from the day it was made: let the business reports refresh that day.
+    try { hooks.afterVoid?.({ accountId, saleId }) } catch { /* never fail a committed void */ }
+    return view
   }
 
   async function performPay(accountId: string, paidById: string, saleId: string): Promise<SalePayView> {
