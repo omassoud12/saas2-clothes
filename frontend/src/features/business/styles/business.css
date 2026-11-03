@@ -46,7 +46,9 @@
    Sections: layout · header & nav · cards · numbers & chips · charts · lists · tabs-specific · wide screens */
 
 /* ---------------------------------------------------------------- layout */
-.biz { max-width: 980px; margin: 0 auto; padding: 12px 12px 40px; display: flex; flex-direction: column; gap: 10px; }
+/* justify-self: the app <main> inherits `place-items: center` (index.css `main`), and Chrome now applies it
+   to block layout too: without this the page shrinks to its content while loading, then jumps wide (CLS). */
+.biz { justify-self: stretch; max-width: 980px; margin: 0 auto; padding: 12px 12px 40px; display: flex; flex-direction: column; gap: 10px; }
 .biz .biz__body { display: flex; flex-direction: column; gap: 10px; transition: opacity 0.2s ease; }
 .biz .biz__body.is-refreshing { opacity: 0.6; }
 
