@@ -1,0 +1,27 @@
+/* SaaS2 theme tokens (same as the website and POS): warm blush ground, rose cards, charcoal actions. */
+:root {
+  --ground: #fcf7f5;
+  --surface: #fffbfa;
+  --soft: #f6e8e4;
+  --pill: #efdcd7;
+  --line: #ebd5cf;
+  --ink: #2a2626;
+  --muted: #6e6461;
+  --accent: #2a2626;
+  --accent-hover: #463f3e;
+  --accent-2: #9a4e5c;
+  --good: #1f6b3c;
+  --good-bg: #dff1e6;
+  --bad: #8e1f1f;
+  --bad-bg: #fbe1e1;
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 22px;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid rgba(154, 78, 92, 0.45); outline-offset: 2px; border-radius: 10px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
