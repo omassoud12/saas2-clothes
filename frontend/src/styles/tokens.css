@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+/* The Arabic font is loaded from index.html (a <link> starts at once; an @import here would only start
+   after this whole stylesheet has downloaded). */
 
 /*
   Design tokens for the whole app. The Sell (POS) screen is the reference design: every other page takes its
