@@ -252,6 +252,11 @@ export function createAuthDependencies(
           role: true,
           accountId: true,
           isActive: true,
+          status: true,
+          employeeRole: true,
+          permissions: true,
+          permissionsCustom: true,
+          mustChangePassword: true,
         },
       })
     },

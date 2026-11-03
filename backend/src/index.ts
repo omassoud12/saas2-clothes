@@ -38,6 +38,7 @@ import { createSaleDependencies } from './sales/sale.service.js'
 import { createBusinessDependencies } from './business/business.routes.js'
 import { createVoidRefresher, scheduleNightlyRollups } from './business/rollup-jobs.js'
 import { ReportCache } from './business/business-cache.js'
+import { createDashboardDependencies } from './dashboard/dashboard.service.js'
 import { createSupabaseVerifier } from './supabase.js'
 import { createVoiceMatchingDependencies } from './voice-sales/matching.service.js'
 import { createVoiceTranscriptionDependencies } from './voice-sales/transcription.service.js'
@@ -124,6 +125,7 @@ async function start(): Promise<void> {
         settings,
         countChecks,
         business: createBusinessDependencies(prisma, { cache: businessCache, logger }),
+        dashboard: createDashboardDependencies(prisma, { cache: businessCache }),
       },
       environment,
       {

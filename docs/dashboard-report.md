@@ -46,3 +46,33 @@ Decisions:
   `SaleItem(accountId, variantId, createdAt)` indexes serve the dashboard queries.
 
 Results: typecheck OK; backend tests 13,724 / 13,724.
+
+## Phase 3 — Dashboard summary and best sellers
+
+- `src/access/permissions.ts`: pages (DASHBOARD, POS, SALES_HISTORY, PRODUCTS, INVENTORY,
+  BUSINESS_REPORTS, EMPLOYEES, EXPENSES, TARGETS, SETTINGS), capabilities (VIEW_COST_PROFIT,
+  EDIT_PRODUCT_COST, GIVE_DISCOUNT, VOID_SALE), role presets, `requirePermission` /
+  `requireAnyPermission`. The auth middleware now refuses INVITED (403 `MEMBER_INVITED`) and DEACTIVATED
+  members and puts the member's effective permissions on `req.auth`.
+- Business reports use the capability: a member with VIEW_COST_PROFIT sees cost/profit (and Yearly); the
+  report cache key follows the capability instead of the role.
+- `GET /api/dashboard/summary?storeId` and `GET /api/dashboard/best-sellers?period&sort&limit&storeId`
+  (`src/dashboard/`), DASHBOARD permission, built only on `business/day-totals.ts`:
+  - today live; yesterday cut at the current shop time; the month from rollups + today live;
+  - target: `progress` = month sales / target (4 decimals), `expectedByToday` = target × day / days;
+  - `projection` = finished days as sold + max(today, today's usual day) + the usual sales of the days to
+    come (the same 4-same-weekday forecast as Business);
+  - `month.expensesTotal` / `netProfit` use the same spread expenses as Business Monthly, so the numbers
+    match; `expensesThisMonth` lists what was entered for the month (not spread);
+  - `missingCost`: active variants without a cost and what was sold without a cost in the last 30 days
+    (driven by `Sale(accountId, status, createdAt)`);
+  - `employees` only with EMPLOYEES; cost, profit and expenses null without VIEW_COST_PROFIT;
+  - best sellers grouped by product with variants, the same `productRows` as Business; `sort=profit`
+    is 403 without VIEW_COST_PROFIT.
+  - Cache 30 s in the shared report cache, key account:store:kind:params:what-the-member-may-see, ETag
+    / 304, in-flight coalescing, 120 requests / minute / account.
+
+Decision: the top-level month key is `currentMonth` (the spec's `month` object holds the numbers).
+
+Results: dashboard tests 7 / 7 (numbers equal Business Daily / Weekly / Monthly, permissions, tenant
+isolation); backend 13,731 / 13,731; typecheck and build OK.
