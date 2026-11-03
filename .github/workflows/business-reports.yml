@@ -24,12 +24,19 @@ jobs:
         working-directory: backend
         run: |
           node scripts/dev-db.mjs start > dev-db.log 2>&1 &
-          for i in $(seq 1 60); do grep -q "running" dev-db.log && break; sleep 2; done
+          for i in $(seq 1 60); do grep -q "Dev database running" dev-db.log && break; sleep 2; done
           cat dev-db.log
+          if ! grep -q "Dev database running" dev-db.log; then echo "::error::The local Postgres did not start"; exit 1; fi
       - name: Typecheck
         run: npm run typecheck --workspace server
       - name: Backend tests (business tests use the local Postgres)
-        run: npm test --workspace server
+        # Failing tests are also printed as annotations, which can be read without opening the log.
+        run: |
+          set +e
+          npm test --workspace server 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          grep -E "✖|Error:|error TS" test.log | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+          exit $status
       - name: All reports agree
         working-directory: backend
         run: npm run check:business
