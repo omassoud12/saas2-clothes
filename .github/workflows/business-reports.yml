@@ -38,7 +38,9 @@ jobs:
           set +e
           npm test --workspace server 2>&1 | tee test.log
           status=${PIPESTATUS[0]}
-          grep -E "✖|^ *not ok|^# (pass|fail)|Error:|error TS|code: '|actual:|expected:" test.log | head -60 | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$status" -ne 0 ]; then
+            grep -E "✖|^ *not ok|^# (pass|fail)|Error:|error TS|code: '|actual:|expected:" test.log | head -60 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
           exit $status
       - name: All reports agree
         working-directory: backend
