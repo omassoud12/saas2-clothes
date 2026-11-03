@@ -1,14 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
-import { createDailyReportService } from './daily-report.service.js'
+import { Prisma } from '../generated/prisma/client.js'
 import {
   computeDailyFinancialsInTransaction,
   computeFinancialRangeInTransaction,
   parseReportDate,
   roundDailyCogs,
-  summarizeFinancialDays,
 } from './financial.service.js'
 import type { DailyFinancials, FinancialTransaction } from './financial.types.js'
 import { FinancialComputationError } from './financial.types.js'
@@ -45,8 +43,6 @@ class FinancialStore {
   events: string[] = []
   aggregateSql = ''
   queryCount = 0
-  failUpsert = false
-  report: Record<string, unknown> | null = null
 
   transaction(): FinancialTransaction {
     const store = this
@@ -69,32 +65,9 @@ class FinancialStore {
         store.aggregateSql = text
         return store.rows
       },
-      dailyReport: {
-        async upsert({ create, update }: { create: Record<string, unknown>; update: Record<string, unknown> }) {
-          store.events.push('Upsert')
-          if (store.failUpsert) throw new Error('sensitive database failure')
-          store.report = store.report ? { ...store.report, ...update } : { id: 'report-id', ...create }
-          return { id: 'report-id' }
-        },
-      },
     } as unknown as FinancialTransaction
   }
 
-  client(): PrismaClient {
-    const store = this
-    return {
-      async $transaction(callback: (transaction: FinancialTransaction) => Promise<unknown>, options: unknown) {
-        store.events.push(`Transaction:${(options as { isolationLevel: string }).isolationLevel}`)
-        const previous = store.report ? { ...store.report } : null
-        try {
-          return await callback(store.transaction())
-        } catch (error) {
-          store.report = previous
-          throw error
-        }
-      },
-    } as unknown as PrismaClient
-  }
 }
 
 function zeroDay(reportDate: string): DailyFinancials {
@@ -270,15 +243,12 @@ describe('financial range calculation', () => {
       { reportDate: '2026-09-23', salesCount: 0, grossRevenue: '0.00', returnedRevenue: '20.00', voidedRevenue: '0.00' },
       { reportDate: '2026-09-24', salesCount: 0, grossRevenue: '0.00', returnedRevenue: '0.00', voidedRevenue: '90.00' },
     ])
-    const summary = summarizeFinancialDays(days)
-    assert.equal(summary.totalUnitsSold, 7)
-    assert.equal(summary.netRevenue, '45.00')
-    assert.equal(summary.grossCOGS, '80.00')
-    assert.equal(summary.returnedCOGS, '14.01')
-    assert.equal(summary.voidedCOGS, '42.01')
-    assert.equal(summary.netCOGS, '23.98')
-    assert.equal(summary.grossProfit, '21.02')
-    assert.equal(summary.netProfit, '21.02')
+    assert.deepEqual(days.map((day) => [day.grossCOGS, day.returnedCOGS, day.voidedCOGS]), [
+      ['80.00', '0.00', '0.00'],
+      ['0.00', '6.00', '0.00'],
+      ['0.00', '8.01', '0.00'],
+      ['0.00', '0.00', '42.01'],
+    ])
   })
 
   test('keeps replacement Sale gross activity and its later Void on their own UTC days', async () => {
@@ -297,7 +267,7 @@ describe('financial range calculation', () => {
     assert.equal(days[2]?.voidedCOGS, '18.00')
   })
 
-  test('rounds each daily COGS component once with HALF_UP before range summarization', async () => {
+  test('rounds each daily COGS component once with HALF_UP', async () => {
     assert.equal(roundDailyCogs('0.0049'), '0.00')
     assert.equal(roundDailyCogs('0.0050'), '0.01')
     assert.equal(roundDailyCogs('0.0051'), '0.01')
@@ -309,21 +279,6 @@ describe('financial range calculation', () => {
     ]
     const days = await computeFinancialRangeInTransaction(store.transaction(), accountId, '2026-09-21', '2026-09-22')
     assert.deepEqual(days.map((day) => day.grossCOGS), ['0.00', '0.00'])
-    assert.equal(summarizeFinancialDays(days).grossCOGS, '0.00')
-  })
-
-  test('summarizes daily rounded components and preserves all accounting equations', () => {
-    const first = { ...zeroDay('2026-09-21'), grossRevenue: '100.00', netRevenue: '100.00', grossCOGS: '60.00', netCOGS: '60.00', grossProfit: '40.00', netProfit: '40.00', salesCount: 1, totalUnitsSold: 2 }
-    const second = { ...zeroDay('2026-09-22'), returnedRevenue: '25.00', netRevenue: '-25.00', returnedCOGS: '15.00', netCOGS: '-15.00', grossProfit: '-10.00', operatingExpenses: '20.00', netProfit: '-30.00' }
-    const summary = summarizeFinancialDays([first, second])
-    assert.equal(summary.grossRevenue, '100.00')
-    assert.equal(summary.returnedRevenue, '25.00')
-    assert.equal(summary.netRevenue, '75.00')
-    assert.equal(summary.netCOGS, '45.00')
-    assert.equal(summary.grossProfit, '30.00')
-    assert.equal(summary.netProfit, '10.00')
-    assert.equal(summary.netProfit, new Prisma.Decimal(first.netProfit).add(second.netProfit).toFixed(2))
-    assert.equal(summary.stockValue, null)
   })
 
   test('rejects mixed currencies and Decimal/Int overflow at the aggregate boundary', async () => {
@@ -393,82 +348,7 @@ describe('financial range calculation', () => {
   })
 })
 
-describe('DailyReport rebuild', () => {
-  test('uses lock-compatible READ COMMITTED, locks Account first, and idempotently upserts one cache row', async () => {
-    const store = new FinancialStore()
-    store.rows = [rawDay('2026-09-24', { grossRevenue: '10.00', rawGrossCOGS: '4.0000' })]
-    const service = createDailyReportService(store.client())
-    const first = await service.rebuildDailyReport(accountId, '2026-09-24')
-    const firstComputedAt = first.computedAt
-    const second = await service.rebuildDailyReport(accountId, '2026-09-24')
-    assert.deepEqual(store.events.slice(0, 5), [
-      `Transaction:${Prisma.TransactionIsolationLevel.ReadCommitted}`,
-      'AccountLock', 'AccountRead', 'Aggregate', 'Upsert',
-    ])
-    assert.equal(first.grossRevenue, '10.00')
-    assert.equal(second.grossRevenue, first.grossRevenue)
-    assert.equal(store.report?.stockValue, null)
-    assert.equal(store.report?.reportDate instanceof Date, true)
-    assert.ok(second.computedAt.getTime() >= firstComputedAt.getTime())
-  })
-
-  test('rebuilds an empty day and updates the same cache row after authoritative results change', async () => {
-    const store = new FinancialStore()
-    const service = createDailyReportService(store.client())
-    const empty = await service.rebuildDailyReport(accountId, '2026-09-24')
-    assert.deepEqual({ ...empty, computedAt: undefined }, { ...zeroDay('2026-09-24'), computedAt: undefined })
-    store.rows = [rawDay('2026-09-24', { operatingExpenses: '20.00' })]
-    const changed = await service.rebuildDailyReport(accountId, '2026-09-24')
-    assert.equal(changed.operatingExpenses, '20.00')
-    assert.equal(changed.netProfit, '-20.00')
-    assert.equal(store.report?.operatingExpenses, '20.00')
-  })
-
-  test('keeps rebuilt cache fields identical to live authoritative output after each event class', async () => {
-    const scenarios = [
-      rawDay('2026-09-24', {
-        salesCount: 2n, totalUnitsSold: 5n, grossRevenue: '120.00', rawGrossCOGS: '70.0050',
-      }),
-      rawDay('2026-09-24', {
-        returnedRevenue: '25.00', rawReturnedCOGS: '12.3450',
-      }),
-      rawDay('2026-09-24', {
-        voidedRevenue: '80.00', rawVoidedCOGS: '44.4450',
-      }),
-      rawDay('2026-09-24', { operatingExpenses: '19.99' }),
-      rawDay('2026-09-24', {
-        salesCount: 1n, totalUnitsSold: 1n, grossRevenue: '40.00', returnedRevenue: '30.00',
-        rawGrossCOGS: '18.0000', rawReturnedCOGS: '13.5000',
-      }),
-    ]
-
-    for (const authoritativeRow of scenarios) {
-      const store = new FinancialStore()
-      store.rows = [authoritativeRow]
-      const live = await computeDailyFinancialsInTransaction(store.transaction(), accountId, '2026-09-24')
-      const rebuilt = await createDailyReportService(store.client()).rebuildDailyReport(accountId, '2026-09-24')
-      const { computedAt: _computedAt, ...rebuiltFinancials } = rebuilt
-      assert.deepEqual(rebuiltFinancials, live)
-      for (const [field, value] of Object.entries(live)) {
-        if (field !== 'reportDate') assert.deepEqual(store.report?.[field], value)
-      }
-    }
-  })
-
-  test('rolls back cache state and returns a safe error when persistence fails', async () => {
-    const store = new FinancialStore()
-    store.report = { id: 'report-id', grossRevenue: '7.00' }
-    store.rows = [rawDay('2026-09-24', { grossRevenue: '10.00' })]
-    store.failUpsert = true
-    await assert.rejects(
-      createDailyReportService(store.client()).rebuildDailyReport(accountId, '2026-09-24'),
-      (error) => expectFinancialError(error, 'FINANCIAL_REBUILD_FAILED'),
-    )
-    assert.deepEqual(store.report, { id: 'report-id', grossRevenue: '7.00' })
-  })
-})
-
-test('unknown-cost activity keeps revenue exact and all final economics unavailable, including cache and summary',async()=>{
+test('unknown-cost activity keeps revenue exact and all final economics unavailable',async()=>{
  const store=new FinancialStore()
  for (const knownCogs of ['0','12.3456']) {
  store.rows=[rawDay('2026-09-24',{grossRevenue:'50.00',rawGrossCOGS:knownCogs,costIncomplete:true,salesCount:1n,totalUnitsSold:2n})]
@@ -476,10 +356,6 @@ test('unknown-cost activity keeps revenue exact and all final economics unavaila
  assert.equal(day.netRevenue,'50.00')
  assert.equal(day.costStatus,'INCOMPLETE')
  for(const field of ['grossCOGS','returnedCOGS','voidedCOGS','netCOGS','grossProfit','netProfit'] as const) assert.equal(day[field],null)
- const summary=summarizeFinancialDays([zeroDay('2026-09-23'),day])
- assert.equal(summary.netRevenue,'50.00');assert.equal(summary.netProfit,null);assert.equal(summary.costStatus,'INCOMPLETE')
- await createDailyReportService(store.client()).rebuildDailyReport(accountId,'2026-09-24')
- assert.equal(store.report?.costStatus,'INCOMPLETE');assert.equal(store.report?.grossCOGS,null)
  assert.match(store.aggregateSql,/BOOL_OR\(si\."unitCostAtSale" IS NULL\)/)
  }
 })

@@ -222,7 +222,6 @@ Examples:
 - SaleReturnItem
 - Exchange
 - Expense
-- DailyReport
 
 The frontend must never be trusted to decide accountId.
 
@@ -1076,21 +1075,9 @@ Number is never used for financial arithmetic.
 Sale, SaleItem, SaleReturn, SaleReturnItem, Sale void metadata, and Expense are
 the authoritative accounting history.
 
-DailyReport is a precomputed cache for faster dashboards.
-
-If DailyReport conflicts with the authoritative accounting history:
-
-The authoritative accounting history wins.
-
-DailyReport can be rebuilt.
-
-DailyReport stores the Account base-currency snapshot used for its computation.
-Its `computedAt` records when the cache row was calculated; it is not proof that
-the row is currently fresh. Sale, Return, Void, Exchange, and Expense writes do
-not synchronously update this cache.
-
-`DailyReport.operatingExpenses` is only the cached per-business-day aggregate
-of authoritative Expense records; it does not replace or duplicate them.
+Financial reports are always computed live from that history; there is no
+precomputed report table. (The former `DailyReport` cache table, which nothing
+read, was dropped in migration `20261103090000_drop_daily_report_cache`.)
 
 In the v1 report contract, `salesCount` is the number of gross Sale transactions
 created during the business day, and `totalUnitsSold` is the gross quantity on
@@ -1115,7 +1102,7 @@ based on Sales created that UTC day, including Sales later returned or voided.
 Historical stock-value rebuild is deferred. Current stock and last purchase
 cost are present-state fields. Inventory movements can reconstruct quantities,
 but historical cost basis still has unavailable or ambiguous cases. Until a
-separate valuation algorithm is approved, `DailyReport.stockValue` remains
+separate valuation algorithm is approved, the report `stockValue` remains
 null; current stock multiplied by current cost and missing cost treated as zero
 are both forbidden substitutes.
 
@@ -1143,34 +1130,19 @@ than rounding a hidden whole-range raw COGS value. All outputs are checked
 against Decimal(18,2), and daily counts/units are checked against PostgreSQL
 Int bounds. Mixed Sale/Expense currency metadata fails as a financial invariant;
 the engine never converts or relabels currency. Historical stock valuation
-remains unavailable, so daily and summary `stockValue` is always null.
-
-The internal `rebuildDailyReport(accountId, reportDate)` service opens one
-`READ COMMITTED` transaction, locks the Account row, calculates the day from
-authoritative history in one aggregate query, and upserts the unique
-`(accountId, reportDate)` cache row with a new `computedAt`. All current
-financial writers lock the Account before mutation, so this rebuild lock
-serializes same-Account writes and rebuilds while the source set is calculated
-and persisted. `READ COMMITTED` is intentional here: if the lock waits for an
-earlier writer, the following aggregate sees that writer's committed rows;
-new same-Account writers remain blocked until rebuild commit. A repeatable-read
-snapshot taken before a lock wait could otherwise precede a writer that commits
-while the rebuild is waiting. `computedAt` records computation time only and
-does not prove ongoing freshness. Sale, Return, Void, Exchange, and Expense
-write paths do not synchronously rebuild DailyReport.
+remains unavailable, so the daily `stockValue` is always null.
 
 Authoritative financial reads are implemented as OWNER-only
-`GET /api/reports/daily?date=YYYY-MM-DD` and
-`GET /api/reports/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`. WAREHOUSE receives no
+`GET /api/reports/daily?date=YYYY-MM-DD` (used by the Dashboard; the period
+reports live under `/api/business`, see docs/business.md). WAREHOUSE receives no
 Expense, COGS, profit, operating-expense, or stock-valuation data, and
-SUPER_ADMIN has no tenant financial-report authority. Both endpoints derive
-the Account from authenticated tenant context, accept strict UTC calendar
-dates, and are read-only. Summary ranges contain 1 to 366 inclusive days and
-return aggregate totals without embedding the daily rows.
+SUPER_ADMIN has no tenant financial-report authority. The endpoint derives
+the Account from authenticated tenant context, accepts a strict UTC calendar
+date, and is read-only.
 
 Each public report calculation runs inside one `REPEATABLE READ` transaction
 and reuses the authoritative transaction-scoped financial core. It takes no
-Account write lock, does not rebuild or read DailyReport, and does not block
+Account write lock, and does not block
 participating financial writers merely to calculate a live report. The result
 represents one consistent committed snapshot; a concurrent write may fall
 before or after that snapshot, so this is not a serializable real-time

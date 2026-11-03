@@ -16,7 +16,7 @@ export function dashboardQuickActions(role) {
   return Object.freeze([
     ...shared,
     Object.freeze({ label: 'Add expense', description: 'Record an operating cost', path: ROUTES.expenses }),
-    Object.freeze({ label: 'View reports', description: 'Open financial reporting', path: ROUTES.reports }),
+    Object.freeze({ label: 'View reports', description: 'Open financial reporting', path: ROUTES.business }),
   ])
 }
 

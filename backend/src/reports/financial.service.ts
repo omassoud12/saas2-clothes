@@ -1,7 +1,6 @@
 import { Prisma } from '../generated/prisma/client.js'
 import type {
   DailyFinancials,
-  FinancialSummary,
   FinancialTransaction,
 } from './financial.types.js'
 import { FinancialComputationError } from './financial.types.js'
@@ -322,31 +321,4 @@ export async function computeDailyFinancialsInTransaction(
   const [day] = await computeFinancialRangeInTransaction(transaction, accountId, reportDate, reportDate)
   if (!day) return fail('FINANCIAL_INVARIANT_VIOLATION', 'Daily financial calculation returned no result')
   return day
-}
-
-export function summarizeFinancialDays(days: readonly DailyFinancials[]): FinancialSummary {
-  if (days.length === 0) return fail('INVALID_FINANCIAL_RANGE', 'At least one financial day is required')
-  const currency = days[0]?.currency
-  if (!currency || days.some((day) => day.currency !== currency)) {
-    return fail('FINANCIAL_INVARIANT_VIOLATION', 'Financial summary contains mixed currencies')
-  }
-  const sumMagnitude = (field: keyof DailyFinancials): string => nonnegativeMoney(days.reduce(
-    (sum, day) => sum.add(decimal((day[field] ?? zeroMoney) as string)),
-    new Prisma.Decimal(0),
-  ))
-  const salesCount = integer(days.reduce((sum, day) => sum + BigInt(day.salesCount), 0n))
-  const totalUnitsSold = integer(days.reduce((sum, day) => sum + BigInt(day.totalUnitsSold), 0n))
-  const { reportDate: _reportDate, ...summary } = deriveDay('', currency, {
-    costIncomplete: days.some(day => day.costStatus === 'INCOMPLETE'),
-    salesCount,
-    totalUnitsSold,
-    grossRevenue: sumMagnitude('grossRevenue'),
-    returnedRevenue: sumMagnitude('returnedRevenue'),
-    voidedRevenue: sumMagnitude('voidedRevenue'),
-    grossCOGS: sumMagnitude('grossCOGS'),
-    returnedCOGS: sumMagnitude('returnedCOGS'),
-    voidedCOGS: sumMagnitude('voidedCOGS'),
-    operatingExpenses: sumMagnitude('operatingExpenses'),
-  })
-  return summary
 }

@@ -88,7 +88,6 @@ model Account {
   saleReturns         SaleReturn[]
   saleReturnItems     SaleReturnItem[]
   exchanges           Exchange[]
-  reports             DailyReport[]
   stores              Store[]
   salesTargets        SalesTarget[]
   closedDays          ClosedDay[]
@@ -465,34 +464,6 @@ model Exchange {
   @@unique([newSaleId, accountId])
   @@unique([accountId, idempotencyKey])
   @@index([accountId, createdAt])
-}
-
-model DailyReport {
-  id                String   @id @default(uuid()) @db.Uuid
-  accountId         String   @db.Uuid
-  reportDate        DateTime @db.Date
-  currency          String   @db.Char(3)
-  grossRevenue      Decimal  @default(0) @db.Decimal(18, 2)
-  returnedRevenue   Decimal  @default(0) @db.Decimal(18, 2)
-  voidedRevenue     Decimal  @default(0) @db.Decimal(18, 2)
-  netRevenue        Decimal  @default(0) @db.Decimal(18, 2)
-  grossCOGS         Decimal? @default(0) @db.Decimal(18, 2)
-  returnedCOGS      Decimal? @default(0) @db.Decimal(18, 2)
-  voidedCOGS        Decimal? @default(0) @db.Decimal(18, 2)
-  netCOGS           Decimal? @default(0) @db.Decimal(18, 2)
-  grossProfit       Decimal? @default(0) @db.Decimal(18, 2)
-  operatingExpenses Decimal  @default(0) @db.Decimal(18, 2)
-  netProfit         Decimal? @default(0) @db.Decimal(18, 2)
-  salesCount        Int
-  totalUnitsSold    Int
-  costStatus        String   @default("COMPLETE") @db.VarChar(10)
-  stockValue        Decimal? @db.Decimal(18, 2)
-
-  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
-
-  computedAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@unique([accountId, reportDate])
 }
 
 model StockReceipt {

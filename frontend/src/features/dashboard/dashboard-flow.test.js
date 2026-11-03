@@ -27,14 +27,14 @@ function json(status, data, headers = {}) { return new Response(JSON.stringify(d
 
 describe('Dashboard role and presentation contract', () => {
   test('OWNER quick actions use centralized permitted routes', () => {
-    assert.deepEqual(dashboardQuickActions('OWNER').map((action) => action.path), [ROUTES.sales, ROUTES.products, ROUTES.inventory, ROUTES.expenses, ROUTES.reports])
+    assert.deepEqual(dashboardQuickActions('OWNER').map((action) => action.path), [ROUTES.sales, ROUTES.products, ROUTES.inventory, ROUTES.expenses, ROUTES.business])
   })
 
   test('WAREHOUSE quick actions omit all finance routes', () => {
     const paths = dashboardQuickActions('WAREHOUSE').map((action) => action.path)
     assert.deepEqual(paths, [ROUTES.sales, ROUTES.products, ROUTES.inventory])
     assert.equal(paths.includes(ROUTES.expenses), false)
-    assert.equal(paths.includes(ROUTES.reports), false)
+    assert.equal(paths.includes(ROUTES.business), false)
     assert.deepEqual(dashboardQuickActions('SUPER_ADMIN'), [])
   })
 

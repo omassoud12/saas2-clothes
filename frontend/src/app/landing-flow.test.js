@@ -60,8 +60,8 @@ describe('public landing route contract', () => {
   })
 
   test('tenant role navigation and SUPER_ADMIN separation remain unchanged', () => {
-    assert.ok(getAppNavigation('OWNER').some(({ key }) => key === 'reports'))
-    assert.equal(getAppNavigation('WAREHOUSE').some(({ key }) => key === 'reports'), false)
+    assert.ok(getAppNavigation('OWNER').some(({ key }) => key === 'business'))
+    assert.equal(getAppNavigation('WAREHOUSE').some(({ key }) => key === 'business'), false)
     assert.deepEqual(getAppNavigation('SUPER_ADMIN'), [])
     assert.deepEqual(authorizeBusinessProfile({ user: { role: 'SUPER_ADMIN' }, account: null }), {
       ok: false,

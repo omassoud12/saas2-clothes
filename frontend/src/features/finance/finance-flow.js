@@ -113,33 +113,25 @@ export async function createExpense({ supabase, fetchImpl = globalThis.fetch, in
   return Object.freeze({ ok: true, expense: result.data.expense })
 }
 
-function reportIsValid(report, kind) {
+function reportIsValid(report) {
   if (!report || !currencyPattern.test(report.currency) || !Number.isInteger(report.salesCount) || report.salesCount < 0 ||
       !Number.isInteger(report.totalUnitsSold) || report.totalUnitsSold < 0 || report.stockValue !== null ||
       !['COMPLETE', 'INCOMPLETE'].includes(report.costStatus) ||
       !reportMoneyFields.every((field) => report.costStatus === 'INCOMPLETE' && costFields.has(field) ? report[field] === null : typeof report[field] === 'string' && signedMoneyPattern.test(report[field])) ||
       !reportMagnitudeFields.every((field) => report.costStatus === 'INCOMPLETE' && costFields.has(field) ? report[field] === null : unsignedMoneyPattern.test(report[field]))) return false
-  if (kind === 'daily') return isBusinessDate(report.reportDate)
-  const range = validateBusinessDateRange(report.from, report.to)
-  return range.ok && report.daysCount === range.daysCount
+  return isBusinessDate(report.reportDate)
 }
 
-async function loadReport({ supabase, fetchImpl, path, kind }) {
+async function loadReport({ supabase, fetchImpl, path }) {
   const result = await authenticatedApiRequest({ supabase, fetchImpl, path, method: 'GET', fallbackMessage: 'Financial reporting is unavailable.' })
   if (!result.ok) return safeFailure(result, 'Financial reporting is unavailable. Please try again.')
-  if (result.status !== 200 || !reportIsValid(result.data?.report, kind)) return error('INVALID_REPORT_RESPONSE', 'The financial report response was invalid. Refresh and try again.')
+  if (result.status !== 200 || !reportIsValid(result.data?.report)) return error('INVALID_REPORT_RESPONSE', 'The financial report response was invalid. Refresh and try again.')
   return Object.freeze({ ok: true, report: result.data.report })
 }
 
 export function loadDailyReport({ supabase, fetchImpl = globalThis.fetch, date }) {
   if (!isBusinessDate(date)) return Promise.resolve(error('INVALID_DAILY_DATE', 'Choose a valid report date.'))
-  return loadReport({ supabase, fetchImpl, kind: 'daily', path: `/api/reports/daily?date=${encodeURIComponent(date)}` })
-}
-
-export function loadSummaryReport({ supabase, fetchImpl = globalThis.fetch, from, to }) {
-  const validation = validateBusinessDateRange(from, to)
-  if (!validation.ok) return Promise.resolve(validation)
-  return loadReport({ supabase, fetchImpl, kind: 'summary', path: `/api/reports/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` })
+  return loadReport({ supabase, fetchImpl, path: `/api/reports/daily?date=${encodeURIComponent(date)}` })
 }
 
 export function createLatestRequestGuard() {

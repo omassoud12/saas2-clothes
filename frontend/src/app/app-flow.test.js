@@ -157,7 +157,6 @@ describe('business app navigation', () => {
         'returns',
         'exchanges',
         'expenses',
-        'reports',
         'business',
         'settings',
       ],
@@ -289,7 +288,7 @@ describe('phone bottom navigation', () => {
     const { bar, more } = getMobileNavigation('OWNER')
     assert.deepEqual(bar.map(({ key }) => key), ['dashboard', 'products', 'sales', 'history'])
     assert.deepEqual(bar.map((item) => item.mobileLabel || item.label), ['Home', 'Products', 'Sell', 'History'])
-    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges', 'expenses', 'reports', 'business', 'settings'])
+    assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges', 'expenses', 'business', 'settings'])
     assert.equal(bar.length + 1, 5, 'four items plus More fill five slots with Sell in the middle')
     assert.equal(bar[2].key, 'sales')
   })
@@ -298,7 +297,7 @@ describe('phone bottom navigation', () => {
     const { bar, more } = getMobileNavigation('WAREHOUSE')
     assert.deepEqual(bar.map(({ key }) => key), ['dashboard', 'products', 'sales', 'history'])
     assert.deepEqual(more.map(({ key }) => key), ['inventory', 'categories', 'returns', 'exchanges'])
-    assert.equal([...bar, ...more].some(({ key }) => key === 'expenses' || key === 'reports'), false)
+    assert.equal([...bar, ...more].some(({ key }) => key === 'expenses' || key === 'business'), false)
   })
 
   test('every module is reachable on a phone and SUPER_ADMIN gets nothing', () => {

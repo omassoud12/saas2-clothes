@@ -8,7 +8,7 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { errorHandler } from '../middleware/error-handler.js'
 import { createReportRouter } from './report.routes.js'
-import { parseDailyReportQuery, parseSummaryReportQuery } from './report.schemas.js'
+import { parseDailyReportQuery } from './report.schemas.js'
 import { createReportDependencies } from './report.service.js'
 
 const accountA = '11111111-1111-4111-8111-111111111111'
@@ -113,30 +113,6 @@ describe('report query validation', () => {
     }
   })
 
-  test('accepts bounded inclusive summary ranges and rejects every invalid shape', () => {
-    assert.deepEqual(parseSummaryReportQuery({ from: '2026-09-24', to: '2026-09-24' }), {
-      from: '2026-09-24', to: '2026-09-24',
-    })
-    assert.doesNotThrow(() => parseSummaryReportQuery({ from: '2026-09-01', to: '2026-09-30' }))
-    assert.doesNotThrow(() => parseSummaryReportQuery({ from: '2024-01-01', to: '2024-12-31' }))
-    for (const query of [
-      { to: '2026-09-24' },
-      { from: '2026-09-24' },
-      { from: '2026-09-25', to: '2026-09-24' },
-      { from: '2024-01-01', to: '2025-01-01' },
-      { from: '2027-02-29', to: '2027-03-01' },
-      { from: '2026-09-01T00:00:00Z', to: '2026-09-02' },
-      { from: ['2026-09-01', '2026-09-02'], to: '2026-09-02' },
-      { from: '2026-09-01', to: ['2026-09-02', '2026-09-03'] },
-      { from: '2026-09-01', to: '2026-09-02', preset: 'month' },
-    ]) {
-      assert.throws(() => parseSummaryReportQuery(query), (error) => {
-        assert.ok(error instanceof HttpError)
-        assert.equal(error.status, 422)
-        return true
-      })
-    }
-  })
 })
 
 describe('authoritative report service', () => {
@@ -149,21 +125,13 @@ describe('authoritative report service', () => {
       rawGrossCOGS: '60.0000',
     })])
     const result = await createReportDependencies(store.client()).getDailyReport(accountA, { date: '2026-09-24' })
-    const summary = await createReportDependencies(store.client()).getSummaryReport(
-      accountA,
-      { from: '2026-09-24', to: '2026-09-24' },
-    )
     assert.equal(result.report.grossRevenue, '100.00')
-    assert.equal(summary.report.grossRevenue, '100.00')
     assert.equal(result.report.grossCOGS, '60.00')
     assert.equal(result.report.netProfit, '40.00')
     assert.notEqual(result.report.grossRevenue, store.staleDailyReport.grossRevenue)
-    assert.deepEqual(store.isolationLevels, [
-      Prisma.TransactionIsolationLevel.RepeatableRead,
-      Prisma.TransactionIsolationLevel.RepeatableRead,
-    ])
-    assert.equal(store.accountReads, 2)
-    assert.equal(store.aggregateQueries, 2)
+    assert.deepEqual(store.isolationLevels, [Prisma.TransactionIsolationLevel.RepeatableRead])
+    assert.equal(store.accountReads, 1)
+    assert.equal(store.aggregateQueries, 1)
     assert.equal(store.dailyReportReads, 0)
     assert.equal(store.mutations, 0)
     assert.deepEqual(store.staleDailyReport, {
@@ -172,7 +140,7 @@ describe('authoritative report service', () => {
     assert.doesNotMatch(store.aggregateSql[0] ?? '', /FOR UPDATE|"DailyReport"|"Exchange"/)
   })
 
-  test('preserves Sale, Return, Void, Expense, negative, and summary equations by occurrence date', async () => {
+  test('preserves Sale, Return, Void, and Expense values by occurrence date', async () => {
     const store = new ReportStore()
     store.rows.set(accountA, [
       rawDay('2026-09-21', {
@@ -187,54 +155,31 @@ describe('authoritative report service', () => {
     const saleDay = await reports.getDailyReport(accountA, { date: '2026-09-21' })
     const returnExpenseDay = await reports.getDailyReport(accountA, { date: '2026-09-22' })
     const voidDay = await reports.getDailyReport(accountA, { date: '2026-09-23' })
-    const summary = await reports.getSummaryReport(accountA, { from: '2026-09-21', to: '2026-09-24' })
     assert.equal(saleDay.report.grossRevenue, '100.00')
     assert.equal(returnExpenseDay.report.returnedRevenue, '25.00')
     assert.equal(returnExpenseDay.report.returnedCOGS, '15.00')
     assert.equal(returnExpenseDay.report.operatingExpenses, '20.00')
     assert.equal(voidDay.report.voidedRevenue, '100.00')
     assert.equal(voidDay.report.voidedCOGS, '60.00')
-    assert.deepEqual({
-      from: summary.report.from,
-      to: summary.report.to,
-      daysCount: summary.report.daysCount,
-      netRevenue: summary.report.netRevenue,
-      netCOGS: summary.report.netCOGS,
-      grossProfit: summary.report.grossProfit,
-      netProfit: summary.report.netProfit,
-      stockValue: summary.report.stockValue,
-    }, {
-      from: '2026-09-21', to: '2026-09-24', daysCount: 4,
-      netRevenue: '-25.00', netCOGS: '-15.00', grossProfit: '-10.00',
-      netProfit: '-30.00', stockValue: null,
-    })
-    assert.equal(Object.hasOwn(summary.report, 'days'), false)
+    assert.equal(returnExpenseDay.report.netProfit, '-30.00')
     assert.equal(store.dailyReportReads, 0)
     assert.equal(store.mutations, 0)
   })
 
-  test('returns Account currency and canonical zeros for empty daily and summary reports', async () => {
+  test('returns Account currency and canonical zeros for an empty daily report', async () => {
     const store = new ReportStore()
     const reports = createReportDependencies(store.client())
     const daily = await reports.getDailyReport(accountB, { date: '2026-09-24' })
-    const summary = await reports.getSummaryReport(accountB, { from: '2026-09-24', to: '2026-09-26' })
     assert.deepEqual(daily.report, {
       reportDate: '2026-09-24', currency: 'LBP', salesCount: 0, totalUnitsSold: 0,
       grossRevenue: '0.00', returnedRevenue: '0.00', voidedRevenue: '0.00', netRevenue: '0.00',
       grossCOGS: '0.00', returnedCOGS: '0.00', voidedCOGS: '0.00', netCOGS: '0.00',
       grossProfit: '0.00', operatingExpenses: '0.00', netProfit: '0.00', costStatus: 'COMPLETE', stockValue: null,
     })
-    assert.equal(summary.report.daysCount, 3)
-    assert.equal(summary.report.currency, 'LBP')
-    assert.equal(summary.report.netProfit, '0.00')
-    assert.equal(summary.report.stockValue, null)
-    assert.deepEqual(store.isolationLevels, [
-      Prisma.TransactionIsolationLevel.RepeatableRead,
-      Prisma.TransactionIsolationLevel.RepeatableRead,
-    ])
+    assert.deepEqual(store.isolationLevels, [Prisma.TransactionIsolationLevel.RepeatableRead])
   })
 
-  test('keeps tenant history isolated and preserves daily-before-range COGS rounding', async () => {
+  test('keeps tenant history isolated and rounds daily COGS once', async () => {
     const store = new ReportStore()
     store.rows.set(accountA, [
       rawDay('2026-09-21', { salesCount: 1n, totalUnitsSold: 2n, grossRevenue: '10.00', rawGrossCOGS: '0.0049', operatingExpenses: '1.00' }),
@@ -244,14 +189,14 @@ describe('authoritative report service', () => {
       salesCount: 4n, totalUnitsSold: 8n, grossRevenue: '999.00', rawGrossCOGS: '500.0000', operatingExpenses: '50.00',
     })])
     const reports = createReportDependencies(store.client())
-    const tenantA = await reports.getSummaryReport(accountA, { from: '2026-09-21', to: '2026-09-22' })
-    const tenantB = await reports.getSummaryReport(accountB, { from: '2026-09-21', to: '2026-09-22' })
-    assert.equal(tenantA.report.grossRevenue, '20.00')
+    const tenantA = await reports.getDailyReport(accountA, { date: '2026-09-21' })
+    const tenantB = await reports.getDailyReport(accountB, { date: '2026-09-21' })
+    assert.equal(tenantA.report.grossRevenue, '10.00')
     assert.equal(tenantA.report.grossCOGS, '0.00')
-    assert.equal(tenantA.report.salesCount, 2)
-    assert.equal(tenantA.report.totalUnitsSold, 4)
-    assert.equal(tenantA.report.operatingExpenses, '2.00')
-    assert.equal(tenantA.report.netProfit, '18.00')
+    assert.equal(tenantA.report.salesCount, 1)
+    assert.equal(tenantA.report.totalUnitsSold, 2)
+    assert.equal(tenantA.report.operatingExpenses, '1.00')
+    assert.equal(tenantA.report.netProfit, '9.00')
     assert.equal(tenantB.report.grossRevenue, '999.00')
     assert.equal(tenantB.report.salesCount, 4)
     assert.equal(tenantB.report.totalUnitsSold, 8)
@@ -329,7 +274,7 @@ async function request(
 }
 
 describe('report routes', () => {
-  test('allows active OWNER on both routes with aggregate-only private responses', async () => {
+  test('allows active OWNER on the daily route with an aggregate-only private response', async () => {
     const daily = await request(UserRole.OWNER, '/api/reports/daily?date=2026-09-24')
     assert.equal(daily.response.status, 200)
     const dailyJson = await daily.response.json() as Row
@@ -339,36 +284,29 @@ describe('report routes', () => {
     for (const forbidden of ['accountId', 'computedAt', 'saleId', 'expenseId', 'unitCostAtSale']) {
       assert.equal(Object.hasOwn(dailyJson.report as object, forbidden), false)
     }
-    const summary = await request(UserRole.OWNER, '/api/reports/summary?from=2026-09-24&to=2026-09-24')
-    assert.equal(summary.response.status, 200)
-    const summaryJson = await summary.response.json() as Row
-    assert.equal((summaryJson.report as Row).daysCount, 1)
-    assert.equal(Object.hasOwn(summaryJson.report as object, 'days'), false)
   })
 
-  test('rejects WAREHOUSE, SUPER_ADMIN, unauthenticated, inactive user, and inactive Account on both routes', async () => {
-    for (const path of ['/api/reports/daily?date=2026-09-24', '/api/reports/summary?from=2026-09-24&to=2026-09-24']) {
-      assert.equal((await request(UserRole.WAREHOUSE, path)).response.status, 403)
-      assert.equal((await request(UserRole.SUPER_ADMIN, path)).response.status, 403)
-      assert.equal((await request(UserRole.OWNER, path, { authorized: false })).response.status, 401)
-      assert.equal((await request(UserRole.OWNER, path, { active: false })).response.status, 403)
-      assert.equal((await request(UserRole.OWNER, path, { status: AccountStatus.SUSPENDED })).response.status, 403)
-    }
+  test('rejects WAREHOUSE, SUPER_ADMIN, unauthenticated, inactive user, and inactive Account', async () => {
+    const path = '/api/reports/daily?date=2026-09-24'
+    assert.equal((await request(UserRole.WAREHOUSE, path)).response.status, 403)
+    assert.equal((await request(UserRole.SUPER_ADMIN, path)).response.status, 403)
+    assert.equal((await request(UserRole.OWNER, path, { authorized: false })).response.status, 401)
+    assert.equal((await request(UserRole.OWNER, path, { active: false })).response.status, 403)
+    assert.equal((await request(UserRole.OWNER, path, { status: AccountStatus.SUSPENDED })).response.status, 403)
   })
 
-  test('validates queries before calculation and exposes no mutation or rebuild route', async () => {
+  test('validates queries before calculation and exposes no summary, mutation or rebuild route', async () => {
     for (const path of [
       '/api/reports/daily',
       '/api/reports/daily?date=2026-09-24&date=2026-09-25',
       '/api/reports/daily?date=2026-09-24&accountId=22222222-2222-4222-8222-222222222222',
-      '/api/reports/summary?from=2026-09-25&to=2026-09-24',
-      '/api/reports/summary?from=2024-01-01&to=2025-01-01',
     ]) {
       const result = await request(UserRole.OWNER, path)
       assert.equal(result.response.status, 422)
       assert.equal(result.store.aggregateQueries, 0)
     }
-    for (const path of ['/api/reports/daily?date=2026-09-24', '/api/reports/summary?from=2026-09-24&to=2026-09-24', '/api/reports/rebuild']) {
+    assert.equal((await request(UserRole.OWNER, '/api/reports/summary?from=2026-09-24&to=2026-09-24')).response.status, 404)
+    for (const path of ['/api/reports/daily?date=2026-09-24', '/api/reports/rebuild']) {
       assert.equal((await request(UserRole.OWNER, path, { method: 'POST' })).response.status, 404)
       for (const method of ['PUT', 'PATCH', 'DELETE']) {
         assert.equal((await request(UserRole.OWNER, path, { method })).response.status, 404)

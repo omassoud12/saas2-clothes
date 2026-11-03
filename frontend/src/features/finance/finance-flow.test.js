@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import {
   buildExpensePayload, canAccessFinance, createExpense, createLatestRequestGuard,
-  isBusinessDate, isZeroReport, listExpenses, loadDailyReport, loadSummaryReport,
+  isBusinessDate, isZeroReport, listExpenses, loadDailyReport,
   localBusinessDate, validateBusinessDateRange,
 } from './finance-flow.js'
 import { createSubmissionGuard } from '../../auth/owner-flow.js'
@@ -97,13 +97,6 @@ describe('authoritative report frontend contract', () => {
     assert.equal(result.report.netProfit, '-5.00')
   })
 
-  test('loads summary data without recalculating backend values', async () => {
-    const supplied = { ...totals, from: '2026-09-01', to: '2026-09-26', daysCount: 26, grossProfit: '-999.00' }
-    const result = await loadSummaryReport({ supabase, from: supplied.from, to: supplied.to, fetchImpl: async (url) => { assert.equal(url, '/api/reports/summary?from=2026-09-01&to=2026-09-26'); return json(200, { report: supplied }) } })
-    assert.equal(result.ok, true)
-    assert.equal(result.report.grossProfit, '-999.00')
-  })
-
   test('rejects malformed reports and non-authoritative stock values', async () => {
     const malformed = await loadDailyReport({ supabase, date: '2026-09-26', fetchImpl: async () => json(200, { report: { ...totals, reportDate: '2026-09-26', netProfit: 1 } }) })
     assert.equal(malformed.code, 'INVALID_REPORT_RESPONSE')
@@ -136,13 +129,13 @@ describe('authoritative report frontend contract', () => {
   })
 
   test('report auth, rate-limit, and network failures remain distinct and safe', async () => {
-    const expired = await loadSummaryReport({ supabase, from: '2026-09-01', to: '2026-09-26', fetchImpl: async () => json(401, { error: { code: 'SESSION_REQUIRED', message: 'token detail' } }) })
+    const expired = await loadDailyReport({ supabase, date: '2026-09-26', fetchImpl: async () => json(401, { error: { code: 'SESSION_REQUIRED', message: 'token detail' } }) })
     assert.equal(expired.requiresLogin, true)
-    const forbidden = await loadSummaryReport({ supabase, from: '2026-09-01', to: '2026-09-26', fetchImpl: async () => json(403, { error: { code: 'REPORT_OWNER_REQUIRED', message: 'role detail' } }) })
+    const forbidden = await loadDailyReport({ supabase, date: '2026-09-26', fetchImpl: async () => json(403, { error: { code: 'REPORT_OWNER_REQUIRED', message: 'role detail' } }) })
     assert.equal(forbidden.forbidden, true)
-    const limited = await loadSummaryReport({ supabase, from: '2026-09-01', to: '2026-09-26', fetchImpl: async () => json(429, { error: { code: 'RATE_LIMITED' } }, { 'Retry-After': '9' }) })
+    const limited = await loadDailyReport({ supabase, date: '2026-09-26', fetchImpl: async () => json(429, { error: { code: 'RATE_LIMITED' } }, { 'Retry-After': '9' }) })
     assert.equal(limited.retryAfterSeconds, 9)
-    const offline = await loadSummaryReport({ supabase, from: '2026-09-01', to: '2026-09-26', fetchImpl: async () => { throw new Error('provider hostname') } })
+    const offline = await loadDailyReport({ supabase, date: '2026-09-26', fetchImpl: async () => { throw new Error('provider hostname') } })
     assert.doesNotMatch(offline.message, /provider|hostname/)
   })
 })

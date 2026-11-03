@@ -55,16 +55,16 @@ describe('phone bottom navigation', () => {
   test('the More sheet lists the remaining modules, the store and Logout for OWNER', () => {
     const html = sheet('OWNER')
     assert.match(html, /<dialog[^>]*aria-labelledby="more-sheet-title"/u)
-    for (const text of ['>More<', 'New product', 'Categories', 'Returns', 'Exchanges', 'Expenses', 'Reports', 'Mini Store', 'Sam Owner', 'Logout']) {
+    for (const text of ['>More<', 'New product', 'Categories', 'Returns', 'Exchanges', 'Expenses', 'Business', 'Mini Store', 'Sam Owner', 'Logout']) {
       assert.ok(html.includes(text), text)
     }
     assert.doesNotMatch(html, />Sell<|>Products<|Sales history/u, 'the bar items are not repeated')
   })
 
-  test('WAREHOUSE never sees Expenses or Reports, and Logout is disabled while signing out', () => {
+  test('WAREHOUSE never sees Expenses or Business, and Logout is disabled while signing out', () => {
     const html = sheet('WAREHOUSE')
     assert.ok(html.includes('New product') && html.includes('Categories'))
-    assert.doesNotMatch(html, /Expenses|Reports/u)
+    assert.doesNotMatch(html, /Expenses|Business/u)
     const busy = sheet('WAREHOUSE', { loggingOut: true })
     assert.match(busy, /disabled=""[^>]*>Signing out\.\.\./u)
   })

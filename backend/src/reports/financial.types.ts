@@ -20,16 +20,6 @@ export interface DailyFinancials {
   readonly stockValue: null
 }
 
-export type FinancialSummary = Omit<DailyFinancials, 'reportDate'>
-
-export interface RebuiltDailyReport extends DailyFinancials {
-  readonly computedAt: Date
-}
-
-export interface DailyReportService {
-  rebuildDailyReport(accountId: string, reportDate: string): Promise<RebuiltDailyReport>
-}
-
 export type FinancialTransaction = Prisma.TransactionClient
 
 export type FinancialErrorCode =
@@ -38,7 +28,6 @@ export type FinancialErrorCode =
   | 'FINANCIAL_ACCOUNT_NOT_FOUND'
   | 'FINANCIAL_INVARIANT_VIOLATION'
   | 'FINANCIAL_VALUE_OVERFLOW'
-  | 'FINANCIAL_REBUILD_FAILED'
 
 export class FinancialComputationError extends Error {
   readonly code: FinancialErrorCode
