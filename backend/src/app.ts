@@ -24,6 +24,10 @@ import { createSettingsRouter, type SettingsDependencies } from './settings/sett
 import { createCountCheckRouter, type CountCheckDependencies } from './inventory/count-check.js'
 import { createReportRouter } from './reports/report.routes.js'
 import { createBusinessRouter, createStoreRouter, type BusinessDependencies } from './business/business.routes.js'
+import { createDashboardRouter } from './dashboard/dashboard.routes.js'
+import { createCostRouter } from './costs/cost.routes.js'
+import type { CostDependencies } from './costs/cost.service.js'
+import type { DashboardDependencies } from './dashboard/dashboard.service.js'
 import type { ReportDependencies } from './reports/report.types.js'
 import type {
   HttpRuntimeConfiguration,
@@ -178,6 +182,8 @@ export interface AppDependencies {
   readonly settings?: SettingsDependencies
   readonly countChecks?: CountCheckDependencies
   readonly business?: BusinessDependencies
+  readonly dashboard?: DashboardDependencies
+  readonly costs?: CostDependencies
 }
 
 export function createApp(
@@ -238,6 +244,7 @@ export function createApp(
     '/api/categories',
     createCategoryRouter(dependencies.auth, dependencies.categories),
   )
+  if (dependencies.costs) app.use('/api/products', createCostRouter(dependencies.auth, dependencies.costs))
   app.use('/api/products', createProductRouter(dependencies.auth, dependencies.products))
   if (dependencies.voiceMatching || dependencies.voiceTranscription) {
     app.use('/api/voice-sales', createVoiceMatchingRouter(dependencies.auth, dependencies.voiceMatching, dependencies.voiceTranscription))
@@ -266,6 +273,9 @@ export function createApp(
   if (dependencies.business) {
     app.use('/api/stores', createStoreRouter(dependencies.auth, dependencies.business))
     app.use('/api/business', createBusinessRouter(dependencies.auth, dependencies.business))
+  }
+  if (dependencies.dashboard) {
+    app.use('/api/dashboard', createDashboardRouter(dependencies.auth, dependencies.dashboard))
   }
   app.use(
     '/api/admin/accounts',

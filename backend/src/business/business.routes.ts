@@ -11,6 +11,7 @@ import { createRequireAuth, createRequireTenant, requireRole } from '../auth/aut
 import type { AuthContext, AuthDependencies } from '../auth/auth.types.js'
 import { HttpError } from '../errors/http-error.js'
 import { UserRole } from '../generated/prisma/enums.js'
+import { canViewCost } from '../access/permissions.js'
 import type { RuntimeLogger } from '../runtime/logger.js'
 import { AccountRateLimiter, ReportCache } from './business-cache.js'
 import { loadAccountContext } from './business-stores.js'
@@ -103,9 +104,9 @@ export function createBusinessDependencies(prisma: PrismaClient, options: Busine
     async getReport(kind, auth, query) {
       const started = Date.now()
       // The cache is checked before any database work: the key only needs the session and the query.
-      const { accountId, role } = tenantOf(auth)
+      const { accountId } = tenantOf(auth)
       const store = typeof query.storeId === 'string' && query.storeId !== '' ? query.storeId : 'all'
-      const key = `${accountId}:${store}:${kind}:${periodKey(kind, query)}:${role === UserRole.OWNER ? 'owner' : 'staff'}`
+      const key = `${accountId}:${store}:${kind}:${periodKey(kind, query)}:${canViewCost(auth) ? 'owner' : 'staff'}`
       const cached = cache.get(key)
       if (cached) return cached
       // Many requests for the same report at once (a stampede after a cache expiry) build it only once.

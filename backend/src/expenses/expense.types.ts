@@ -1,5 +1,5 @@
-export type ExpenseCategory = 'RENT' | 'SALARIES' | 'ELECTRICITY' | 'GENERATOR' | 'OTHER'
-export const expenseCategories: readonly ExpenseCategory[] = ['RENT', 'SALARIES', 'ELECTRICITY', 'GENERATOR', 'OTHER']
+export type ExpenseCategory = 'RENT' | 'SALARIES' | 'ELECTRICITY' | 'GENERATOR' | 'INTERNET' | 'OTHER'
+export const expenseCategories: readonly ExpenseCategory[] = ['RENT', 'SALARIES', 'ELECTRICITY', 'GENERATOR', 'INTERNET', 'OTHER']
 
 export interface ExpenseInput {
   readonly amount: string

@@ -76,8 +76,8 @@ export async function seedAccount(sql: pg.Client, options: { name?: string; time
   const staff = { id: randomUUID(), name: 'Rami Haddad', code: 'R1', role: 'WAREHOUSE' as const }
   for (const user of [owner, staff]) {
     const [first, last] = user.name.split(' ')
-    await sql.query(`INSERT INTO "User" ("id", "email", "firstName", "lastName", "employeeCode", "role", "accountId", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, now())`, [user.id, `${user.id}@test.local`, first, last, user.code, user.role, accountId])
+    await sql.query(`INSERT INTO "User" ("id", "email", "firstName", "lastName", "employeeCode", "role", "employeeRole", "accountId", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7::"EmployeeRole", $8, now())`, [user.id, `${user.id}@test.local`, first, last, user.code, user.role, user.role === 'WAREHOUSE' ? 'WAREHOUSE' : null, accountId])
   }
   const categoryId = randomUUID()
   await sql.query(`INSERT INTO "Category" ("id", "accountId", "name", "updatedAt") VALUES ($1, $2, 'Shirts', now())`, [categoryId, accountId])

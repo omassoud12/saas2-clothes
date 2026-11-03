@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { HttpError } from '../errors/http-error.js'
 import { UserRole } from '../generated/prisma/enums.js'
 import type { AuthContext } from '../auth/auth.types.js'
+import { canViewCost } from '../access/permissions.js'
 import { isCalendarDate, shiftDate, shopNow, type ShopNow } from './business-dates.js'
 import { loadAccountContext, resolveStoreIds, type AccountContext } from './business-stores.js'
 import { rangeTotals, type BusinessScope, type DayNumbers, type RangeTotals, type StaffNumbers, type VariantNumbers } from './day-totals.js'
@@ -14,6 +15,7 @@ export interface ReportContext {
   readonly prisma: PrismaClient
   readonly account: AccountContext
   readonly scope: BusinessScope
+  /** The member may see cost and profit (VIEW_COST_PROFIT; always true for the OWNER). */
   readonly isOwner: boolean
   readonly now: ShopNow
   readonly storeKey: string
@@ -34,7 +36,7 @@ export function tenantOf(auth: AuthContext | undefined): { accountId: string; ro
 }
 
 export async function reportContext(prisma: PrismaClient, auth: AuthContext | undefined, storeId: unknown, options: BusinessOptions): Promise<ReportContext> {
-  const { accountId, role } = tenantOf(auth)
+  const { accountId } = tenantOf(auth)
   const account = await loadAccountContext(prisma, accountId)
   const storeIds = resolveStoreIds(account, storeId)
   let now: ShopNow
@@ -46,7 +48,7 @@ export async function reportContext(prisma: PrismaClient, auth: AuthContext | un
   return {
     prisma, account, now,
     scope: { accountId, timezone: account.timezone, storeIds },
-    isOwner: role === UserRole.OWNER,
+    isOwner: canViewCost(auth),
     storeKey: storeIds.length === account.stores.length ? 'all' : storeIds.join(','),
   }
 }

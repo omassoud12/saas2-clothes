@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from 'express'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
+import { effectivePermissions } from '../access/permissions.js'
 import type {
   AuthDependencies,
   VerifiedIdentityContext,
@@ -229,7 +230,15 @@ export function createRequireAuth(
         )
       }
 
-      if (!applicationUser.isActive) {
+      if (applicationUser.status === 'INVITED') {
+        throw new HttpError(
+          403,
+          'MEMBER_INVITED',
+          'Accept the invitation before signing in',
+        )
+      }
+
+      if (!applicationUser.isActive || applicationUser.status === 'DEACTIVATED') {
         throw new HttpError(
           403,
           'USER_INACTIVE',
@@ -241,6 +250,9 @@ export function createRequireAuth(
         userId: applicationUser.id,
         role: applicationUser.role,
         accountId: applicationUser.accountId,
+        permissions: effectivePermissions(applicationUser),
+        employeeRole: applicationUser.employeeRole ?? null,
+        mustChangePassword: applicationUser.mustChangePassword === true,
       })
 
       next()

@@ -2,12 +2,17 @@ import type {
   AccountStatus,
   UserRole,
 } from '../generated/prisma/enums.js'
+import type { Permission } from '../access/permissions.js'
 
 export interface AuthContext {
   readonly userId: string
   readonly role: UserRole
   readonly accountId: string | null
   readonly accountStatus?: AccountStatus
+  /** Pages and capabilities (src/access/permissions.ts); absent only in old test doubles. */
+  readonly permissions?: ReadonlySet<Permission>
+  readonly employeeRole?: string | null
+  readonly mustChangePassword?: boolean
 }
 
 export interface VerifiedAuthIdentity {
@@ -59,6 +64,12 @@ export interface ApplicationIdentity {
   readonly role: UserRole
   readonly accountId: string | null
   readonly isActive: boolean
+  // Owner Dashboard access fields (optional so older test doubles keep working).
+  readonly status?: 'INVITED' | 'ACTIVE' | 'DEACTIVATED'
+  readonly employeeRole?: string | null
+  readonly permissions?: readonly string[]
+  readonly permissionsCustom?: boolean
+  readonly mustChangePassword?: boolean
 }
 
 export interface TenantAccount {

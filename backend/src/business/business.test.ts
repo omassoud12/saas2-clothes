@@ -157,7 +157,7 @@ describe('business endpoints', () => {
     }
     assert.equal(month.totals.salesTotal, sales.toFixed(2)); assert.equal(month.totals.piecesSold, pieces)
     assert.equal(month.days[30].salesTotal, null)
-    assert.deepEqual(month.expenses.map((row: any) => row.category), ['RENT', 'SALARIES', 'ELECTRICITY', 'GENERATOR', 'OTHER'])
+    assert.deepEqual(month.expenses.map((row: any) => row.category), ['RENT', 'SALARIES', 'ELECTRICITY', 'GENERATOR', 'INTERNET', 'OTHER'])
     assert.equal(typeof month.inventory.stockUnits, 'number')
     const year = (await get('/api/business/yearly?year=2026')).body
     const october = year.months.find((row: any) => row.month === '2026-10')

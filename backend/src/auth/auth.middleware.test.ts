@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
+import { effectivePermissions } from '../access/permissions.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import type { PrismaClient } from '../generated/prisma/client.js'
@@ -148,6 +149,9 @@ describe('Supabase access-token verification', () => {
       userId,
       role: UserRole.OWNER,
       accountId,
+      permissions: effectivePermissions({ role: UserRole.OWNER }),
+      employeeRole: null,
+      mustChangePassword: false,
     })
     assert.deepEqual(failures, [])
   })
@@ -374,6 +378,9 @@ describe('requireAuth', () => {
         userId,
         role,
         accountId: resolvedAccountId,
+        permissions: effectivePermissions({ role }),
+        employeeRole: null,
+        mustChangePassword: false,
       })
       assert.equal(Object.isFrozen(request.auth), true)
     })

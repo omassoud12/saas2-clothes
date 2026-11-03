@@ -109,10 +109,14 @@ export function isPlainLeftClick(event) {
 }
 
 export function isNavigationItemActive(pathname, itemPath) {
-  return pathname === itemPath || (itemPath === ROUTES.products && /^\/app\/products\/[0-9a-f-]{36}$/i.test(pathname))
+  return pathname === itemPath || (itemPath === ROUTES.dashboard && pathname === ROUTES.dashboardCosts) || (itemPath === ROUTES.products && /^\/app\/products\/[0-9a-f-]{36}$/i.test(pathname))
 }
 
 export function resolveAppRoute(pathname, role, development = false) {
+  // Owner Dashboard sub-page (the account owner only; the API refuses everyone else too).
+  if (pathname === ROUTES.dashboardCosts && role === 'OWNER') {
+    return Object.freeze({ route: Object.freeze({ key: 'dashboardCosts', label: 'Product cost', path: ROUTES.dashboardCosts }), redirectTo: null })
+  }
   if (development === true && pathname === ROUTES.textMatchingLab && tenantRoles.includes(role)) {
     return Object.freeze({ route: Object.freeze({ key: 'textMatchingLab', label: 'Text Matching Lab', path: ROUTES.textMatchingLab }), redirectTo: null })
   }

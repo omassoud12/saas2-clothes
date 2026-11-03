@@ -260,6 +260,7 @@ export async function computeFinancialRangeInTransaction(
              BOOL_OR(e."currency" <> ${account.baseCurrency}) AS currency_mismatch
       FROM "Expense" e, bounds b
       WHERE e."accountId" = ${accountId}::uuid
+        AND e."deletedAt" IS NULL
         AND e."expenseDate" BETWEEN b.from_date AND b.to_date
       GROUP BY 1
     )

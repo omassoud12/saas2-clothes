@@ -38,6 +38,8 @@ import { createSaleDependencies } from './sales/sale.service.js'
 import { createBusinessDependencies } from './business/business.routes.js'
 import { createVoidRefresher, scheduleNightlyRollups } from './business/rollup-jobs.js'
 import { ReportCache } from './business/business-cache.js'
+import { createDashboardDependencies } from './dashboard/dashboard.service.js'
+import { createCostDependencies } from './costs/cost.service.js'
 import { createSupabaseVerifier } from './supabase.js'
 import { createVoiceMatchingDependencies } from './voice-sales/matching.service.js'
 import { createVoiceTranscriptionDependencies } from './voice-sales/transcription.service.js'
@@ -85,6 +87,7 @@ async function start(): Promise<void> {
     const reports = createReportDependencies(prisma)
     const settings = createSettingsDependencies(prisma)
     const countChecks = createCountCheckDependencies(prisma)
+    const receipts = createReceiptDependencies(prisma)
     startupStage = 'app'
     const app = createApp(
       {
@@ -114,7 +117,8 @@ async function start(): Promise<void> {
           },
         }),
         inventory,
-        receipts: createReceiptDependencies(prisma),
+        receipts,
+        costs: createCostDependencies(prisma, receipts, { afterChange: forgetBusinessReports }),
         sales,
         returns,
         exchanges,
@@ -124,6 +128,7 @@ async function start(): Promise<void> {
         settings,
         countChecks,
         business: createBusinessDependencies(prisma, { cache: businessCache, logger }),
+        dashboard: createDashboardDependencies(prisma, { cache: businessCache }),
       },
       environment,
       {
