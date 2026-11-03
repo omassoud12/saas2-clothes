@@ -12,6 +12,7 @@ export const EXPENSE_CATEGORIES = [
   { category: 'SALARIES', label: 'Salaries' },
   { category: 'ELECTRICITY', label: 'Electricity (EDL)' },
   { category: 'GENERATOR', label: 'Generator' },
+  { category: 'INTERNET', label: 'Internet' },
   { category: 'OTHER', label: 'Other' },
 ] as const
 
@@ -22,7 +23,7 @@ export const EXPENSE_CATEGORIES = [
 export async function monthExpenses(ctx: ReportContext, month: string): Promise<Map<string, Prisma.Decimal>> {
   const rows = await ctx.prisma.$queryRaw<{ category: string; amount: string }[]>(Prisma.sql`
     SELECT "category"::text AS category, SUM("amount")::text AS amount FROM "Expense"
-    WHERE "accountId" = ${ctx.scope.accountId}::uuid AND "expenseDate" >= ${`${month}-01`}::date AND "expenseDate" < (${`${month}-01`}::date + interval '1 month')
+    WHERE "accountId" = ${ctx.scope.accountId}::uuid AND "deletedAt" IS NULL AND "expenseDate" >= ${`${month}-01`}::date AND "expenseDate" < (${`${month}-01`}::date + interval '1 month')
     GROUP BY "category"`)
   const dates = monthDates(month)
   const share = month === ctx.now.date.slice(0, 7) ? new Prisma.Decimal(Number(ctx.now.date.slice(8, 10))).div(dates.length) : new Prisma.Decimal(1)
@@ -38,7 +39,7 @@ export async function monthExpenses(ctx: ReportContext, month: string): Promise<
 export async function yearExpenses(ctx: ReportContext, year: string): Promise<Map<string, Map<string, Prisma.Decimal>>> {
   const rows = await ctx.prisma.$queryRaw<{ m: string; category: string; amount: string }[]>(Prisma.sql`
     SELECT to_char("expenseDate", 'YYYY-MM') AS m, "category"::text AS category, SUM("amount")::text AS amount FROM "Expense"
-    WHERE "accountId" = ${ctx.scope.accountId}::uuid AND "expenseDate" >= ${`${year}-01-01`}::date AND "expenseDate" < ${`${Number(year) + 1}-01-01`}::date
+    WHERE "accountId" = ${ctx.scope.accountId}::uuid AND "deletedAt" IS NULL AND "expenseDate" >= ${`${year}-01-01`}::date AND "expenseDate" < ${`${Number(year) + 1}-01-01`}::date
     GROUP BY 1, 2`)
   const current = ctx.now.date.slice(0, 7)
   const out = new Map<string, Map<string, Prisma.Decimal>>()

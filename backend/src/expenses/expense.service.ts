@@ -79,6 +79,7 @@ export function createExpenseDependencies(prisma: PrismaClient): ExpenseDependen
     try {
       const where: Prisma.ExpenseWhereInput = {
         accountId,
+        deletedAt: null,
         ...(query.from || query.to ? {
           expenseDate: {
             ...(query.from ? { gte: query.from } : {}),

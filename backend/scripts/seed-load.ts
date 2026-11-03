@@ -48,8 +48,8 @@ try {
     await sql.query(`INSERT INTO "Store" ("id", "accountId", "name", "isDefault", "updatedAt") VALUES (gen_random_uuid(), $1, 'Hamra', true, now())`, [account])
     const owner = (await sql.query(`INSERT INTO "User" ("id", "email", "firstName", "lastName", "role", "accountId", "updatedAt")
       VALUES (gen_random_uuid(), $1, 'Abu', 'Ali', 'OWNER', $2, now()) RETURNING "id"`, [`owner-${index}@load.local`, account])).rows[0].id as string
-    const staff = (await sql.query(`INSERT INTO "User" ("id", "email", "firstName", "lastName", "employeeCode", "role", "accountId", "updatedAt")
-      VALUES (gen_random_uuid(), $1, 'Rami', 'Haddad', 'R1', 'WAREHOUSE', $2, now()) RETURNING "id"`, [`staff-${index}@load.local`, account])).rows[0].id as string
+    const staff = (await sql.query(`INSERT INTO "User" ("id", "email", "firstName", "lastName", "employeeCode", "role", "employeeRole", "accountId", "updatedAt")
+      VALUES (gen_random_uuid(), $1, 'Rami', 'Haddad', 'R1', 'WAREHOUSE', 'WAREHOUSE', $2, now()) RETURNING "id"`, [`staff-${index}@load.local`, account])).rows[0].id as string
     const category = (await sql.query(`INSERT INTO "Category" ("id", "accountId", "name", "updatedAt") VALUES (gen_random_uuid(), $1, 'Clothes', now()) RETURNING "id"`, [account])).rows[0].id as string
     await sql.query(`CREATE TEMP TABLE v ON COMMIT DROP AS
       WITH p AS (
