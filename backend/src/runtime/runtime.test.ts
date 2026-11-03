@@ -35,6 +35,17 @@ import {
   type StartupStage,
 } from './startup-diagnostics.js'
 
+// The deadline timers under test are unref'd on purpose (they must not keep a server process alive).
+// Keep the event loop alive while a test waits for one, or Node 22's test runner ends the file first.
+async function whileAlive<T>(work: () => Promise<T>): Promise<T> {
+  const keepAlive = setInterval(() => {}, 1_000)
+  try {
+    return await work()
+  } finally {
+    clearInterval(keepAlive)
+  }
+}
+
 async function withServer<T>(
   app: ReturnType<typeof express>,
   operation: (baseUrl: string) => Promise<T>,
@@ -454,7 +465,7 @@ describe('external and server timeouts', () => {
       })
     const timeoutFetch = createTimeoutFetch(5, hangingFetch)
 
-    await assert.rejects(timeoutFetch('https://example.invalid'))
+    await whileAlive(() => assert.rejects(timeoutFetch('https://example.invalid')))
     assert.equal(aborted, true)
   })
 
@@ -513,7 +524,7 @@ describe('readiness', () => {
     const prisma = {
       $queryRaw: async () => new Promise<never>(() => {}),
     } as unknown as PrismaClient
-    await assert.rejects(createPrismaReadinessProbe(prisma, 5)())
+    await whileAlive(() => assert.rejects(createPrismaReadinessProbe(prisma, 5)()))
   })
 })
 
@@ -568,7 +579,7 @@ describe('graceful shutdown and fatal policy', () => {
       exit: (code) => { exitCodes.push(code) },
     })
 
-    await coordinator.shutdown('SIGTERM')
+    await whileAlive(() => coordinator.shutdown('SIGTERM'))
     assert.equal(forcedConnections, 1)
     assert.equal(cleanupCalls, 1)
     assert.deepEqual(exitCodes, [1])
