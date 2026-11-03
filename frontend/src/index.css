@@ -491,3 +491,6 @@ button:disabled { cursor: wait; opacity: .65; }
 .landing-language { margin-inline-start: var(--space-3); }
 [dir='rtl'] :is(.mock-pos-today svg, .product-card-open > span[aria-hidden='true'], .dashboard-action > span:last-child, .entry-view-products > span[aria-hidden='true']) { display: inline-block; transform: scaleX(-1); }
 [dir='rtl'] input[type='tel'], [dir='rtl'] input[inputmode='decimal'], [dir='rtl'] input[inputmode='numeric'], [dir='rtl'] input[type='email'] { direction: ltr; text-align: end; }
+
+/* App.jsx: shown while a screen's own file downloads (the screens are split into separate files). */
+.screen-loading { min-height: 100vh; min-height: 100dvh; background: var(--color-background); }

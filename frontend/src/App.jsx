@@ -1,21 +1,33 @@
 import { confirmDiscardChanges } from './app/dirty-state.js'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AppRouteGuard } from './app/AppRouteGuard.jsx'
 import { isBusinessPath, isSitePath, normalizePathname, ROUTES } from './app/routes.js'
-import { AuthCallbackPage } from './pages/AuthCallbackPage.jsx'
-import { AdminPage } from './pages/AdminPage.jsx'
-import { LoginPage } from './pages/LoginPage.jsx'
 import { NotFoundPage } from './pages/NotFoundPage.jsx'
-import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage.jsx'
-import { PendingApprovalPage } from './pages/PendingApprovalPage.jsx'
-import { InactiveAccountPage } from './pages/InactiveAccountPage.jsx'
-import { SetPasswordPage } from './pages/SetPasswordPage.jsx'
-import { SignupCallbackPage } from './pages/SignupCallbackPage.jsx'
-import { SignupPage } from './pages/SignupPage.jsx'
-import { SiteRoot } from './site/SiteRoot.jsx'
+
+// Only the app shell is in the first download. Every other screen (the public site, login, signup,
+// admin...) is its own file, fetched the first time it is opened: someone opening the Sell screen never
+// downloads the landing page and its animations.
+function lazyNamed(loader, exportName) {
+  return lazy(() => loader().then((module) => ({ default: module[exportName] })))
+}
+const AuthCallbackPage = lazyNamed(() => import('./pages/AuthCallbackPage.jsx'), 'AuthCallbackPage')
+const AdminPage = lazyNamed(() => import('./pages/AdminPage.jsx'), 'AdminPage')
+const LoginPage = lazyNamed(() => import('./pages/LoginPage.jsx'), 'LoginPage')
+const OwnerOnboardingPage = lazyNamed(() => import('./pages/OwnerOnboardingPage.jsx'), 'OwnerOnboardingPage')
+const PendingApprovalPage = lazyNamed(() => import('./pages/PendingApprovalPage.jsx'), 'PendingApprovalPage')
+const InactiveAccountPage = lazyNamed(() => import('./pages/InactiveAccountPage.jsx'), 'InactiveAccountPage')
+const SetPasswordPage = lazyNamed(() => import('./pages/SetPasswordPage.jsx'), 'SetPasswordPage')
+const SignupCallbackPage = lazyNamed(() => import('./pages/SignupCallbackPage.jsx'), 'SignupCallbackPage')
+const SignupPage = lazyNamed(() => import('./pages/SignupPage.jsx'), 'SignupPage')
+const SiteRoot = lazyNamed(() => import('./site/SiteRoot.jsx'), 'SiteRoot')
 
 function readPathname() {
   return normalizePathname(window.location.pathname)
+}
+
+/** While a screen's file is downloading: an empty page in the app's background colour (no flash). */
+function ScreenLoading() {
+  return <div className="screen-loading" aria-busy="true" />
 }
 
 function App() {
@@ -45,6 +57,10 @@ function App() {
     setPathname(readPathname())
   }, [])
 
+  return <Suspense fallback={<ScreenLoading />}>{screenFor(pathname, navigate)}</Suspense>
+}
+
+function screenFor(pathname, navigate) {
   if (pathname === ROUTES.authCallback) return <AuthCallbackPage />
   if (pathname === ROUTES.signupCallback) return <SignupCallbackPage />
   if (pathname === ROUTES.setPassword) return <SetPasswordPage />
