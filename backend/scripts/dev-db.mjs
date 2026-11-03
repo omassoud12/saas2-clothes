@@ -8,7 +8,7 @@
 import EmbeddedPostgres from 'embedded-postgres'
 import pg from 'pg'
 import { existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 export const DEV_DB_PORT = Number(process.env.DEV_DB_PORT ?? 54329)
 export const DEV_DB_NAME = process.env.DEV_DB_NAME ?? 'saas2_dev'
@@ -54,7 +54,8 @@ export async function startDevDatabase() {
   return server
 }
 
-if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
+// Run as a script (not imported). pathToFileURL gives the same URL form on Windows and Linux.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const command = process.argv[2]
   if (command === 'start') {
     const server = await startDevDatabase()

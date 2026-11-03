@@ -26,7 +26,10 @@ jobs:
           node scripts/dev-db.mjs start > dev-db.log 2>&1 &
           for i in $(seq 1 60); do grep -q "Dev database running" dev-db.log && break; sleep 2; done
           cat dev-db.log
-          if ! grep -q "Dev database running" dev-db.log; then echo "::error::The local Postgres did not start"; exit 1; fi
+          if ! grep -q "Dev database running" dev-db.log; then
+            tail -20 dev-db.log | while IFS= read -r line; do echo "::error::$line"; done
+            echo "::error::The local Postgres did not start"; exit 1
+          fi
       - name: Typecheck
         run: npm run typecheck --workspace server
       - name: Backend tests (business tests use the local Postgres)
