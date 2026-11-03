@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
+import { VerifiedTokenCache } from './token-cache.js'
 import { AccountStatus, UserRole } from '../generated/prisma/enums.js'
 import { HttpError } from '../errors/http-error.js'
 import type {
@@ -215,9 +216,14 @@ export function createAuthDependencies(
   verifier: SupabaseClient,
   reportVerificationFailure: AuthVerificationFailureReporter =
     reportAuthVerificationFailure,
+  tokenCache: VerifiedTokenCache = new VerifiedTokenCache(),
 ): AuthDependencies {
   return {
-    async verifyAccessToken(accessToken) {
+    async verifyAccessToken(accessToken, options = {}) {
+      if (!options.fresh) {
+        const cached = tokenCache.get(accessToken)
+        if (cached) return cached
+      }
       try {
         const {
           data: { user },
@@ -232,12 +238,14 @@ export function createAuthDependencies(
           return null
         }
 
-        return {
+        const identity = {
           id: user.id,
           email: user.email ?? null,
           emailConfirmedAt: user.email_confirmed_at ?? null,
           isAnonymous: user.is_anonymous === true,
         }
+        tokenCache.set(accessToken, identity)
+        return identity
       } catch (error) {
         safelyReportAuthVerificationFailure(error, reportVerificationFailure)
         return null
@@ -257,6 +265,8 @@ export function createAuthDependencies(
           permissions: true,
           permissionsCustom: true,
           mustChangePassword: true,
+          // The Account in the same query, so the tenant check needs no second round trip.
+          account: { select: { id: true, status: true } },
         },
       })
     },

@@ -63,9 +63,10 @@ function getBearerToken(request: Request): string {
 export async function resolveVerifiedIdentity(
   request: Request,
   dependencies: AuthDependencies,
+  options: { readonly fresh?: boolean } = {},
 ): Promise<Readonly<VerifiedIdentityContext>> {
   const accessToken = getBearerToken(request)
-  const identity = await dependencies.verifyAccessToken(accessToken)
+  const identity = await dependencies.verifyAccessToken(accessToken, options)
 
   if (!identity) {
     throw new HttpError(
@@ -112,9 +113,11 @@ export function createRequireVerifiedIdentity(
 ): RequestHandler {
   return async (request, _response, next) => {
     try {
+      // Owner onboarding always asks Supabase (no cached verification).
       request.verifiedIdentity = await resolveVerifiedIdentity(
         request,
         dependencies,
+        { fresh: true },
       )
       next()
     } catch (error) {
@@ -254,6 +257,7 @@ export function createRequireAuth(
         employeeRole: applicationUser.employeeRole ?? null,
         mustChangePassword: applicationUser.mustChangePassword === true,
       })
+      if (applicationUser.account !== undefined) request.tenantAccount = applicationUser.account
 
       next()
     } catch (error) {
@@ -312,7 +316,11 @@ export function createRequireTenant(
         )
       }
 
-      const account = await dependencies.findAccountById(auth.accountId)
+      // Already loaded with the User (same query) when available; it must be this user's Account.
+      const loaded = request.tenantAccount
+      const account = loaded !== undefined && (loaded === null || loaded.id === auth.accountId)
+        ? loaded
+        : await dependencies.findAccountById(auth.accountId)
 
       if (!account) {
         throw new HttpError(

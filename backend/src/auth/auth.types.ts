@@ -70,6 +70,8 @@ export interface ApplicationIdentity {
   readonly permissions?: readonly string[]
   readonly permissionsCustom?: boolean
   readonly mustChangePassword?: boolean
+  /** The Account, loaded in the same query when the dependency supports it. */
+  readonly account?: TenantAccount | null
 }
 
 export interface TenantAccount {
@@ -95,7 +97,8 @@ export interface CurrentUserProfile {
 }
 
 export interface AuthDependencies {
-  verifyAccessToken(accessToken: string): Promise<VerifiedAuthIdentity | null>
+  /** fresh: always ask Supabase (owner onboarding); otherwise a confirmed token may come from a 30 s cache. */
+  verifyAccessToken(accessToken: string, options?: { readonly fresh?: boolean }): Promise<VerifiedAuthIdentity | null>
   findApplicationUser(userId: string): Promise<ApplicationIdentity | null>
   findAccountById(accountId: string): Promise<TenantAccount | null>
   findCurrentUser(userId: string): Promise<CurrentUserProfile | null>

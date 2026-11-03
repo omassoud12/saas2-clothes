@@ -1267,6 +1267,13 @@ request bodies, provider details, SQL, credentials, or production stack traces.
 The health endpoint is a liveness response (`status: ok`) only and makes no
 hardcoded dependency-readiness claims.
 
+A token that Supabase Auth confirmed is remembered in process for at most 30
+seconds (never past its own expiry), keyed by its SHA-256; failures are never
+cached and owner onboarding always verifies fresh. A logout therefore takes up
+to 30 seconds to stop an access token, while the application User (status,
+role, permissions) and its Account are still read from the database on every
+request, in one query, so deactivation and suspension apply immediately.
+
 Ordinary HTTP startup loads only the Supabase URL and publishable/legacy anon
 key needed by the non-privileged Bearer-token verifier. It neither reads the
 service-role key nor constructs an admin client. The SUPER_ADMIN administrative
