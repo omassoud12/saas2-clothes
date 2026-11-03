@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createAuthOnlyClient } from './supabase-auth-client.js'
 import { exchangePasswordSetupCode, inspectAuthCallbackUrl } from '../auth/auth-flow.js'
 import { inspectSignupCallbackUrl } from '../auth/owner-flow.js'
 import { normalizePathname, ROUTES } from '../app/routes.js'
@@ -14,13 +14,7 @@ export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabasePublishableKey,
 )
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabasePublishableKey, {
-      auth: {
-        autoRefreshToken: true,
-        detectSessionInUrl: !usesCodeCallback,
-        persistSession: true,
-      },
-    })
+  ? createAuthOnlyClient(supabaseUrl, supabasePublishableKey, { detectSessionInUrl: !usesCodeCallback })
   : null
 
 let codeCallbackPromise
