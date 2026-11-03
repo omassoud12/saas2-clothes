@@ -289,8 +289,8 @@ export function CostsPage({ navigate }) {
                   ))}
                 </ul>
               </section>
-              <CostForm key={`${current.id}-${version}`} product={current} rate={rate} stores={stores} onSaved={(message) => { setToast(message); setVersion((count) => count + 1) }} />
-              <History key={`${current.id}-${version}`} productId={current.id} first={product.body} />
+              <CostForm key={`form-${current.id}-${version}`} product={current} rate={rate} stores={stores} onSaved={(message) => { setToast(message); setVersion((count) => count + 1) }} />
+              <History key={`history-${current.id}-${version}`} productId={current.id} first={product.body} />
             </>
           )}
         </div>
